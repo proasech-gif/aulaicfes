@@ -352,22 +352,30 @@ async function readFile(file,f){
   return lines;
 }
 function setRows(lines){
-  const seen=new Set(),rows=[];let skip=0;
-  lines.forEach(l=>{l=(l||'').trim();if(!l)return;const p=parseLine(l);if(!p){if(/[A-Za-zÁ-ú]/.test(l))skip++;return}const k=p.email||p.document;if(seen.has(k))return;seen.add(k);rows.push(p)});
-  RF.rows=rows;RF.skip=skip;
-  if(!rows.length)toast('⚠️','No encontré estudiantes','En cada fila debe haber el nombre y el número de documento o el correo del estudiante.');
+  const seen=new Set(),rows=[],bad=[],sk=[];let skip=0;
+  lines.forEach(l=>{l=(l||'').trim();if(!l)return;const p=parseLine(l);
+    if(!p){if(/[A-Za-zÁ-ú]/.test(l)){skip++;if(sk.length<15)sk.push(l)}return}
+    p.document=(p.document||'').replace(/\D/g,'');
+    const palabras=p.full_name.trim().split(/\s+/).filter(w=>/[A-Za-zÁ-ú]/.test(w)),why=[];
+    if(p.document.length<5)why.push('falta el número de documento');
+    if(palabras.length<2)why.push('falta el nombre completo (nombres y apellidos)');
+    if(why.length){bad.push({l,why:why.join(' y ')});return}
+    if(seen.has(p.document))return;seen.add(p.document);rows.push(p)});
+  RF.rows=rows;RF.skip=skip;RF.sk=sk;RF.bad=bad;
+  if(!rows.length)toast('⚠️','No encontré estudiantes válidos','Cada fila debe tener el nombre completo y el número de documento del estudiante.');
 }
 async function pickFile(file){
   if(!file)return;
   const ext=(file.name.split('.').pop()||'').toLowerCase(),okx={excel:['xlsx','xls','csv'],word:['docx'],pdf:['pdf']}[RF.f]||[];
   if(!okx.includes(ext))return toast('⚠️','El archivo no coincide con el formato','Elegiste '+FMT[RF.f]+' pero el archivo es .'+ext+'. Cambia el formato o el archivo.');
   toast('⏳','Leyendo el archivo…',file.name);
-  try{setRows(await readFile(file,RF.f));RF.fname=file.name}catch(e){RF.rows=[];err(e)}
+  try{setRows(await readFile(file,RF.f));RF.fname=file.name}catch(e){RF.rows=[];RF.bad=[];RF.sk=[];err(e)}
   render();
 }
 function reviewText(){RF.fname='';setRows((RF.txt||'').split(/\n/));render()}
 async function loadRoster(){
   if(!RF.c)return toast('⚠️','Elige el curso','Selecciona el curso al que pertenece esta lista.');
+  if(RF.bad&&RF.bad.length)return toast('⚠️','Faltan datos en '+RF.bad.length+' fila(s)','Todos los estudiantes deben tener nombre completo y documento. Corrige la lista y vuelve a subirla.');
   if(!RF.rows.length)return toast('⚠️','No hay estudiantes para cargar','Primero sube un archivo o escribe la lista y revísala.');
   const c=D.courses.find(x=>x.id===RF.c),all=RF.rows.map(x=>({email:x.email||null,full_name:x.full_name,document:x.document||null}));
   let ok=0,conf=0;
@@ -377,7 +385,7 @@ async function loadRoster(){
     ok+=r.data.ok;conf+=(+r.data.conflicts||0);
   }
   toast('✅','Lista cargada',ok+' estudiantes en '+c.grade+'° '+c.name+'.'+(conf?' '+conf+' ya pertenecen a otro docente y no se cargaron.':''));
-  RF.txt='';RF.rows=[];RF.skip=0;RF.fname='';go('cur');
+  RF.txt='';RF.rows=[];RF.skip=0;RF.bad=[];RF.sk=[];RF.fname='';go('cur');
 }
 async function delRoster(id){const{error}=await sb.from('roster').delete().eq('id',id);if(error)return err(error);go('cur')}
 
@@ -637,7 +645,8 @@ function vCur(){
   <div class="grid sm:grid-cols-2 gap-3"><label class="text-sm">1. Curso de esta lista<select class="w-full border rounded-lg p-2 mt-1" onchange="RF.c=this.value;render()"><option value="">Elige un curso</option>${cs.map(c=>`<option value="${c.id}" ${c.id===RF.c?'selected':''}>${c.grade}° ${E(c.name)}</option>`).join('')}</select></label>
   <label class="text-sm">2. Formato en que vas a subir la lista<select class="w-full border rounded-lg p-2 mt-1" onchange="RF.f=this.value;RF.rows=[];RF.skip=0;RF.fname='';render()"><option value="excel" ${RF.f==='excel'?'selected':''}>Excel o CSV (.xlsx, .xls, .csv)</option><option value="word" ${RF.f==='word'?'selected':''}>Word (.docx)</option><option value="pdf" ${RF.f==='pdf'?'selected':''}>PDF (con texto, no escaneado)</option><option value="text" ${RF.f==='text'?'selected':''}>Escribir o pegar la lista</option></select></label></div>
   ${RF.f==='text'?`<label class="text-sm block">3. Escribe o pega la lista, una línea por estudiante (Nombre, documento, correo)<textarea class="w-full border rounded-lg p-2 mt-1 text-sm" rows="6" oninput="RF.txt=this.value" placeholder="Ana Pérez, 1001234567, ana@correo.com&#10;Luis Gómez, 1002345678">${E(RF.txt)}</textarea></label><button onclick="reviewText()" class="px-4 py-2 rounded-lg bg-slate-200">Revisar la lista</button>`:`<label class="text-sm block">3. Elige el archivo ${FMT[RF.f]}<input type="file" accept="${ACC[RF.f]}" class="w-full border rounded-lg p-2 mt-1" onchange="pickFile(this.files[0])"></label>${RF.f==='word'?'<p class="text-xs text-slate-500">Si tu archivo es .doc (Word antiguo), ábrelo en Word y guárdalo como .docx.</p>':''}`}
-  ${RF.rows.length?`<div class="border rounded-xl p-3 space-y-2"><div class="text-sm"><b>${RF.rows.length}</b> estudiantes encontrados${RF.fname?' en <b>'+E(RF.fname)+'</b>':''}. Filas con texto pero sin documento ni correo, ignoradas: ${RF.skip}. Revisa que estén bien antes de cargar.</div><div class="overflow-x-auto"><table class="w-full text-sm"><tr class="text-left text-slate-500"><th>#</th><th>Nombre</th><th>Documento</th><th>Correo</th></tr>${RF.rows.slice(0,100).map((r,i)=>`<tr class="border-t"><td>${i+1}</td><td>${E(r.full_name)}</td><td>${E(r.document||'—')}</td><td>${E(r.email||'—')}</td></tr>`).join('')}</table></div>${RF.rows.length>100?'<p class="text-xs text-slate-500">Se muestran los primeros 100.</p>':''}<button onclick="loadRoster()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">4. Cargar ${RF.rows.length} estudiantes${cur?' en '+cur.grade+'° '+E(cur.name):''}</button></div>`:''}</div>
+  ${(RF.bad&&RF.bad.length)||(RF.sk&&RF.sk.length)?`<div class="rounded-xl p-3 space-y-2" style="background:#fef2f2;border:1px solid #fca5a5"><div class="text-sm font-semibold" style="color:#b91c1c">${RF.bad&&RF.bad.length?`⛔ ${RF.bad.length} fila(s) incompletas. No se puede cargar la lista hasta corregirlas.`:'⚠️ Hay filas ignoradas'}</div>${(RF.bad||[]).slice(0,30).map(b=>`<div class="text-xs"><b>${E(b.l)}</b> → ${E(b.why)}</div>`).join('')}${RF.sk&&RF.sk.length?`<div class="text-xs text-slate-600 pt-1">${RF.skip} línea(s) sin documento fueron ignoradas (pueden ser títulos). Si alguna es un estudiante, agrégale el documento: ${RF.sk.map(x=>E(x)).join(' · ')}</div>`:''}</div>`:''}
+  ${RF.rows.length?`<div class="border rounded-xl p-3 space-y-2"><div class="text-sm"><b>${RF.rows.length}</b> estudiantes encontrados${RF.fname?' en <b>'+E(RF.fname)+'</b>':''}. Revisa que estén bien antes de cargar.</div><div class="overflow-x-auto"><table class="w-full text-sm"><tr class="text-left text-slate-500"><th>#</th><th>Nombre</th><th>Documento</th><th>Correo</th></tr>${RF.rows.slice(0,100).map((r,i)=>`<tr class="border-t"><td>${i+1}</td><td>${E(r.full_name)}</td><td>${E(r.document||'—')}</td><td>${E(r.email||'—')}</td></tr>`).join('')}</table></div>${RF.rows.length>100?'<p class="text-xs text-slate-500">Se muestran los primeros 100.</p>':''}<button onclick="loadRoster()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">4. Cargar ${RF.rows.length} estudiantes${cur?' en '+cur.grade+'° '+E(cur.name):''}</button></div>`:''}</div>
   ${ro.length?`<div class="bg-white rounded-2xl p-4 shadow space-y-2"><h3 class="font-semibold">En lista con correo, pendientes de registrarse (${ro.length})</h3>${ro.map(r=>`<div class="flex flex-wrap items-center justify-between gap-2 text-sm border-t pt-2"><span>${E(r.full_name)} · ${E(r.email)} · ${cname(r.course_id)}</span><button onclick="delRoster('${r.id}')" class="px-3 py-1.5 rounded-lg bg-slate-200 text-xs">Quitar</button></div>`).join('')}</div>`:''}
   <div class="bg-white rounded-2xl p-4 shadow overflow-x-auto"><h3 class="font-semibold mb-2">Mis estudiantes con cuenta (${stu.length})</h3>${stu.length?`<table class="w-full text-sm"><tr class="text-left text-slate-500"><th>Nombre</th><th>Correo</th><th>Grado</th><th>Curso</th></tr>${stu.map(u=>`<tr class="border-t"><td>${E(u.full_name)}</td><td>${E(u.email||'')}</td><td>${u.grade??''}°</td><td><select class="border rounded-lg p-2 text-sm" onchange="setCourse('${u.id}',this.value)"><option value="">Sin curso</option>${cs.map(c=>`<option value="${c.id}" ${c.id===u.course_id?'selected':''}>${c.grade}° ${E(c.name)}</option>`).join('')}</select></td></tr>`).join('')}</table>`:'<p class="text-sm text-slate-500">Aún no tienes estudiantes con cuenta. Carga la lista de un curso.</p>'}</div></div>`}
 function vSimP(){
