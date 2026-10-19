@@ -146,6 +146,39 @@ async function resend(){
   if(error)return err(error);
   toast('📧','Correo enviado','Usa solo el enlace más reciente, en el mismo navegador.');
 }
+function passModal(){
+  closePass();
+  const o=document.createElement('div');o.id='passbox';
+  o.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px';
+  o.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:360px;box-shadow:0 20px 40px rgba(0,0,0,.25)">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:4px">🔑 Cambiar contraseña</h2>
+  <p style="font-size:12px;color:#64748b;margin-bottom:12px">Mínimo 6 caracteres. Usa una que no sea fácil de adivinar.</p>
+  <input id="pw0" type="password" placeholder="Contraseña actual" autocomplete="current-password" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;margin-bottom:8px">
+  <input id="pw1" type="password" placeholder="Contraseña nueva" autocomplete="new-password" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;margin-bottom:8px">
+  <input id="pw2" type="password" placeholder="Repite la contraseña nueva" autocomplete="new-password" onkeydown="if(event.key==='Enter')savePass()" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;margin-bottom:8px">
+  <div id="pwerr" style="color:#dc2626;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+  <div style="display:flex;gap:8px"><button onclick="closePass()" style="flex:1;padding:8px;border-radius:8px;background:#e2e8f0">Cancelar</button><button id="pwbtn" onclick="savePass()" style="flex:1;padding:8px;border-radius:8px;background:#4f46e5;color:#fff">Guardar</button></div></div>`;
+  document.body.appendChild(o);document.getElementById('pw0').focus();
+}
+function closePass(){const o=document.getElementById('passbox');if(o)o.remove()}
+async function savePass(){
+  const err=m=>{document.getElementById('pwerr').textContent=m};
+  const a=document.getElementById('pw0').value,b=document.getElementById('pw1').value,c=document.getElementById('pw2').value;
+  if(!a){return err('Escribe tu contraseña actual.')}
+  if(b.length<6){return err('La nueva contraseña debe tener mínimo 6 caracteres.')}
+  if(b!==c){return err('Las dos contraseñas nuevas no coinciden.')}
+  if(b===a){return err('La nueva contraseña debe ser distinta a la actual.')}
+  const btn=document.getElementById('pwbtn');btn.disabled=true;btn.textContent='Guardando…';err('');
+  try{
+    const {data:u}=await sb.auth.getUser();const email=u&&u.user&&u.user.email;
+    if(!email)throw new Error('No se pudo identificar tu sesión. Sal y vuelve a entrar.');
+    const chk=await sb.auth.signInWithPassword({email,password:a});
+    if(chk.error)throw new Error('La contraseña actual no es correcta.');
+    const r=await sb.auth.updateUser({password:b});
+    if(r.error)throw new Error(r.error.message);
+    closePass();toast('🔑','Contraseña cambiada','Úsala la próxima vez que entres.');
+  }catch(e){err(e.message||'No se pudo cambiar la contraseña.');btn.disabled=false;btn.textContent='Guardar'}
+}
 async function logout(){clearInterval(timer);S=null;await sb.auth.signOut()}
 
 /* ---------- Aviso de clase en vivo (toda la app) ---------- */
@@ -676,7 +709,7 @@ function render(){
   const prof=M.role==='prof';
   const tabs=prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')]]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['preg','📚 Preguntas'],['clase','🎥 Clase']]:[['sim','📝 Mis simulacros y tareas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
   const body={sim:vSim,simp:vSimP,cur:vCur,imp:vImp,doc:vDoc,est:vEst,med:vMed,prof:vProf,preg:vPreg,clase:vClase,lb:vLb}[tab]();
-  root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></header>
+  root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
   <div id="livebar">${vLive()}</div>
   <nav class="flex gap-2 overflow-x-auto mb-4">${tabs.map(([k,l])=>`<button onclick="go('${k}')" class="px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${tab===k?'on':'bg-white'}">${l}</button>`).join('')}</nav>${body}`;
   if(tab==='clase')paintChat();
