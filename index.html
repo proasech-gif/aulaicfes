@@ -209,6 +209,97 @@ async function loadAvail(){
 async function loadCourses(){const c=await sb.from('courses').select('*').eq('teacher_id',M.id).order('grade').order('name');if(c.error)throw c.error;D.courses=c.data}
 function defLT(){const s=D.school||{},c=s.colegios,mu=c?.municipios;return{l1:c?.nombre||s.school_other||'',l2:mu?(mu.nombre+', '+(mu.departamentos?.nombre||'')):'',l3:'',logo:''}}
 function LH(){return D.letter?{l1:D.letter.line1||'',l2:D.letter.line2||'',l3:D.letter.line3||'',logo:D.letter.logo_path||''}:defLT()}
+
+/* ===== Calificar hojas de respuestas por foto ===== */
+const CAL={model:'m120',key:'',items:[],busy:false};
+function calLoad(){return(typeof OMR!=='undefined'&&window.PLANTILLAS)?Promise.resolve():Promise.all([loadScript('omr.js?v=1'),loadScript('plantillas.js?v=1')])}
+function calParseKey(t){
+  const K={};t=(t||'').trim();if(!t)return K;
+  const pairs=[...t.matchAll(/(\d{1,3})\s*[-.:)=]?\s*([A-Ha-h])(?![A-Za-z])/g)];
+  if(pairs.length>=2){pairs.forEach(m=>{K[+m[1]]=m[2].toUpperCase()});return K}
+  [...t.replace(/[^A-Ha-h]/g,'').toUpperCase()].forEach((c,i)=>{K[i+1]=c});return K}
+function calSleep(ms){return new Promise(r=>setTimeout(r,ms))}
+async function calImg(file){
+  let bmp;try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'})}catch(e){bmp=await new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>ok(im);im.onerror=()=>no(new Error('No se pudo abrir la imagen. Usa fotos JPG o PNG.'));im.src=u})}
+  const w0=bmp.width||bmp.naturalWidth,h0=bmp.height||bmp.naturalHeight,k=Math.min(1,2800/Math.max(w0,h0)),w=Math.round(w0*k),h=Math.round(h0*k);
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(bmp,0,0,w,h);
+  return{data:x.getImageData(0,0,w,h).data,w,h}}
+async function calPdfJobs(f){
+  await loadScript(LIB.pdf);pdfjsLib.GlobalWorkerOptions.workerSrc=LIB.pdfw;
+  const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,jobs=[];
+  for(let p=1;p<=pdf.numPages;p++)jobs.push({name:f.name+' (página '+p+')',get:async()=>{
+    const pg=await pdf.getPage(p),v0=pg.getViewport({scale:1}),sc=2800/Math.max(v0.width,v0.height),vp=pg.getViewport({scale:sc});
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);const x=c.getContext('2d',{willReadFrequently:true});
+    x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);await pg.render({canvasContext:x,viewport:vp}).promise;
+    return{data:x.getImageData(0,0,c.width,c.height).data,w:c.width,h:c.height}}});
+  return jobs}
+function calCrops(g,M,res,K){
+  const out={},c=document.createElement('canvas'),x=c.getContext('2d');
+  for(const row of M.preguntas){const q=row[0];if(!K[q])continue;const v=res[q];if(!v||v.st==='ok'||v.r==='sin marcar')continue;
+    const x0=Math.max(0,Math.round(row[1][0]-35)),x1=Math.min(1700,Math.round(row[row.length-1][0]+35)),y0=Math.max(0,Math.round(row[1][1])-24),h=48,w=x1-x0;
+    const im=x.createImageData(w,h);for(let j=0;j<h;j++)for(let i=0;i<w;i++){const val=g[(y0+j)*1700+x0+i],p=(j*w+i)*4;im.data[p]=im.data[p+1]=im.data[p+2]=val;im.data[p+3]=255}
+    c.width=w;c.height=h;x.putImageData(im,0,0);out[q]=c.toDataURL('image/jpeg',0.7)}
+  return out}
+async function calStart(){
+  if(CAL.busy)return;
+  CAL.key=(document.getElementById('calkey')?.value||'').trim();CAL.model=document.getElementById('calmodel').value;
+  const files=[...(document.getElementById('calfiles')?.files||[])],K=calParseKey(CAL.key);
+  if(!Object.keys(K).length)return toast('⚠️','Falta la clave','Escribe la clave de respuestas, por ejemplo ABCDDABC… o 1-A, 2-C, 3-B…');
+  if(!files.length)return toast('⚠️','Faltan las fotos','Elige una o más fotos (JPG o PNG) o un PDF escaneado.');
+  CAL.busy=true;CAL.items=[];render();
+  try{await calLoad()}catch(e){CAL.busy=false;render();return err(e)}
+  const M=PLANTILLAS[CAL.model],jobs=[];
+  for(const f of files){
+    if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){try{jobs.push(...await calPdfJobs(f))}catch(e){CAL.items.push({name:f.name,status:'err',err:e.message||'No se pudo leer el PDF.',ov:{}})}}
+    else jobs.push({name:f.name,get:()=>calImg(f)})}
+  for(const j of jobs){
+    const it={name:j.name,model:CAL.model,status:'proc',ov:{},doc:'',stu:null};CAL.items.push(it);render();await calSleep(30);
+    try{const im=await j.get(),r=OMR.grade(im.data,im.w,im.h,M);
+      if(r.error){it.status='err';it.err=r.error}else{it.status='ok';it.res=r.res;it.quality=r.quality;it.crops=calCrops(r.g,M,r.res,K)}}
+    catch(e){it.status='err';it.err=(e&&e.message)||'No se pudo leer esta foto.'}
+    render();await calSleep(30)}
+  CAL.busy=false;render()}
+function calEval(it){
+  const K=calParseKey(CAL.key),M=PLANTILLAS[it.model],o={ok:0,bad:0,anu:0,rev:0,n:0,reasons:{},list:[]};
+  for(const row of M.preguntas){const q=row[0];if(!K[q])continue;const v=it.res[q];if(!v)continue;o.n++;
+    const ov=it.ov[q];let letter=null,why=null,pend=false;
+    if(ov==='X')why='anulada por el docente';else if(ov)letter=ov;
+    else if(v.st==='ok')letter=v.r;else if(v.st==='revisar'){why='relleno incompleto';pend=true}else why=v.r;
+    if(letter){if(letter===K[q])o.ok++;else o.bad++}
+    else{o.anu++;if(pend)o.rev++;o.reasons[why]=(o.reasons[why]||0)+1}
+    if(v.st!=='ok'||ov)o.list.push({q,v,ov,letter,why,pend,nopt:row.length-1})}
+  o.nota=o.n?Math.round(50*o.ok/o.n)/10:0;o.pct=o.n?Math.round(100*o.ok/o.n):0;return o}
+function calSet(i,q,val){CAL.items[i].ov[q]=val||undefined;render()}
+function calDoc(i,v){const it=CAL.items[i],d=(v||'').replace(/\D/g,'');it.doc=d;it.stu=(D.roster||[]).find(r=>String(r.document||'')===d)||null;render()}
+function calReset(){CAL.items=[];CAL.busy=false;render()}
+function calCsv(){
+  const rows=[['archivo','documento','nombre','correctas','incorrectas','anuladas','por_revisar','motivos_anuladas','nota_0_a_5','porcentaje']];
+  CAL.items.filter(i=>i.status==='ok').forEach(it=>{const e=calEval(it);rows.push([it.name,it.doc,it.stu?it.stu.full_name:'',e.ok,e.bad,e.anu,e.rev,Object.entries(e.reasons).map(([k,v])=>k+': '+v).join(' | '),String(e.nota).replace('.',','),e.pct+'%'])});
+  const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='calificacion_hojas.csv';a.click()}
+function vCal(){
+  const ro=D.roster||[],show=CAL.items.length>0,ok=CAL.items.filter(i=>i.status==='ok').length;
+  const form=show?`<div class="flex flex-wrap gap-2 items-center"><button onclick="calReset()" class="px-4 py-2 rounded-lg bg-slate-200">↩️ Nueva calificación</button>${ok?`<button onclick="calCsv()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">⬇️ Descargar resultados (Excel/CSV)</button>`:''}${CAL.busy?'<span class="text-sm text-slate-600">⏳ Leyendo fotos… no cierres esta página.</span>':''}</div>`
+  :`<div class="space-y-3"><div><label class="text-sm font-semibold">1. Modelo de hoja</label><select id="calmodel" class="w-full border rounded-lg p-2"><option value="m120" ${CAL.model==='m120'?'selected':''}>120 preguntas (opciones A–D)</option><option value="ing45" ${CAL.model==='ing45'?'selected':''}>Inglés: 45 preguntas (7 partes)</option></select></div>
+  <div><label class="text-sm font-semibold">2. Clave de respuestas</label><textarea id="calkey" rows="3" class="w-full border rounded-lg p-2" placeholder="Ejemplos: ABCDDABCAD…   o   1-A, 2-C, 3-B, 4-D…">${E(CAL.key)}</textarea><p class="text-xs text-slate-500">Solo se califican las preguntas que tengan clave. Letras A–H según las opciones de cada pregunta.</p></div>
+  <div><label class="text-sm font-semibold">3. Fotos de las hojas (una por estudiante)</label><input id="calfiles" type="file" accept="image/*,.pdf,application/pdf" multiple class="w-full border rounded-lg p-2 bg-white"></div>
+  <button onclick="calStart()" class="px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold">📷 Calificar las hojas</button></div>
+  <div class="rounded-xl p-3 text-sm" style="background:#eff6ff;border:1px solid #bfdbfe"><b>Para que la lectura salga bien:</b> pon la hoja <b>plana</b> sobre una mesa de color <b>oscuro</b>, con buena luz y sin sombras fuertes; que se vea <b>toda la hoja</b> (los cuatro bordes) y toma la foto de frente, con el celular quieto. Los óvalos deben estar rellenos por completo con lápiz o bolígrafo negro.</div>`;
+  const dl=`<datalist id="calstu">${ro.map(r=>`<option value="${E(r.document||'')}">${E(r.full_name)}</option>`).join('')}</datalist>`;
+  const cards=CAL.items.map((it,i)=>{
+    if(it.status==='proc')return`<div class="border rounded-xl p-3 bg-white text-sm">⏳ Leyendo <b>${E(it.name)}</b>…</div>`;
+    if(it.status==='err')return`<div class="border rounded-xl p-3" style="background:#fef2f2;border-color:#fca5a5"><b>${E(it.name)}</b><div class="text-sm" style="color:#b91c1c">⛔ ${E(it.err)}</div></div>`;
+    const e=calEval(it),rs=Object.entries(e.reasons).map(([k,v])=>`${v} ${E(k)}`).join(' · ');
+    const items=e.list.map(x=>{const opts=['ABCDEFGH'.slice(0,x.nopt)].join('').split('').map(L=>`<option value="${L}" ${x.ov===L?'selected':''}>Contar como ${L}</option>`).join('');
+      const est=x.ov==='X'?'anulada por ti':x.ov?'tú: '+x.ov:(x.letter?'leída: '+x.letter:x.why);
+      return`<div class="flex flex-wrap items-center gap-2 border-t pt-2"><b class="w-10">P${x.q}</b>${it.crops[x.q]?`<img src="${it.crops[x.q]}" style="height:48px;border:1px solid #cbd5e1;border-radius:6px">`:''}<span class="text-xs ${x.pend?'font-semibold':''}" style="${x.pend?'color:#b45309':'color:#475569'}">${E(est)}</span><select onchange="calSet(${i},${x.q},this.value)" class="border rounded p-1 text-xs"><option value="">Como la leyó la app</option><option value="X" ${x.ov==='X'?'selected':''}>Anular</option>${opts}</select></div>`}).join('');
+    return`<div class="border rounded-xl p-3 space-y-2 bg-white"><div class="flex flex-wrap justify-between gap-2"><b class="text-sm">${E(it.name)}</b><span class="text-xs text-slate-500">calidad de lectura: ${it.quality.ovalos} óvalos ubicados</span></div>
+    <div class="flex flex-wrap items-center gap-2"><input list="calstu" value="${E(it.doc)}" onchange="calDoc(${i},this.value)" placeholder="Documento del estudiante" class="border rounded-lg p-1.5 text-sm" style="width:210px">${it.stu?`<span class="text-sm">✅ <b>${E(it.stu.full_name)}</b></span>`:`<span class="text-xs" style="color:#b45309">${it.doc?'Ese documento no está en tus listas.':'Escribe o elige el documento para saber de quién es la hoja.'}</span>`}</div>
+    <div class="text-sm"><b style="color:#047857">${e.ok} correctas</b> · <b style="color:#b91c1c">${e.bad} incorrectas</b> · <b style="color:#b45309">${e.anu} anuladas</b> de ${e.n} · Nota <b>${e.nota}</b> / 5 (${e.pct}%)</div>
+    ${e.anu?`<div class="text-xs text-slate-600">Anuladas: ${rs}${e.rev?` — <b style="color:#b45309">${e.rev} esperan tu revisión</b> (cuentan como anuladas hasta que decidas)`:''}</div>`:''}
+    ${e.list.length?`<details ${e.rev?'open':''}><summary class="text-sm cursor-pointer">Ver preguntas anuladas o dudosas (${e.list.length})</summary><div class="space-y-2 mt-2">${items}</div></details>`:''}</div>`}).join('');
+  return`<div class="space-y-4"><div><h2 class="text-xl font-bold">📷 Calificar hojas de respuestas por foto</h2><p class="text-sm text-slate-600">Sube las fotos de las hojas y la app lee los óvalos y calcula la nota. Son anuladas las preguntas sin marcar, con dos marcas, con X o chulo, o con el óvalo sin rellenar por completo.</p></div>${dl}${form}<div class="space-y-3">${cards}</div></div>`}
+
 async function go(t){
   leaveChat();tab=t;
   try{
@@ -233,6 +324,9 @@ async function go(t){
       const j=await sb.from('print_jobs').select('*,courses(grade,name)').order('created_at',{ascending:false}).limit(30);D.jobs=j.data||[];
       const r=await sb.from('roster').select('id,course_id');D.rcount={};(r.data||[]).forEach(x=>{D.rcount[x.course_id]=(D.rcount[x.course_id]||0)+1});
       LT=LH()}
+    if(t==='cal'){
+      await loadCourses();const ids=D.courses.map(c=>c.id);
+      const r=await sb.from('roster').select('*').order('full_name');D.roster=(r.data||[]).filter(x=>ids.includes(x.course_id))}
     if(t==='doc'){
       await loadCat();
       const r=await sb.from('profiles').select('id,full_name,email,phone,teacher_status,is_admin,school_other,area,asignaturas,grados,created_at,colegios(nombre,municipios(nombre,departamentos(nombre))),courses!courses_teacher_id_fkey(grade,name)').eq('role','prof').order('created_at',{ascending:false});if(r.error)throw r.error;D.docs=r.data;
@@ -722,8 +816,8 @@ function render(){
   if(!M){root.innerHTML=vAuth();return}
   if(M.role==='prof'&&M.teacher_status!=='aprobado'){root.innerHTML=vPend();return}
   const prof=M.role==='prof';
-  const tabs=prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')]]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['preg','📚 Preguntas'],['clase','🎥 Clase']]:[['sim','📝 Mis simulacros y tareas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
-  const body={sim:vSim,simp:vSimP,cur:vCur,imp:vImp,doc:vDoc,est:vEst,med:vMed,prof:vProf,preg:vPreg,clase:vClase,lb:vLb}[tab]();
+  const tabs=prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')]]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['clase','🎥 Clase']]:[['sim','📝 Mis simulacros y tareas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
+  const body={sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,preg:vPreg,clase:vClase,lb:vLb}[tab]();
   root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
   <div id="livebar">${vLive()}</div>
   <nav class="flex gap-2 overflow-x-auto mb-4">${tabs.map(([k,l])=>`<button onclick="go('${k}')" class="px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${tab===k?'on':'bg-white'}">${l}</button>`).join('')}</nav>${body}`;
