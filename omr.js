@@ -1,6 +1,6 @@
 /* Lector de hojas de respuestas por foto (sin librerías). Entrada: imagen RGBA; salida: respuestas por pregunta. */
 const OMR=(function(){
-const TW=1700,TH=2200;
+let TW=1700,TH=2200;
 function boxDown(src,w,h,f){const nw=Math.floor(w/f),nh=Math.floor(h/f),out=new Uint8Array(nw*nh),a=f*f;
   for(let y=0;y<nh;y++)for(let x=0;x<nw;x++){let s=0;for(let j=0;j<f;j++){const r=(y*f+j)*w+x*f;for(let i=0;i<f;i++)s+=src[r+i]}out[y*nw+x]=s/a}
   return{d:out,w:nw,h:nh}}
@@ -69,13 +69,32 @@ function ringContrast(g,cx,cy,a,b){let s1=0,s2=0;const N=16;
     let x=Math.round(cx+a*c),y=Math.round(cy+b*s);if(x<0||y<0||x>=TW||y>=TH)return-999;s1+=255-g[y*TW+x];
     x=Math.round(cx+(a+4)*c);y=Math.round(cy+(b+4)*s);if(x<0||y<0||x>=TW||y>=TH)return-999;s2+=255-g[y*TW+x]}
   return(s1-s2)/N}
+function alignMarks(g,marks){
+  const pts=[];
+  for(const m of marks){const cx=m[0],cy=m[1],w=m[2],R=Math.round(w*1.8)+60;
+    const x0=Math.max(0,Math.round(cx-R)),x1=Math.min(TW-1,Math.round(cx+R)),y0=Math.max(0,Math.round(cy-R)),y1=Math.min(TH-1,Math.round(cy+R)),ww=x1-x0+1,hh=y1-y0+1;
+    const lab=new Int32Array(ww*hh),st=new Int32Array(ww*hh);let best=null,id=0;
+    for(let s0=0;s0<ww*hh;s0++){const sx=s0%ww,sy=(s0-sx)/ww;if(lab[s0]||g[(y0+sy)*TW+x0+sx]>110)continue;id++;let sp=0,n=0,bx0=1e9,bx1=-1,by0=1e9,by1=-1;st[sp++]=s0;lab[s0]=id;
+      while(sp){const p=st[--sp],px=p%ww,py=(p-px)/ww;n++;if(px<bx0)bx0=px;if(px>bx1)bx1=px;if(py<by0)by0=py;if(py>by1)by1=py;
+        for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=px+dx,ny=py+dy;if(nx<0||ny<0||nx>=ww||ny>=hh)continue;const q=ny*ww+nx;if(!lab[q]&&g[(y0+ny)*TW+x0+nx]<=110){lab[q]=id;st[sp++]=q}}}
+      const bw=bx1-bx0+1,bh=by1-by0+1;
+      if(Math.abs(bw-w)<0.35*w&&Math.abs(bh-w)<0.35*w&&n>0.7*bw*bh){const ccx=x0+(bx0+bx1)/2,ccy=y0+(by0+by1)/2,dist=Math.hypot(ccx-cx,ccy-cy);if(!best||dist<best.dist)best={ccx,ccy,dist}}}
+    if(!best)return null;pts.push([cx,cy,best.ccx,best.ccy])}
+  return fitH(pts)}
+function readId(g,model,map){
+  const dig=[];let okid=true;
+  for(const col of model.idcols){const st=col.map(o=>{const[cx,cy]=map(o[0],o[1]);return classify(g,cx,cy,{w:o[2],h:o[3]},null,0)});
+    const f=[];st.forEach((r,i)=>{if(r.s==='lleno')f.push(i)});if(f.length===1)dig.push(String(f[0]));else{dig.push('?');okid=false}}
+  const sv=model.ver.map(o=>{const[cx,cy]=map(o[0],o[1]);return classify(g,cx,cy,{w:o[2],h:o[3]},null,0)}),fv=[];sv.forEach((r,i)=>{if(r.s==='lleno')fv.push(i)});
+  const doc=dig.join('').replace(/^0+/,'');
+  return{doc:okid?doc:null,docRaw:dig.join(''),ver:fv.length===1?'ABCDEF'[fv[0]]:null,verIdx:fv.length===1?fv[0]:null}}
 function allOvals(model){const L=[];for(const row of model.preguntas){const q=row[0];for(let k=1;k<row.length;k++){const o=row[k];L.push({q,k:k-1,x:o[0],y:o[1],w:o[2],h:o[3]})}}return L}
 function sampleOvals(L,n){const s=[],st=Math.max(1,Math.floor(L.length/n));for(let i=0;i<L.length;i+=st)s.push(L[i]);return s}
 function coarseScore(g,S,R){let tot=0;for(const o of S){let best=-999;for(let dy=-R;dy<=R;dy+=2)for(let dx=-R;dx<=R;dx+=2){const c=ringContrast(g,o.x+dx,o.y+dy,(o.w-2)/2,(o.h-2)/2);if(c>best)best=c}tot+=best}return tot/S.length}
-function refine(g,L,R){const pairs=[];
-  for(const o of L){const a=(o.w-2)/2,b=(o.h-2)/2;let best=-999,bx=0,by=0,sum=0,cnt=0;
-    for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const c=ringContrast(g,o.x+dx,o.y+dy,a,b);sum+=c;cnt++;if(c>best){best=c;bx=dx;by=dy}}
-    o.conf=best-sum/cnt;o.best=best;o.dx=bx;o.dy=by;if(best>55&&o.conf>35)pairs.push([o.x,o.y,o.x+bx,o.y+by])}
+function refine(g,L,R,init){const pairs=[];
+  for(const o of L){const a=(o.w-2)/2,b=(o.h-2)/2;let best=-999,bx=0,by=0,sum=0,cnt=0;const[ix,iy]=init?init(o.x,o.y):[o.x,o.y];
+    for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const c=ringContrast(g,ix+dx,iy+dy,a,b);sum+=c;cnt++;if(c>best){best=c;bx=dx;by=dy}}
+    o.conf=best-sum/cnt;o.best=best;o.dx=bx;o.dy=by;if(best>55&&o.conf>35)pairs.push([o.x,o.y,ix+bx,iy+by])}
   if(pairs.length<40)return null;
   let P=pairs,map=null;
   for(let it=0;it<4;it++){map=fitH(P);if(!map)return null;const res=pairs.map(p=>{const[u,v]=map(p[0],p[1]);return Math.hypot(u-p[2],v-p[3])});
@@ -131,15 +150,17 @@ function gradeGray(g,model,res){
   return out}
 /* --- principal --- */
 function grade(rgba,w,h,model){
+  TW=model.W||1700;TH=model.H||2200;
   const gray=lumGray(rgba,w*h),cands=paperQuads(rgba,w,h);if(!cands.length)return{error:'No se encontró la hoja en la foto. Toma la foto con la hoja completa sobre una mesa oscura.'};
   const L=allOvals(model),S=sampleOvals(L,40);let best=null;
   for(const quad of cands){for(let rot=0;rot<4;rot++){const q=[0,1,2,3].map(i=>quad[(i+rot)%4]);
-      const wp=warpGray(gray,w,h,q);if(!wp)continue;const g=normLight(wp),sc=coarseScore(g,S,8);
+      const wp=warpGray(gray,w,h,q);if(!wp)continue;const g=normLight(wp),sc=coarseScore(g,S,model.marks?14:8);
       if(!best||sc>best.sc)best={sc,g,q};}
     if(best&&best.sc>70)break}
   if(!best)return{error:'No se pudo enderezar la foto.'};
-  const rf=refine(best.g,L,10);
+  const init=model.marks?alignMarks(best.g,model.marks):null;
+  const rf=refine(best.g,L,model.marks?(init?6:14):10,init);
   if(!rf||rf.med>4)return{error:'La hoja no se ve con claridad (borrosa, cortada o muy oscura). Toma otra foto.'};
-  const res=gradeGray(best.g,model,rf);return{g:best.g,res,quality:{ovalos:rf.n,desv:rf.med}}}
+  const res=gradeGray(best.g,model,rf),id=model.idcols?readId(best.g,model,rf.map):null;return{g:best.g,res,id,quality:{ovalos:rf.n,desv:rf.med,esquinas:!!init}}}
 return{grade,TW,TH}})();
 if(typeof module!=='undefined')module.exports=OMR;
