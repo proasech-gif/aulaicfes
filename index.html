@@ -544,20 +544,21 @@ async function pickLogo(f){
 }
 async function delLogo(){LT.logo='';await saveLetter()}
 /* ---------- Referentes de calidad (DBA, estándares, competencias...) ---------- */
-function refArea(sub){const t=String(sub||'').toLowerCase();
-  if(/matem/.test(t))return'Matemáticas';
-  if(/lectura|lengua|lenguaje|castellan/.test(t))return'Lenguaje';
-  if(/ingl/.test(t))return'Inglés';
-  if(/social|ciudadan|filosof|historia|geograf/.test(t))return'Ciencias Sociales y Ciudadanas';
-  if(/natural|qu[ií]mic|f[ií]sic|biolog/.test(t))return'Ciencias Naturales';
-  return''}
+async function loadAsig(){if(D.asig)return;const r=await sb.from('asignaturas').select('nombre,banco_subject,areas(nombre)');D.asig=r.data||[]}
+function refArea(sub){const a=(D.asig||[]).find(x=>x.banco_subject===sub||x.nombre===sub);return a&&a.areas?a.areas.nombre:''}
 async function loadCat(){
+  await loadAsig();
   const c=(D.courses||[]).find(x=>x.id===PJ.c),area=refArea(PJ.s);
-  if(!c||!area){D.cat=[];render();return}
-  const r=await sb.from('referentes').select('id,tipo,prueba,codigo,padre,peso_pct,titulo,grado_min,grado_max,owner,verificado').eq('area',area).limit(1000);
-  if(r.error){D.cat=[];render();return err(r.error)}
-  D.cat=(r.data||[]).filter(x=>x.grado_min==null||(c.grade>=x.grado_min&&c.grade<=x.grado_max)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
-  render()}
+  if(!c||!PJ.s){D.cat=[];D.catArea='';render();return}
+  const sel='id,tipo,prueba,codigo,padre,peso_pct,titulo,grado_min,grado_max,owner,verificado,asignaturas';
+  const [q1,q2]=await Promise.all([
+    area?sb.from('referentes').select(sel).eq('area',area).is('owner',null).limit(1000):Promise.resolve({data:[]}),
+    sb.from('referentes').select(sel).eq('owner',M.id).eq('asignatura',PJ.s).limit(300)]);
+  if(q1.error||q2.error){D.cat=[];D.catArea=area;render();return err(q1.error||q2.error)}
+  const general=PJ.s==='Ciencias Naturales';   // la materia general del área ve todos los referentes del área
+  const okMat=x=>!x.asignaturas||x.asignaturas.includes(PJ.s)||general,okGr=x=>x.grado_min==null||(c.grade>=x.grado_min&&c.grade<=x.grado_max);
+  D.cat=[...(q1.data||[]).filter(x=>okMat(x)&&okGr(x)),...(q2.data||[]).filter(okGr)].sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
+  D.catArea=area;render()}
 function togRef(id,on){const i=PJ.refs.indexOf(id);if(on&&i<0)PJ.refs.push(id);if(!on&&i>=0)PJ.refs.splice(i,1);const e=document.getElementById('refcnt');if(e)e.textContent=PJ.refs.length}
 const REFT={dba:'DBA (Derechos Básicos de Aprendizaje)',estandar:'Estándares Básicos de Competencias',competencia:'Competencias',afirmacion:'Afirmaciones',evidencia:'Evidencias',componente:'Componentes',contenido:'Contenidos',parte:'Partes de la prueba',indicador:'Indicadores de desempeño (propios)',tema:'Temas (propios)',otro:'Otros referentes (propios)'};
 function refPicker(){
@@ -566,8 +567,8 @@ function refPicker(){
   const grupos=orden.map(t=>({t,items:cat.filter(x=>x.tipo===t)})).filter(g=>g.items.length);
   const lbl=x=>`${x.codigo==='PROPIO'?'':E(x.codigo)+' · '}${E(x.titulo)}${x.peso_pct?` <span class="text-slate-400">(${x.peso_pct} %)</span>`:''}${x.owner?' <span style="color:#7c3aed">(propio)</span>':''}${x.verificado?'':' <span style="color:#b45309" title="Por confirmar con el texto oficial">⚠</span>'}`;
   return`<div class="border rounded-xl p-3 space-y-2"><div class="font-semibold text-sm">📚 Referentes de calidad que evalúa este examen <span class="text-xs font-normal text-slate-500">(opcional · saldrán en el informe)</span></div>
-  <p class="text-xs text-slate-500">Estos son los referentes del Ministerio y del ICFES para tu materia y grado. Marca los que trabajaste en este examen: no tienes que subir nada. Seleccionados: <b id="refcnt">${PJ.refs.length}</b></p>
-  ${grupos.length?grupos.map(g=>`<details ${g.t==='dba'||g.t==='estandar'?'open':''}><summary class="text-sm cursor-pointer font-medium">${REFT[g.t]} (${g.items.length})</summary><div class="space-y-1 mt-1" style="max-height:260px;overflow:auto">${g.items.map(x=>`<label class="flex gap-2 text-xs items-start"><input type="checkbox" ${PJ.refs.includes(x.id)?'checked':''} onchange="togRef(${x.id},this.checked)" style="margin-top:2px"><span>${lbl(x)}</span></label>`).join('')}</div></details>`).join(''):'<p class="text-xs text-slate-500">Todavía no hay referentes cargados para esta materia y grado. Puedes agregar los tuyos abajo.</p>'}
+  <p class="text-xs text-slate-500">Solo aparecen los referentes de <b>${E(PJ.s)}</b>${D.catArea&&D.catArea!==PJ.s?' (área de '+E(D.catArea)+')':''} para el grado de tu curso, según el Ministerio de Educación y el ICFES. Marca los que trabajaste en este examen: no tienes que subir nada. Seleccionados: <b id="refcnt">${PJ.refs.length}</b></p>
+  ${grupos.length?grupos.map(g=>`<details ${g.t==='dba'||g.t==='estandar'?'open':''}><summary class="text-sm cursor-pointer font-medium">${REFT[g.t]} (${g.items.length})</summary><div class="space-y-1 mt-1" style="max-height:260px;overflow:auto">${g.items.map(x=>`<label class="flex gap-2 text-xs items-start"><input type="checkbox" ${PJ.refs.includes(x.id)?'checked':''} onchange="togRef(${x.id},this.checked)" style="margin-top:2px"><span>${lbl(x)}</span></label>`).join('')}</div></details>`).join(''):'<p class="text-xs" style="color:#b45309">Todavía no hay referentes oficiales cargados para esta materia y grado. Puedes escribir los tuyos aquí abajo.</p>'}
   <div class="flex flex-wrap gap-2 items-center pt-1"><select id="rtp" class="border rounded p-1 text-xs"><option value="indicador">Indicador de desempeño</option><option value="tema">Tema</option><option value="dba">DBA propio</option><option value="estandar">Estándar propio</option><option value="competencia">Competencia propia</option><option value="otro">Otro</option></select><input id="rtx" class="border rounded p-1 text-xs flex-1" style="min-width:200px" placeholder="Escribe aquí un referente de tu plan de área"><button onclick="addOwnRef()" class="px-3 py-1 rounded bg-slate-200 text-xs">➕ Agregar</button></div></div>`}
 async function addOwnRef(){
   const c=(D.courses||[]).find(x=>x.id===PJ.c),tx=(document.getElementById('rtx')?.value||'').trim(),tp=document.getElementById('rtp')?.value||'otro';
