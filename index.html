@@ -43,6 +43,7 @@ const sb=supabase.createClient('https://pmigzkhhqxzhspqmkbvf.supabase.co','sb_pu
 const IMG='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/question-images/';
 const LOGO='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/school-logos/';
 const MEDALS={first:['🥇','Primer Paso','Completar tu primer simulacro'],perfect:['🧠','Mente Brillante','100% de respuestas correctas'],clock:['⏱️','Contra el Reloj','Terminar con más de la mitad del tiempo restante'],streak:['🔥','Constante','Completar 3 simulacros'],high:['⭐','Alto Puntaje','Obtener 80 o más']};
+const isDir=()=>!!M&&(M.role==='rector'||M.role==='coordinador');
 const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0;
@@ -66,11 +67,11 @@ async function boot(){
   const{data,error}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
   if(error)return err(error);
   M=data;
-  if(M.role==='prof'&&M.teacher_status!=='aprobado')return render();
-  startLive();
+  if((M.role==='prof'||isDir())&&M.teacher_status!=='aprobado')return render();
+  if(!isDir())startLive();
   if(session.user.user_metadata&&session.user.user_metadata.pw_initial===true&&M.role==='est')toast('🔑','Cambia tu contraseña','Tu contraseña inicial es tu documento. Cámbiala con el botón 🔑 Contraseña de arriba.');
-  if(M.is_admin){const c=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('role','prof').eq('teacher_status','pendiente');D.pend=c.count||0}
-  await go(M.role==='prof'?'prof':'sim');
+  if(M.is_admin){const c=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('role','prof').eq('teacher_status','pendiente');D.pend=c.count||0;const c2=await sb.from('profiles').select('id',{count:'exact',head:true}).in('role',['rector','coordinador']).eq('teacher_status','pendiente');D.pendDir=c2.count||0}
+  await go(isDir()?'dcol':M.role==='prof'?'prof':'sim');
 }
 sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'){M=null;leaveChat();if(liveChan){sb.removeChannel(liveChan);liveChan=null}render()}});
 async function loadCat(){
@@ -80,9 +81,10 @@ async function loadCat(){
 }
 async function setMode(m){
   authMode=m;
-  if(m==='docente'){
+  if(m==='docente'||m==='directivo'){
     if(!D.deps){const r=await sb.from('departamentos').select('id,nombre').order('nombre');D.deps=r.data||[]}
     await loadCat();
+    if(m==='directivo')await loadScript('colegio.js?v=1');
   }
   render();
 }
@@ -127,6 +129,7 @@ async function doDocente(){
 }
 async function doAuth(){
   if(authMode==='docente')return doDocente();
+  if(authMode==='directivo'&&window.DIR)return DIR.doReg();
   const email=v('em');let password=document.getElementById('pw')?.value||'';
   const dc=(document.getElementById('dc')?.value||'').replace(/\D/g,'');
   if(authMode==='register'){
@@ -317,6 +320,7 @@ function vCal(){
 async function go(t){
   leaveChat();tab=t;
   try{
+    if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=1');await DIR.load(t)}
     if(t==='sim'){
       await loadAvail();
       const s=await sb.from('simulacros').select('*').order('created_at',{ascending:false});if(s.error)throw s.error;D.sims=s.data;
@@ -703,8 +707,9 @@ function exportCSV(){
 
 /* ---------- Vistas ---------- */
 function vAuth(){
-  const m=authMode,T=[['login','Entrar'],['register','Soy estudiante'],['docente','Soy docente']];
-  const head=`<h1 class="text-2xl font-extrabold text-indigo-700 text-center">🎓 AulaICFES</h1><p class="text-center text-sm text-slate-500">Clases virtuales y simulacros Pre-ICFES</p><div class="flex gap-2">${T.map(([k,l])=>`<button onclick="setMode('${k}')" class="flex-1 py-2 rounded-lg text-sm ${m===k?'on':'bg-slate-200'}">${l}</button>`).join('')}</div>`;
+  const m=authMode,T=[['login','Entrar'],['register','Soy estudiante'],['docente','Soy docente'],['directivo','Rector o coordinador']];
+  const head=`<h1 class="text-2xl font-extrabold text-indigo-700 text-center">🎓 AulaICFES</h1><p class="text-center text-sm text-slate-500">Clases virtuales y simulacros Pre-ICFES</p><div class="flex flex-wrap gap-2">${T.map(([k,l])=>`<button onclick="setMode('${k}')" class="flex-1 py-2 rounded-lg text-sm ${m===k?'on':'bg-slate-200'}" style="min-width:7rem">${l}</button>`).join('')}</div>`;
+  if(m==='directivo'&&window.DIR)return DIR.vReg(head);
   if(m==='docente'){
     const deps=D.deps||[],muns=D.muns||[],asg=(D.asigs||[]).filter(x=>x.area===RG.area);
     return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3">${head}<p class="text-xs text-slate-500">Regístrate como docente. Un administrador revisará tus datos antes de activar tu cuenta.</p>
@@ -729,6 +734,8 @@ function vAuth(){
   <button onclick="doAuth()" class="w-full py-2 bg-indigo-600 text-white rounded-lg">${reg?'Crear cuenta de estudiante':'Entrar'}</button>
   ${reg?'':'<p class="text-xs text-slate-500 text-center">Estudiantes: tu contraseña inicial es tu número de documento.</p><button onclick="resend()" class="w-full text-xs text-slate-500 underline">Reenviar correo de confirmación</button>'}</div>`}
 function vPend(){const st=M.teacher_status,rej=st==='rechazado';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de docente no fue aprobada':'Tu cuenta de docente está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AulaICFES si crees que es un error.':'El administrador revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión y verás el panel de docente.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div><div><b>Área:</b> ${E(M.area||'')}</div><div><b>Asignaturas:</b> ${E((M.asignaturas||[]).join(', '))}</div><div><b>Grados:</b> ${E((M.grados||[]).join('°, '))}${(M.grados||[]).length?'°':''}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
+const dirTabs=()=>M.role==='rector'?[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes'],['dhist','🧾 Historial']]:[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes']];
+function vPendDir(){const st=M.teacher_status,rej=st==='rechazado',r=M.role==='rector'?'rector':'coordinador',quien=M.role==='rector'?'El administrador':'El rector de tu colegio o el administrador';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de '+r+' no fue aprobada':'Tu cuenta de '+r+' está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AulaICFES si crees que es un error.':quien+' revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
 function vDoc(){
   const ds=D.docs||[],badge=s=>s==='aprobado'?'✅ Aprobado':s==='rechazado'?'⛔ Rechazado':'🕒 Pendiente';
   const sch=d=>d.colegios?`${E(d.colegios.nombre)} · ${E(d.colegios.municipios?.nombre||'')} (${E(d.colegios.municipios?.departamentos?.nombre||'')})`:(d.school_other?E(d.school_other)+' (colegio escrito por el docente)':'—');
@@ -865,10 +872,11 @@ function render(){
   const root=document.getElementById('app');
   if(!M){root.innerHTML=vAuth();return}
   if(M.role==='prof'&&M.teacher_status!=='aprobado'){root.innerHTML=vPend();return}
+  if(isDir()&&M.teacher_status!=='aprobado'){root.innerHTML=vPendDir();return}
   const prof=M.role==='prof';
-  const tabs=prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')]]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['clase','🎥 Clase']]:[['sim','📝 Mis simulacros y tareas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
-  const body={sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,preg:vPreg,clase:vClase,lb:vLb}[tab]();
-  root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
+  const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')]]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['clase','🎥 Clase']]:[['sim','📝 Mis simulacros y tareas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
+  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>window.DIR?DIR.view(tab):''))();
+  root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${isDir()?(M.role==='rector'?'Rector':'Coordinador'):prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
   <div id="livebar">${vLive()}</div>
   <nav class="flex gap-2 overflow-x-auto mb-4">${tabs.map(([k,l])=>`<button onclick="go('${k}')" class="px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${tab===k?'on':'bg-white'}">${l}</button>`).join('')}</nav>${body}`;
   if(tab==='clase')paintChat();
