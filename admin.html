@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CERQUITA · Administración</title>
+<style>
+:root{--bg:#f4f6f8;--fg:#10181f;--card:#fff;--br:#e1e6eb;--mut:#6b7783;--acc:#12a150;--side:#0f1a22;--red:#d92d3a;--amb:#c98a00}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1117;--fg:#eef2f5;--card:#151e26;--br:#27323d;--mut:#93a0ac}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.side{background:var(--side);color:#cfd8df;padding:16px 10px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{font-weight:800;font-size:19px;color:#fff;padding:4px 10px 16px}.brand span{color:var(--acc)}
+.nav{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:transparent;color:inherit;font:inherit;border-radius:10px;cursor:pointer;text-align:left}
+.nav:hover{background:#1a2833}.nav.on{background:#143a2a;color:#5be39a}.nav .n{margin-left:auto;background:var(--red);color:#fff;border-radius:10px;padding:0 7px;font-size:12px}
+.main{padding:18px;min-width:0}.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}.bar h2{margin:0;font-size:22px;margin-right:auto}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px}.card h3{margin:0 0 10px;font-size:15px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}.k div{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px}.k b{font-size:24px;display:block}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.tbl{overflow-x:auto}table{border-collapse:collapse;width:100%}th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}td,th{padding:9px 8px;border-bottom:1px solid var(--br);text-align:left;vertical-align:top}td{white-space:nowrap}td.w{white-space:normal;min-width:200px}
+.mut{color:var(--mut);font-size:13px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button.b{padding:8px 12px;border:1px solid var(--acc);border-radius:9px;background:var(--acc);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button.b.g{background:transparent;color:var(--fg);border-color:var(--br)}button.b.r{background:var(--red);border-color:var(--red)}button.b.s{padding:4px 9px;font-size:12px}
+.chip{padding:6px 12px;border-radius:18px;border:1px solid var(--br);background:var(--card);color:var(--fg);font:inherit;cursor:pointer}.chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+input,select{padding:8px 10px;border:1px solid var(--br);border-radius:9px;background:var(--bg);color:var(--fg);font:inherit;min-width:0}
+.pill{display:inline-block;padding:1px 9px;border-radius:12px;font-size:12px;border:1px solid var(--br)}.pill.ok{background:#e1f6ea;color:#0b7a3e;border-color:#bfe8d0}.pill.wa{background:#fff3d6;color:#8a5d00;border-color:#f1dca3}.pill.no{background:#fde4e6;color:#a31d28;border-color:#f4bcc1}
+.login{max-width:380px;margin:12vh auto;padding:0 14px}.login .card{padding:20px}.login input{width:100%;margin-bottom:10px}
+#t{position:fixed;left:12px;right:12px;bottom:14px;max-width:560px;margin:auto;background:#10181f;color:#fff;padding:12px 14px;border-radius:12px;display:none;z-index:9}
+a{color:var(--acc);cursor:pointer}
+@media(max-width:820px){.app{grid-template-columns:1fr}.side{position:static;height:auto;display:flex;overflow-x:auto;padding:8px}.brand{display:none}.nav{width:auto;white-space:nowrap}}
+</style></head>
+<body><div id="app"></div><div id="t"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL='https://bwcluuunbaxpmdpscekg.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3Y2x1dXVuYmF4cG1kcHNjZWtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzODM3NDYsImV4cCI6MjEwODk1OTc0Nn0.0Pi0yGf_fHVBjWJJdlkxO6yVvEa1_RBY4-izbsMCDCs';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $c=n=>'$'+Math.round(n||0).toLocaleString('es-CO');
+const fd=d=>d?new Date(d).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}):'—';
+const LV={operador:1,supervisor:2,admin:3},lv=()=>LV[S.p?.role]||0;
+const RS={searching:'Buscando',accepted:'En camino',arrived:'Llegó',ongoing:'En viaje',completed:'Finalizado',cancelled:'Cancelado',expired:'Expirado'};
+const DS={pending:'Pendiente',approved:'Aprobado',rejected:'Rechazado',suspended:'Suspendido'};
+const PS={pending:'Pendiente',paid:'Pagado',failed:'Fallido',cancelled:'Cancelado'};
+const CS={open:'Abierto',in_review:'En revisión',resolved:'Resuelto'};
+const NAV=[['resumen','Resumen','▦'],['conductores','Conductores','🚗'],['viajes','Viajes','🧭'],['pagos','Pagos','💳'],['usuarios','Usuarios','👥'],['reclamaciones','Reclamaciones','📝'],['sos','Alertas SOS','🆘'],['notificaciones','Notificaciones','🔔'],['tarifas','Tarifas y zonas','⚙️'],['auditoria','Auditoría','📜']];
+let S={u:null,p:null,sec:'resumen',D:{},f:{},badge:{},csv:null,mode:'in',em:'',pw:''};
+function toast(x){const t=document.getElementById('t');t.textContent=x;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',4500)}
+const q=async p=>{const{data,error}=await p;if(error){toast(error.message);return undefined}return data};
+const m=async p=>{const{error}=await p;if(error){toast(error.message);return false}return true};
+const pill=(t,c)=>`<span class="pill ${c||''}">${E(t)}</span>`;
+const TB=(h,rows,empty)=>`<div class="tbl"><table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${h.length}" class="mut">${empty||'Sin datos'}</td></tr>`}</table></div>`;
+const chips=(key,opts,labels)=>`<div class="row" style="margin-bottom:10px">${opts.map(o=>`<button class="chip ${(S.f[key]||'all')===o?'on':''}" onclick="S.f.${key}='${o}';R()">${o==='all'?'Todos':labels[o]}</button>`).join('')}</div>`;
+const cnt=async(t,f)=>{let x=sb.from(t).select('id',{count:'exact',head:true});if(f)x=f(x);const{count}=await x;return count||0};
+
+// ===== Carga de datos por sección =====
+async function load(sec){
+  const D=S.D;
+  if(sec==='resumen'){const[r,p,d,u]=await Promise.all([q(sb.from('rides').select('created_at,status,agreed_fare').order('created_at',{ascending:false}).limit(1000)),q(sb.from('payments').select('amount,commission_amount,status')),q(sb.from('drivers').select('status,online')),q(sb.from('profiles').select('role'))]);D.resumen={r:r||[],p:p||[],d:d||[],u:u||[]}}
+  if(sec==='conductores')D.conductores=await q(sb.from('drivers').select('*,vehicles(model,plate,color),driver_documents(id,doc_type,storage_path,status),profiles(email,phone)').order('created_at',{ascending:false}))||[];
+  if(sec==='viajes')D.viajes=await q(sb.from('rides').select('*,drivers(display_name)').order('created_at',{ascending:false}).limit(300))||[];
+  if(sec==='pagos')D.pagos=await q(sb.from('payments').select('*,rides(origin_name,dest_name,passenger_name)').order('created_at',{ascending:false}).limit(300))||[];
+  if(sec==='usuarios')D.usuarios=await q(sb.from('profiles').select('*').order('created_at',{ascending:false}).limit(300))||[];
+  if(sec==='reclamaciones')D.reclamaciones=await q(sb.from('claims').select('*,profiles(full_name,email)').order('created_at',{ascending:false}).limit(200))||[];
+  if(sec==='sos')D.sos=await q(sb.from('sos_alerts').select('*,profiles(full_name,email,phone)').order('created_at',{ascending:false}).limit(100))||[];
+  if(sec==='notificaciones')D.notificaciones=await q(sb.from('broadcasts').select('*').order('created_at',{ascending:false}).limit(50))||[];
+  if(sec==='tarifas'){const[c,k,z]=await Promise.all([q(sb.from('settings').select('*').single()),q(sb.from('service_categories').select('*').order('code')),q(sb.from('zones').select('*').order('name'))]);D.tarifas={cfg:c,cats:k||[],zones:z||[]}}
+  if(sec==='auditoria'&&lv()>=3){const[a,u]=await Promise.all([q(sb.from('audit_log').select('*').order('created_at',{ascending:false}).limit(100)),q(sb.from('profiles').select('id,email'))]);D.auditoria={a:a||[],u:Object.fromEntries((u||[]).map(x=>[x.id,x.email]))}}
+  S.badge={sos:await cnt('sos_alerts',x=>x.eq('status','open')),conductores:await cnt('drivers',x=>x.eq('status','pending')),reclamaciones:await cnt('claims',x=>x.eq('status','open'))};
+  R();
+}
+
+// ===== Acciones =====
+const A={
+async login(){const{error}=await sb.auth.signInWithPassword({email:S.em.trim(),password:S.pw});if(error)toast(error.message)},
+out(){sb.auth.signOut()},
+go(s){S.sec=s;S.csv=null;R();load(s)},
+async dst(id,st){if(await m(sb.from('drivers').update({status:st}).eq('id',id)))load('conductores')},
+async docSt(id,st){if(await m(sb.from('driver_documents').update({status:st,reviewed_by:S.u.id}).eq('id',id)))load('conductores')},
+async doc(path){const{data,error}=await sb.storage.from('driver-docs').createSignedUrl(path,120);if(error)return toast(error.message);window.open(data.signedUrl,'_blank')},
+async paid(id){const ref=prompt('Referencia de la transacción (opcional):')??null;if(ref===null)return;if(await m(sb.from('payments').update({status:'paid',provider_ref:ref||null}).eq('id',id)))load('pagos')},
+async role(id,r){if(await m(sb.from('profiles').update({role:r}).eq('id',id)))load('usuarios')},
+async susp(id,v){if(await m(sb.from('profiles').update({suspended:v}).eq('id',id)))load('usuarios')},
+async claim(id,st){let res=null;if(st==='resolved'){res=prompt('Resolución o respuesta al usuario:');if(res===null)return}if(await m(sb.from('claims').update({status:st,...(res?{resolution:res}:{})}).eq('id',id)))load('reclamaciones')},
+async bc(){const g=i=>document.getElementById(i).value.trim(),t=g('bt'),b=g('bb'),a=g('ba');if(!t||!b)return toast('Escribe el título y el mensaje');
+  if(!confirm('¿Enviar esta notificación a '+({todos:'todos los usuarios',pasajeros:'los pasajeros',conductores:'los conductores aprobados'}[a])+'?'))return;
+  const{data,error}=await sb.rpc('send_broadcast',{p_audience:a,p_title:t,p_body:b});if(error)return toast(error.message);toast('Notificación enviada a '+data+' personas');load('notificaciones')},
+async sosOk(id){if(await m(sb.from('sos_alerts').update({status:'resolved'}).eq('id',id)))load('sos')},
+async cfg(k,v){v=+v;if(!(v>0))return toast('Valor inválido');if(await m(sb.from('settings').update({[k]:v}).eq('id',1))){toast('Configuración guardada');load('tarifas')}},
+async cat(code,k,v){const val=k==='active'?v:+v;if(await m(sb.from('service_categories').update({[k]:val}).eq('code',code)))toast('Categoría actualizada')},
+async zone(id,v){if(await m(sb.from('zones').update({active:v}).eq('id',id)))load('tarifas')},
+async zdel(id){if(confirm('¿Eliminar esta zona?')&&await m(sb.from('zones').delete().eq('id',id)))load('tarifas')},
+async zadd(){const g=i=>document.getElementById(i).value,r={name:g('zn').trim(),city:g('zc').trim(),center_lat:+g('zl'),center_lng:+g('zo'),radius_m:+g('zr')};
+  if(!r.name||!r.city||!r.radius_m||isNaN(r.center_lat)||isNaN(r.center_lng))return toast('Completa todos los campos de la zona');if(await m(sb.from('zones').insert(r)))load('tarifas')},
+csv(){const c=S.csv;if(!c)return;const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"',txt='\ufeff'+[c.head,...c.rows].map(r=>r.map(esc).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));a.download=c.name+'.csv';a.click()}};
+
+// ===== Vistas =====
+function bars(vals,labels,fmt){const mx=Math.max(1,...vals),w=300/vals.length;
+return`<svg viewBox="0 0 320 150" style="width:100%">${vals.map((v,i)=>{const h=v/mx*100,x=10+i*w;return`<rect x="${x+6}" y="${115-h}" width="${w-12}" height="${h}" rx="4" fill="var(--acc)"/><text x="${x+w/2}" y="${110-h}" font-size="9" text-anchor="middle" fill="var(--fg)">${fmt(v)}</text><text x="${x+w/2}" y="132" font-size="9" text-anchor="middle" fill="var(--mut)">${labels[i]}</text>`}).join('')}</svg>`}
+function vResumen(){const r=S.D.resumen;if(!r)return'<p class="mut">Cargando…</p>';
+const done=r.r.filter(x=>x.status==='completed'),gross=done.reduce((a,x)=>a+x.agreed_fare,0),com=r.p.filter(x=>x.status!=='cancelled').reduce((a,x)=>a+x.commission_amount,0);
+const days=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d}),key=d=>d.toDateString();
+const nrides=days.map(d=>r.r.filter(x=>key(new Date(x.created_at))===key(d)).length),inc=days.map(d=>done.filter(x=>key(new Date(x.created_at))===key(d)).reduce((a,x)=>a+x.agreed_fare,0)),lab=days.map(d=>d.toLocaleDateString('es-CO',{weekday:'short'}));
+return`<div class="k"><div><span class="mut">Viajes totales</span><b>${r.r.length}</b></div><div><span class="mut">Activos ahora</span><b>${r.r.filter(x=>['searching','accepted','arrived','ongoing'].includes(x.status)).length}</b></div><div><span class="mut">Finalizados</span><b>${done.length}</b></div><div><span class="mut">Ingresos brutos</span><b>${$c(gross)}</b></div><div><span class="mut">Comisión</span><b>${$c(com)}</b></div><div><span class="mut">Pasajeros</span><b>${r.u.filter(x=>x.role==='pasajero').length}</b></div><div><span class="mut">Conductores aprobados</span><b>${r.d.filter(x=>x.status==='approved').length}</b></div><div><span class="mut">Conductores en línea</span><b>${r.d.filter(x=>x.online).length}</b></div><div><span class="mut">Por aprobar</span><b>${r.d.filter(x=>x.status==='pending').length}</b></div></div>
+<div class="g2"><div class="card"><h3>Viajes últimos 7 días</h3>${bars(nrides,lab,v=>v)}</div><div class="card"><h3>Ingresos últimos 7 días</h3>${bars(inc,lab,v=>v>=1000?Math.round(v/1000)+'k':v)}</div></div>`}
+function vConductores(){const L=(S.D.conductores||[]).filter(d=>(S.f.dst||'all')==='all'||d.status===S.f.dst),ok=lv()>=2;
+const dc={pending:'wa',approved:'ok',rejected:'no'};
+return chips('dst',['all','pending','approved','rejected','suspended'],DS)+`<div class="card">${TB(['Conductor','Contacto','Categoría','Vehículo','Documentos','Estado','Calif.','',],L.map(d=>[E(d.display_name)+(d.online?' 🟢':''),E(d.profiles?.email)+'<br><span class="mut">'+E(d.profiles?.phone||'')+'</span>',E(d.category),E(d.vehicles?.[0]?.model||'—')+'<br><span class="mut">'+E(d.vehicles?.[0]?.plate||'')+'</span>',
+`<div style="white-space:normal;min-width:240px">${(d.driver_documents||[]).map(x=>`<div class="row"><a onclick="A.doc('${E(x.storage_path)}')">${E(x.doc_type)}</a>${pill(DS[x.status],dc[x.status])}${ok?`<button class="b s" onclick="A.docSt('${x.id}','approved')">✓</button><button class="b s r" onclick="A.docSt('${x.id}','rejected')">✗</button>`:''}</div>`).join('')||'<span class="mut">Sin documentos</span>'}</div>`,
+pill(DS[d.status],dc[d.status]),'★ '+d.rating_avg,ok?(d.status==='approved'?`<button class="b s r" onclick="A.dst('${d.id}','suspended')">Suspender</button>`:`<button class="b s" onclick="A.dst('${d.id}','approved')">${d.status==='suspended'?'Reactivar':'Aprobar'}</button>${d.status==='pending'?` <button class="b s g" onclick="A.dst('${d.id}','rejected')">Rechazar</button>`:''}`):'']),'Sin conductores en este filtro')}</div>`+(ok?'':'<p class="mut">Tu rol solo permite consultar; aprobar requiere supervisor o administrador.</p>')}
+function vViajes(){const L=(S.D.viajes||[]).filter(r=>(S.f.rs||'all')==='all'||r.status===S.f.rs);
+S.csv={name:'viajes',head:['Fecha','Pasajero','Conductor','Origen','Destino','Categoría','Oferta','Acordado','Pago','Estado'],rows:L.map(r=>[fd(r.created_at),r.passenger_name,r.drivers?.display_name||'',r.origin_name,r.dest_name,r.category,r.offered_fare,r.agreed_fare||'',r.payment_method,RS[r.status]])};
+return chips('rs',['all',...Object.keys(RS)],RS)+`<div class="card">${TB(['Fecha','Pasajero','Conductor','Ruta','Cat.','Oferta','Acordado','Pago','Estado'],L.map(r=>[fd(r.created_at),E(r.passenger_name),E(r.drivers?.display_name||'—'),E(r.origin_name)+' → '+E(r.dest_name),E(r.category),$c(r.offered_fare),r.agreed_fare?$c(r.agreed_fare):'—',E(r.payment_method),pill(RS[r.status],r.status==='completed'?'ok':r.status==='cancelled'||r.status==='expired'?'no':'wa')]),'Sin viajes')}</div>`}
+function vPagos(){const L=S.D.pagos||[],tot=L.filter(p=>p.status==='paid').reduce((a,p)=>a+p.amount,0),com=L.filter(p=>p.status!=='cancelled').reduce((a,p)=>a+p.commission_amount,0);
+S.csv={name:'pagos',head:['Fecha','Pasajero','Ruta','Método','Monto','Comisión','Estado','Referencia'],rows:L.map(p=>[fd(p.created_at),p.rides?.passenger_name||'',(p.rides?.origin_name||'')+' → '+(p.rides?.dest_name||''),p.method,p.amount,p.commission_amount,PS[p.status],p.provider_ref||''])};
+return`<div class="k"><div><span class="mut">Recaudado</span><b>${$c(tot)}</b></div><div><span class="mut">Comisión generada</span><b>${$c(com)}</b></div><div><span class="mut">Pendientes</span><b>${L.filter(p=>p.status==='pending').length}</b></div></div><div class="card">${TB(['Fecha','Pasajero','Ruta','Método','Monto','Comisión','Estado',''],L.map(p=>[fd(p.created_at),E(p.rides?.passenger_name),E(p.rides?.origin_name)+' → '+E(p.rides?.dest_name),E(p.method),$c(p.amount),$c(p.commission_amount),pill(PS[p.status],p.status==='paid'?'ok':p.status==='pending'?'wa':'no'),p.status==='pending'&&lv()>=2?`<button class="b s" onclick="A.paid('${p.id}')">Marcar pagado</button>`:'']),'Sin pagos')}</div><p class="mut">Los pagos en efectivo se marcan como pagados al finalizar el viaje. Las transferencias y billeteras se concilian aquí hasta integrar la pasarela (Wompi).</p>`}
+function vUsuarios(){const L=S.D.usuarios||[],ad=lv()>=3;return`<div class="card">${TB(['Nombre','Correo','Teléfono','Rol','Estado','Registro'],L.map(u=>[E(u.full_name||'—'),E(u.email),E(u.phone||'—'),ad&&u.id!==S.u.id?`<select onchange="A.role('${u.id}',this.value)">${['pasajero','conductor','operador','supervisor','admin'].map(r=>`<option ${r===u.role?'selected':''}>${r}</option>`).join('')}</select>`:E(u.role),ad&&u.id!==S.u.id?(u.suspended?`<button class="b s" onclick="A.susp('${u.id}',false)">Reactivar</button>`:`<button class="b s r" onclick="A.susp('${u.id}',true)">Suspender</button>`):(u.suspended?pill('Suspendido','no'):pill('Activo','ok')),fd(u.created_at)]),'Sin usuarios')}</div>${ad?'':'<p class="mut">Solo un administrador puede cambiar roles o suspender cuentas.</p>'}`}
+function vReclamaciones(){const L=S.D.reclamaciones||[];return`<div class="card">${TB(['Fecha','Usuario','Tipo','Descripción','Estado','Resolución',''],L.map(c=>[fd(c.created_at),E(c.profiles?.full_name||c.profiles?.email),E(c.kind),`<div class="w">${E(c.description)}</div>`,pill(CS[c.status],c.status==='resolved'?'ok':'wa'),`<div class="w">${E(c.resolution||'')}</div>`,c.status!=='resolved'?`${c.status==='open'?`<button class="b s g" onclick="A.claim('${c.id}','in_review')">Revisar</button> `:''}<button class="b s" onclick="A.claim('${c.id}','resolved')">Resolver</button>`:'']),'Sin reclamaciones')}</div>`}
+function vSos(){const L=S.D.sos||[];return`<div class="card">${TB(['Fecha','Usuario','Teléfono','Viaje','Ubicación','Estado',''],L.map(a=>[fd(a.created_at),E(a.profiles?.full_name||a.profiles?.email),E(a.profiles?.phone||'—'),E(String(a.ride_id||'—').slice(0,8)),a.lat?`<a href="https://www.google.com/maps?q=${a.lat},${a.lng}" target="_blank">Ver en Google Maps</a>`:'—',pill(CS[a.status],a.status==='resolved'?'ok':'no'),a.status!=='resolved'?`<button class="b s" onclick="A.sosOk('${a.id}')">Marcar atendida</button>`:'']),'Sin alertas')}</div>`}
+function vNotificaciones(){const L=S.D.notificaciones||[],ok=lv()>=2;
+return(ok?`<div class="card"><h3>Enviar notificación</h3><div class="row"><select id="ba"><option value="todos">Todos los usuarios</option><option value="pasajeros">Solo pasajeros</option><option value="conductores">Solo conductores aprobados</option></select><input id="bt" placeholder="Título (máx. 80)" maxlength="80" style="width:240px"><input id="bb" placeholder="Mensaje (máx. 300)" maxlength="300" style="flex:1;min-width:240px"><button class="b" onclick="A.bc()">Enviar</button></div><p class="mut">Les llega al instante a quienes tengan la app del celular abierta, y la ven al abrirla los demás.</p></div>`:'<p class="mut">Solo supervisores y administradores pueden enviar notificaciones.</p>')+
+`<div class="card"><h3>Historial</h3>${TB(['Fecha','Audiencia','Título','Mensaje','Enviada a'],L.map(x=>[fd(x.created_at),E(x.audience),E(x.title),`<div class="w">${E(x.body)}</div>`,x.recipients+' personas']),'Aún no se han enviado notificaciones')}</div>`}
+function vTarifas(){const T=S.D.tarifas;if(!T||!T.cfg)return'<p class="mut">Cargando…</p>';const ad=lv()>=3,dis=ad?'':'disabled',c=T.cfg;
+return`<div class="card"><h3>Comisión y reglas de negociación</h3><div class="row">${[['commission_pct','Comisión por viaje %'],['base_fare','Tarifa base $'],['min_offer_pct','Oferta mínima % de la referencia'],['max_offer_pct','Oferta máxima % de la referencia'],['max_offers','Máx. ofertas por viaje']].map(([k,l])=>`<label class="mut">${l}<br><input type="number" ${dis} value="${c[k]}" onchange="A.cfg('${k}',this.value)" style="width:170px"></label>`).join('')}</div><p class="mut">Se aplican de inmediato a los nuevos viajes y ofertas, sin tocar el código.</p></div>
+<div class="card"><h3>Categorías de servicio</h3>${TB(['Código','Nombre','Multiplicador base','$ por km','Activa'],T.cats.map(k=>[E(k.code),E(k.name),`<input type="number" step="0.1" ${dis} value="${k.base_multiplier}" onchange="A.cat('${k.code}','base_multiplier',this.value)" style="width:90px">`,`<input type="number" ${dis} value="${k.per_km}" onchange="A.cat('${k.code}','per_km',this.value)" style="width:100px">`,`<input type="checkbox" ${dis} ${k.active?'checked':''} onchange="A.cat('${k.code}','active',this.checked)">`]))}</div>
+<div class="card"><h3>Ciudades y zonas de cobertura</h3>${TB(['Zona','Ciudad','Centro','Radio (m)','Activa',''],T.zones.map(z=>[E(z.name),E(z.city),z.center_lat+', '+z.center_lng,z.radius_m,`<input type="checkbox" ${dis} ${z.active?'checked':''} onchange="A.zone('${z.id}',this.checked)">`,ad?`<button class="b s g" onclick="A.zdel('${z.id}')">Eliminar</button>`:'']))}
+${ad?`<div class="row" style="margin-top:10px"><input id="zn" placeholder="Zona"><input id="zc" placeholder="Ciudad"><input id="zl" type="number" step="any" placeholder="Latitud" style="width:110px"><input id="zo" type="number" step="any" placeholder="Longitud" style="width:110px"><input id="zr" type="number" placeholder="Radio (m)" style="width:110px"><button class="b" onclick="A.zadd()">Agregar zona</button></div>`:''}</div>`}
+function vAuditoria(){if(lv()<3)return'<p class="mut">Solo el administrador puede ver la auditoría.</p>';const a=S.D.auditoria;if(!a)return'<p class="mut">Cargando…</p>';
+const sum=x=>{const o=x.detail?.old||{},n=x.detail?.new||{};if(x.entity==='drivers')return`Conductor: ${DS[o.status]} → ${DS[n.status]}`;if(x.entity==='profiles')return`Usuario: rol ${o.role} → ${n.role}${o.suspended!==n.suspended?`; suspendido ${n.suspended}`:''}`;return'Configuración modificada'};
+return`<div class="card">${TB(['Fecha','Quién','Detalle'],a.a.map(x=>[fd(x.created_at),E(a.u[x.actor]||String(x.actor||'sistema').slice(0,8)),E(sum(x))]),'Sin registros')}</div>`}
+const VIEWS={resumen:vResumen,conductores:vConductores,viajes:vViajes,pagos:vPagos,usuarios:vUsuarios,reclamaciones:vReclamaciones,sos:vSos,notificaciones:vNotificaciones,tarifas:vTarifas,auditoria:vAuditoria};
+function R(){
+  const el=document.getElementById('app'),ae=document.activeElement;if(ae&&['INPUT','SELECT'].includes(ae.tagName)&&el.contains(ae)&&S.p)return;
+  if(!S.u){el.innerHTML=`<div class="login"><div class="card"><div class="brand" style="color:var(--fg)">📍 CERQUITA <span>Admin</span></div><p class="mut">Acceso solo para personal autorizado.</p><input type="email" placeholder="Correo" value="${E(S.em)}" oninput="S.em=this.value"><input type="password" placeholder="Contraseña" oninput="S.pw=this.value" onkeydown="if(event.key==='Enter')A.login()"><button class="b" style="width:100%;padding:11px" onclick="A.login()">Ingresar</button></div></div>`;return}
+  if(!S.p){el.innerHTML='<p class="mut" style="padding:20px">Cargando…</p>';return}
+  if(!lv()){el.innerHTML=`<div class="login"><div class="card"><h3>Sin acceso</h3><p>La cuenta <b>${E(S.u.email)}</b> no tiene permisos de administración. Pide a un administrador que te asigne un rol.</p><button class="b" onclick="A.out()">Cerrar sesión</button></div></div>`;return}
+  const cur=NAV.find(n=>n[0]===S.sec);
+  el.innerHTML=`<div class="app"><aside class="side"><div class="brand">📍 CERQUITA <span>Admin</span></div>${NAV.filter(n=>n[0]!=='auditoria'||lv()>=3).map(([k,l,i])=>`<button class="nav ${S.sec===k?'on':''}" onclick="A.go('${k}')"><span>${i}</span>${l}${S.badge[k]?`<span class="n">${S.badge[k]}</span>`:''}</button>`).join('')}</aside>
+  <main class="main"><div class="bar"><h2>${cur[1]}</h2>${S.csv?`<button class="b g" onclick="A.csv()">⬇ Exportar CSV</button>`:''}<span class="mut">${E(S.p.full_name||S.u.email)} · ${S.p.role}</span><button class="b g" onclick="A.out()">Salir</button></div>${VIEWS[S.sec]()}</main></div>`}
+let dt;const deb=()=>{clearTimeout(dt);dt=setTimeout(()=>load(S.sec),400)};
+async function boot(){S.p=await q(sb.from('profiles').select('*').eq('id',S.u.id).single());R();if(!lv())return;
+  if(!S.ch){S.ch=sb.channel('adm');['rides','sos_alerts','offers'].forEach(t=>S.ch.on('postgres_changes',{event:'*',schema:'public',table:t},deb));S.ch.subscribe()}load(S.sec)}
+sb.auth.onAuthStateChange((e,s)=>{S.u=s?.user||null;if(S.u)setTimeout(boot,0);else{S.p=null;S.D={};R()}});
+R();
+</script></body></html>
