@@ -5,9 +5,9 @@
 (function(){
 'use strict';
 const DN=['','Lun','Mar','Mié','Jue','Vie','Sáb'],DL=['','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-const SEC=[['jornada','⏰ Jornada'],['grupos','🏫 Grupos'],['asigs','📚 Asignaturas'],['docs','👩‍🏫 Docentes'],['aulas','🚪 Aulas'],['asign','🔗 Asignaciones'],['restr','📏 Restricciones'],['gen','⚡ Generar'],['vers','🗂️ Versiones']];
-const S={sec:'jornada',colegio:'',dias:[1,2,3,4,5],franjas:[],grupos:[],docentes:[],asigs:[],aulas:[],asigns:[],nd:[],restr:[],vers:[],
-  gen:null,rev:null,busy:false,vw:{clases:[],titulo:''},verId:'',modo:'grupo',item:'',dispDoc:'',pubOk:false,miDoc:null,iniMi:false,pegarMsg:''};
+const SEC=[['archivo','📎 Cargar archivo'],['jornada','⏰ Jornada'],['grupos','🏫 Grupos'],['asigs','📚 Asignaturas'],['docs','👩‍🏫 Docentes'],['aulas','🚪 Aulas'],['asign','🔗 Asignaciones'],['restr','📏 Restricciones'],['gen','⚡ Generar'],['vers','🗂️ Versiones']];
+const S={sec:'archivo',colegio:'',dias:[1,2,3,4,5],franjas:[],grupos:[],docentes:[],asigs:[],aulas:[],asigns:[],nd:[],restr:[],vers:[],
+  imp:null,regs:[],impMsg:'',visto:false,gen:null,rev:null,busy:false,vw:{clases:[],titulo:''},verId:'',modo:'grupo',item:'',dispDoc:'',pubOk:false,miDoc:null,iniMi:false,pegarMsg:''};
 
 /* estilos propios (la hoja de estilos de la app no trae todas las clases) */
 if(!document.getElementById('hz-css')){const st=document.createElement('style');st.id='hz-css';st.textContent='.hz-gap1{gap:.25rem}.hz-end{align-items:flex-end}.hz-mb1{margin-bottom:.25rem}.hz-mb3{margin-bottom:.75rem}.hz-mr1{margin-right:.25rem}.hz-mt3{margin-top:.75rem}.hz-px2{padding-left:.5rem;padding-right:.5rem}.hz-sy1>*+*{margin-top:.25rem}.hz-amber{color:#b45309}.hz-emerald{color:#047857}';document.head.appendChild(st)}
@@ -57,6 +57,7 @@ async function cargarPublicado(){
   else S.vw={clases:[],titulo:''};
   S.miDoc=S.docentes.find(d=>d.user_id===M.id)||null;
 }
+async function cargarRegs(){S.regs=ok(await sb.from('profiles').select('id,full_name,email').eq('role','prof').eq('colegio_id',M.colegio_id).eq('teacher_status','aprobado'))}
 function entrada(){
   return{dias:S.dias,
     franjas:S.franjas.map(f=>({id:f.id,orden:f.orden,es_clase:f.es_clase})),
@@ -216,7 +217,7 @@ function vVers(){
 function vHor(){
   if(!M.colegio_id)return card('<h2 class="text-xl font-bold">🗓 Horarios</h2><p class="text-sm text-red-600">Tu cuenta no tiene un colegio del catálogo. Escribe al administrador para vincularla.</p>');
   const nav=SEC.map(([k,l])=>`<button onclick="HZUI.sec('${k}')" class="px-3 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${S.sec===k?'on':'bg-white'}">${l}</button>`).join('');
-  const body=({jornada:vJornada,grupos:vGrupos,asigs:vAsigs,docs:vDocs,aulas:vAulas,asign:vAsign,restr:vRestr,gen:vGen,vers:vVers}[S.sec]||vJornada)();
+  const body=({archivo:vArchivo,jornada:vJornada,grupos:vGrupos,asigs:vAsigs,docs:vDocs,aulas:vAulas,asign:vAsign,restr:vRestr,gen:vGen,vers:vVers}[S.sec]||vJornada)();
   return`<div class="space-y-4">${card(`<h2 class="text-xl font-bold">🗓 Horarios del colegio</h2><p class="text-sm text-slate-600">${E(S.colegio)}</p><p class="text-xs text-slate-500 mt-1">Recorre las pestañas de izquierda a derecha: arma la jornada, los grupos, las asignaturas, los docentes y las asignaciones; agrega restricciones si quieres; y genera el horario.</p>`)}<nav class="flex gap-2 overflow-x-auto">${nav}</nav>${body}</div>`;
 }
 function vMi(){
@@ -227,15 +228,196 @@ function vMi(){
   return`<div class="space-y-4">${card(`<h2 class="text-xl font-bold">🗓 Mi horario</h2><p class="text-sm text-slate-600">${E(S.colegio)}</p>${aviso}`)}${vGrid()}</div>`;
 }
 
+
+/* ---------- cargar todo desde un archivo (Excel, Word o PDF) ---------- */
+async function libF(){await loadScript('horarios_archivo.js?v=1');return window.HZF}
+async function leerArchivo(file){
+  const ext=(String(file.name).split('.').pop()||'').toLowerCase(),F=await libF();
+  if(file.size>10*1024*1024)throw new Error('El archivo pesa más de 10 MB. Sube uno más pequeño.');
+  if(ext==='xlsx'||ext==='xls'||ext==='csv'){
+    await loadScript(LIB.xlsx);
+    const wb=ext==='csv'?XLSX.read(await file.text(),{type:'string'}):XLSX.read(await file.arrayBuffer(),{type:'array'});
+    return wb.SheetNames.map(n=>({nombre:n,filas:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:''}).map(r=>r.map(x=>String(x).trim())).filter(r=>r.some(Boolean))}));
+  }
+  if(ext==='docx'){
+    await loadScript(LIB.mammoth);
+    const r=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()}),h=F.desdeHtml(r.value);
+    return h.tablas.concat(F.tablasDeLineas(h.lineas));
+  }
+  if(ext==='pdf'){
+    await loadScript(LIB.pdf);pdfjsLib.GlobalWorkerOptions.workerSrc=LIB.pdfw;
+    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;let lineas=[];
+    for(let p=1;p<=pdf.numPages;p++){const tc=await(await pdf.getPage(p)).getTextContent();
+      lineas=lineas.concat(F.lineasDeItems(tc.items.map(it=>({x:it.transform[4],y:it.transform[5],w:it.width||0,t:it.str}))))}
+    if(!lineas.length)throw new Error('No encontré texto en el PDF. Si es un PDF escaneado (una foto), usa Excel o Word.');
+    return F.tablasDeLineas(lineas);
+  }
+  if(ext==='doc')throw new Error('Los archivos .doc antiguos no se pueden leer. Ábrelo y guárdalo como .docx o como PDF.');
+  throw new Error('Ese tipo de archivo no se puede leer. Sube un Excel (.xlsx), un Word (.docx) o un PDF.');
+}
+const ok2=(a,b)=>a&&a.length?a:b;
+function gruposConocidos(){
+  const m=new Map(S.grupos.map(g=>[g.grado+'|'+g.nombre,{grado:g.grado,nombre:g.nombre}]));
+  S.imp.o.grupos.forEach((g,j)=>{if(S.imp.selGrp[j]&&!g.errores.length)m.set(g.grado+'|'+g.nombre,{grado:g.grado,nombre:g.nombre})});
+  return[...m.values()];
+}
+const existeDoc=n=>S.docentes.find(d=>norm(d.nombre)===norm(n));
+const existeAsig=n=>S.asigs.find(a=>norm(a.nombre)===norm(n));
+function cuentaDe(d,usadosExt){
+  const usados=usadosExt||new Set(S.docentes.map(x=>x.user_id).filter(Boolean));
+  const c=(d.correo||'').toLowerCase();
+  const r=S.regs.find(x=>c&&x.email&&String(x.email).toLowerCase()===c)||S.regs.find(x=>norm(x.full_name)===norm(d.nombre));
+  return r&&!usados.has(r.id)?r:null;
+}
+function estAsign(i){
+  const I=S.imp,a=I.o.asignaciones[i];
+  if(a.errores.length)return{ok:false,err:true,t:a.errores.join(' · ')};
+  if(!I.selAsign[i])return{ok:false,t:'No elegida'};
+  const dk=norm(a.docente),ak=norm(a.asignatura);
+  if(!(existeDoc(a.docente)||I.o.docentes.some((d,j)=>norm(d.nombre)===dk&&I.selDoc[j]&&!d.errores.length)))return{ok:false,t:'No se carga: el docente no está elegido'};
+  if(!(existeAsig(a.asignatura)||I.o.asignaturas.some((x,j)=>norm(x.nombre)===ak&&I.selAsg[j]&&!x.errores.length)))return{ok:false,t:'No se carga: la asignatura no está elegida'};
+  const gs=gruposConocidos().filter(g=>g.grado===a.grupo.grado&&(a.grupo.todos||g.nombre===a.grupo.nombre));
+  if(!gs.length)return{ok:false,t:'No se carga: el grupo no existe o no está elegido'};
+  const asg=existeAsig(a.asignatura);
+  const rem=asg?gs.filter(g=>{const gg=S.grupos.find(x=>x.grado===g.grado&&x.nombre===g.nombre);return gg&&S.asigns.some(x=>x.grupo_id===gg.id&&x.asignatura_id===asg.id)}).length:0;
+  return{ok:true,n:gs.length,t:(a.grupo.todos?gs.length+' grupos':'Se cargará')+(rem?' · reemplaza '+rem+' existente(s)':'')};
+}
+const cb=(on,fn,dis)=>`<input type="checkbox" ${on?'checked':''} ${dis?'disabled':''} onchange="${fn}">`;
+const rr=()=>{const y=window.scrollY||0;render();if(window.scrollTo)window.scrollTo(0,y)};
+function cuentaSel(arr,lista){return arr.filter((v,i)=>v&&!lista[i].errores.length).length}
+function vArchivo(){
+  const I=S.imp;
+  const cab=card(`<h3 class="font-semibold mb-1">📎 Cargar todo desde un archivo</h3>
+    <p class="text-sm text-slate-600">No tienes que escribir nada a mano: sube tu lista de docentes, grupos, asignaturas y asignaciones desde <b>Excel</b>, <b>Word</b> o <b>PDF</b>. Antes de guardar, verás lo que la página entendió y <b>podrás escoger qué docentes de la lista usar</b>.</p>
+    <div class="flex flex-wrap gap-3 items-center hz-mt3"><a href="plantilla_horarios.xlsx" download class="px-3 py-2 rounded-lg text-sm bg-emerald-600 text-white">⬇️ Descargar la plantilla de Excel</a>
+    <label class="px-3 py-2 rounded-lg text-sm bg-indigo-600 text-white" style="cursor:pointer">📤 Subir mi archivo<input id="hz_file" type="file" accept=".xlsx,.xls,.csv,.docx,.pdf" style="display:none" onchange="HZUI.leer(this)"></label></div>
+    <p class="text-xs text-slate-500 hz-mt3">Lo más fácil: descarga la plantilla, llénala (tiene listas desplegables) y súbela. También puedes subir una lista que ya tengas en Word o PDF. Para PDF escaneados (fotos) usa Excel o Word.</p>`);
+  const msg=S.impMsg?card(`<div class="text-sm">${S.impMsg}</div>`):'';
+  if(!I)return`<div class="space-y-4">${cab}${msg}</div>`;
+  const o=I.o,r=window.HZF.resumen(o);
+  const lista=(n,l)=>n?`${n} ${l}`:'';
+  const hall=[lista(r.docentes,'docentes'),lista(r.grupos,'grupos'),lista(r.asignaturas,'asignaturas'),lista(r.asignaciones,'asignaciones'),lista(r.jornada,'franjas de la jornada'),lista(r.noDisp,'filas de disponibilidad'),lista(r.restr,'restricciones')].filter(Boolean).join(' · ');
+  const avisos=o.avisos.length?`<div class="text-xs hz-amber hz-mt3">${o.avisos.map(E).join('<br>')}</div>`:'';
+  const head=card(`<h3 class="font-semibold mb-1">🔍 Esto fue lo que entendí de «${E(I.nombre)}»</h3><p class="text-sm">${E(hall)}</p>${avisos}<p class="text-xs text-slate-500 hz-mt3">Revisa cada lista y quita lo que no quieras. Nada se guarda hasta que pulses «Cargar lo elegido».</p>`);
+  // docentes
+  const nDoc=cuentaSel(I.selDoc,o.docentes);
+  const fd=o.docentes.map((d,i)=>{const ya=existeDoc(d.nombre),ct=ya?null:cuentaDe(d),err=d.errores.length;
+    const est=err?`<span style="color:#b91c1c">${E(d.errores.join(' · '))}</span>`:ya?'<span class="text-slate-500">Ya está en el horario</span>':ct?'<span class="hz-emerald">Nuevo · tiene cuenta (se vinculará)</span>':'Nuevo'+(d.origen==='asignaciones'?' <span class="text-xs text-slate-500">(solo aparece en las asignaciones)</span>':'');
+    return`<tr class="border-t hz_fd" data-n="${E(norm(d.nombre))}" style="${I.filtro&&!norm(d.nombre).includes(window.HZF.norm(I.filtro))?'display:none':''}"><td class="py-1">${cb(I.selDoc[i]&&!err,`HZUI.selDoc(${i},this.checked)`,err||ya)}</td><td>${E(d.nombre)}</td><td class="text-xs">${E(d.correo||'')}</td><td class="text-xs">${est}${d.avisos.length?` <span class="hz-amber">${E(d.avisos.join(' · '))}</span>`:''}</td></tr>`}).join('');
+  const cDoc=o.docentes.length?card(`<h3 class="font-semibold mb-1">👩‍🏫 Escoge los docentes que van a entrar al horario</h3><p class="text-xs text-slate-500 mb-2">Quita la marca a quien no deba entrar. <b id="hz_ndoc">${nDoc}</b> de ${o.docentes.filter(d=>!d.errores.length).length} elegidos.</p>
+    <div class="flex flex-wrap gap-2 items-center hz-mb3">${btn("HZUI.todos('doc',true)",'Marcar todos')}${btn("HZUI.todos('doc',false)",'Quitar todos')}<input class="${IN}" placeholder="Buscar un docente…" value="${E(I.filtro||'')}" oninput="HZUI.filtrar(this.value)"></div>
+    <div class="overflow-x-auto" style="max-height:26rem;overflow-y:auto"><table class="w-full text-sm"><tr class="text-left text-slate-500"><th></th><th>Nombre</th><th>Correo</th><th>Estado</th></tr>${fd}</table></div>`):'';
+  // grupos
+  const cGr=o.grupos.length?card(`<h3 class="font-semibold mb-1">🏫 Grupos (${cuentaSel(I.selGrp,o.grupos)} elegidos)</h3><div>${o.grupos.map((g,i)=>{const ya=g.grado!==null&&S.grupos.some(x=>x.grado===g.grado&&x.nombre===g.nombre);
+    return`<label class="inline-block text-sm hz-mr1" style="margin-bottom:.25rem;padding:.15rem .5rem;border-radius:.5rem;background:${g.errores.length?'#fecaca':ya?'#e2e8f0':'#ecfdf5'}">${cb(I.selGrp[i]&&!g.errores.length,`HZUI.selGrp(${i},this.checked)`,g.errores.length||ya)} ${g.grado!==null?E(g.grado+'° '+g.nombre):E(g.nombre)}${g.errores.length?' ⚠️':''}${ya?' (ya está)':''}</label>`}).join('')}</div>${o.grupos.some(g=>g.errores.length)?`<p class="text-xs" style="color:#b91c1c">${E(o.grupos.filter(g=>g.errores.length).map(g=>g.errores[0]).join(' · '))}</p>`:''}`):'';
+  // asignaturas
+  const cAs=o.asignaturas.length?card(`<h3 class="font-semibold mb-1">📚 Asignaturas (${cuentaSel(I.selAsg,o.asignaturas)} elegidas)</h3><div class="overflow-x-auto"><table class="w-full text-sm"><tr class="text-left text-slate-500"><th></th><th>Asignatura</th><th>Área</th><th>Estado</th></tr>${o.asignaturas.map((a,i)=>{const ya=existeAsig(a.nombre);
+    return`<tr class="border-t"><td class="py-1">${cb(I.selAsg[i]&&!a.errores.length,`HZUI.selAsg(${i},this.checked)`,a.errores.length||ya)}</td><td>${E(a.nombre)}</td><td>${E(a.area)}</td><td class="text-xs">${a.errores.length?`<span style="color:#b91c1c">${E(a.errores.join(' · '))}</span>`:ya?'Ya está':'Nueva'}${a.origen==='asignaciones'?' <span class="text-xs text-slate-500">(solo aparece en las asignaciones; revisa su área después)</span>':''}</td></tr>`}).join('')}</table></div>`):'';
+  // asignaciones
+  const est=o.asignaciones.map((a,i)=>estAsign(i)),nOk=est.filter(e=>e.ok).length,nErr=est.filter(e=>e.err).length;
+  const cAn=o.asignaciones.length?card(`<h3 class="font-semibold mb-1">🔗 Asignaciones: <b>${nOk}</b> listas para cargar${nErr?` · <span style="color:#b91c1c">${nErr} con problemas</span>`:''}</h3>
+    <div class="flex gap-2 hz-mb3">${btn("HZUI.todos('asign',true)",'Marcar todas')}${btn("HZUI.todos('asign',false)",'Quitar todas')}</div>
+    <div class="overflow-x-auto" style="max-height:24rem;overflow-y:auto"><table class="w-full text-sm"><tr class="text-left text-slate-500"><th></th><th>Fila</th><th>Grupo</th><th>Asignatura</th><th>Docente</th><th>Horas</th><th>Estado</th></tr>${o.asignaciones.map((a,i)=>{const e=est[i];
+    return`<tr class="border-t"><td class="py-1">${cb(I.selAsign[i]&&!a.errores.length,`HZUI.selAsign(${i},this.checked)`,a.errores.length)}</td><td class="text-xs">${a.fila||''}</td><td>${a.grupo?(a.grupo.todos?'Todos los '+a.grupo.grado+'°':E(a.grupo.grado+'° '+a.grupo.nombre)):'—'}</td><td>${E(a.asignatura)}</td><td>${E(a.docente)}</td><td>${a.horas==null?'—':a.horas}</td><td class="text-xs" style="color:${e.err?'#b91c1c':e.ok?'#047857':'#64748b'}">${E(e.t)}</td></tr>`}).join('')}</table></div>`):'';
+  // jornada / disponibilidad / restricciones
+  const cJo=o.jornada.length?card(`<h3 class="font-semibold mb-1">⏰ Jornada (${o.jornada.length} franjas)</h3><label class="text-sm flex items-center gap-1">${cb(I.selJornada,'HZUI.setSel("selJornada",this.checked)')} Cargar la jornada</label>${S.franjas.length?`<label class="text-sm flex items-center gap-1" style="color:#b45309">${cb(I.reemplazarJornada,'HZUI.setSel("reemplazarJornada",this.checked)')} Ya hay ${S.franjas.length} franjas: reemplazarlas (se borran sus clases guardadas y la disponibilidad)</label>`:''}<div class="text-xs text-slate-600 hz-mt3">${o.jornada.map(j=>E(j.nombre+(j.inicio?' '+j.inicio+'–'+(j.fin||''):'')+(j.es_clase?'':' (descanso)'))).join(' · ')}</div>`):'';
+  const cNd=o.noDisp.length?card(`<h3 class="font-semibold mb-1">🗓 Disponibilidad de docentes (${o.noDisp.filter(x=>!x.errores.length).length} filas)</h3><label class="text-sm flex items-center gap-1">${cb(I.selNoDisp,'HZUI.setSel("selNoDisp",this.checked)')} Cargar los momentos en que cada docente no puede</label>${o.noDisp.filter(x=>x.errores.length).map(x=>`<div class="text-xs" style="color:#b91c1c">Fila ${x.fila}: ${E(x.errores.join(' · '))}</div>`).join('')}`):'';
+  const cRe=o.restr.length?card(`<h3 class="font-semibold mb-1">📏 Restricciones (${o.restr.filter(x=>!x.errores.length).length})</h3>${o.restr.map((x,i)=>`<label class="text-sm flex items-center gap-1" style="margin-bottom:.25rem">${cb(I.selRestr[i]&&!x.errores.length,`HZUI.selRestr(${i},this.checked)`,x.errores.length)} ${x.errores.length?`<span style="color:#b91c1c">Fila ${x.fila}: ${E(x.errores.join(' · '))}</span>`:descRImp(x)}</label>`).join('')}`):'';
+  const pie=card(`<div class="flex flex-wrap gap-2">${btn('HZUI.aplicar()','✅ Cargar lo elegido',BTN)}${btn('HZUI.cancelarImp()','Cancelar')}</div>`);
+  return`<div class="space-y-4">${cab}${head}${cDoc}${cGr}${cAs}${cAn}${cJo}${cNd}${cRe}${pie}</div>`;
+}
+function descRImp(x){
+  const amb=x.alcance==='colegio'?'en todo el colegio':x.alcance==='grado'?'en '+x.grado+'°':'en '+(x.grupo?x.grupo.grado+'° '+x.grupo.nombre:'un grupo');
+  const q={solo_dias:'solo los días '+x.dias.map(d=>DN[d]).join(', '),nunca_dias:'nunca los días '+x.dias.map(d=>DN[d]).join(', '),solo_franjas:'solo en las horas n.º '+x.franjas.join(', '),nunca_franjas:'nunca en las horas n.º '+x.franjas.join(', '),max_por_dia:'máximo '+x.valor+' hora(s) por día',bloque_doble:'en bloques de 2 horas seguidas'}[x.tipo];
+  return`${SOBRE[x.sobre]} <b>${E(x.objetivo)}</b> ${E(amb)}: ${E(q)} <span class="text-xs">(${x.fuerza})</span>`;
+}
+function preparar(tablas,nombre){
+  const F=window.HZF,o=F.interpretar(tablas,{asignaturas:S.asigs.map(a=>a.nombre)}),r=F.resumen(o);
+  if(!Object.values(r).some(n=>n>0))throw new Error('No encontré datos que pueda entender en «'+nombre+'». Descarga la plantilla de Excel, llénala y vuelve a subirla.');
+  S.impMsg='';
+  S.imp={nombre,o,selDoc:o.docentes.map(d=>!d.errores.length),selGrp:o.grupos.map(g=>!g.errores.length),selAsg:o.asignaturas.map(a=>!a.errores.length),
+    selAsign:o.asignaciones.map(a=>!a.errores.length),selRestr:o.restr.map(x=>!x.errores.length),selJornada:true,reemplazarJornada:false,selNoDisp:true};
+}
+
 /* ---------- acciones ---------- */
 const mut=async(fn)=>{await run(async()=>{await fn();cambio();await cargar();render()})};
 function parseGrupo(s){const m=String(s).trim().match(/^(\d{1,2})\s*[°ºo\-.]?\s*([A-Za-z0-9]+)$/);return m?{grado:+m[1],nombre:m[2].toUpperCase()}:null}
 window.HZUI={
-  async load(t){await cargar();if(t==='mhor')await cargarPublicado();else if(t==='dhor'&&S.sec==='gen'){/* nada */}},
+  async load(t){await cargar();
+    if(t==='mhor')await cargarPublicado();
+    else if(t==='dhor'){await cargarRegs();if(!S.visto){S.visto=true;if(S.franjas.length||S.grupos.length||S.docentes.length)S.sec='gen'}}},
+  preparar(tablas,nombre){preparar(tablas,nombre)},
   view(t){return t==='mhor'?vMi():vHor()},
   sec(k){S.sec=k;S.dispDoc='';render()},
   setModo(m){S.modo=m;S.item='';render()},
   setItem(i){S.item=i;render()},
+
+  /* cargar desde archivo */
+  leer(input){const f=input&&input.files&&input.files[0];if(!f)return;
+    return run(async()=>{await cargarRegs();const tablas=await leerArchivo(f);preparar(tablas,f.name);if(input)input.value='';render()})},
+  selDoc(i,on){S.imp.selDoc[i]=on;rr()},selGrp(i,on){S.imp.selGrp[i]=on;rr()},selAsg(i,on){S.imp.selAsg[i]=on;rr()},
+  selAsign(i,on){S.imp.selAsign[i]=on;rr()},selRestr(i,on){S.imp.selRestr[i]=on;rr()},setSel(k,v){S.imp[k]=v;rr()},
+  todos(t,on){const o=S.imp.o;if(t==='doc')S.imp.selDoc=o.docentes.map(d=>on&&!d.errores.length);if(t==='asign')S.imp.selAsign=o.asignaciones.map(a=>on&&!a.errores.length);rr()},
+  filtrar(v){S.imp.filtro=v;const k=window.HZF.norm(v);document.querySelectorAll('.hz_fd').forEach(tr=>{tr.style.display=!k||String(tr.getAttribute('data-n')).includes(k)?'':'none'})},
+  cancelarImp(){S.imp=null;rr()},
+  aplicar(){return run(async()=>{
+    const I=S.imp;if(!I)return;const o=I.o,c=M.colegio_id,inf=[],salt=[];
+    if(I.selJornada&&o.jornada.length&&S.franjas.length&&I.reemplazarJornada&&!confirm('Vas a reemplazar la jornada actual. Se borrarán las clases guardadas en los horarios y la disponibilidad de los docentes. ¿Seguro?'))return;
+    await cargar();await cargarRegs();
+    // 1) jornada
+    if(I.selJornada&&o.jornada.length){
+      if(o.jornada.length>20)throw new Error('La jornada tiene más de 20 franjas.');
+      if(S.franjas.length&&!I.reemplazarJornada)salt.push('La jornada no se cargó porque ya tienes una (marca "reemplazarla" si quieres cambiarla).');
+      else{if(S.franjas.length)ok(await sb.from('hz_franjas').delete().eq('colegio_id',c));
+        ok(await sb.from('hz_franjas').insert(o.jornada.map((j,i)=>({colegio_id:c,orden:i+1,nombre:j.nombre,inicio:j.inicio,fin:j.fin,es_clase:j.es_clase}))));inf.push(o.jornada.length+' franjas de la jornada')}
+    }
+    // 2) grupos
+    const gs=o.grupos.filter((g,i)=>I.selGrp[i]&&!g.errores.length&&!S.grupos.some(x=>x.grado===g.grado&&x.nombre===g.nombre));
+    if(gs.length){ok(await sb.from('hz_grupos').upsert(gs.map(g=>({colegio_id:c,grado:g.grado,nombre:g.nombre})),{onConflict:'colegio_id,grado,nombre',ignoreDuplicates:true}));inf.push(gs.length+' grupos')}
+    // 3) asignaturas
+    const as=o.asignaturas.filter((a,i)=>I.selAsg[i]&&!a.errores.length&&!existeAsig(a.nombre));
+    if(as.length){ok(await sb.from('hz_asignaturas').insert(as.map(a=>({colegio_id:c,nombre:a.nombre,area:a.area||a.nombre,aula_tipo:a.aula_tipo||null}))));inf.push(as.length+' asignaturas')}
+    // 4) docentes (y vínculo con su cuenta si ya están registrados)
+    const usados=new Set(S.docentes.map(x=>x.user_id).filter(Boolean)),nuevos=[],vincular=[];let conCuenta=0;
+    o.docentes.forEach((d,i)=>{if(!I.selDoc[i]||d.errores.length)return;const ex=existeDoc(d.nombre),r=(ex&&ex.user_id)?null:cuentaDe(d,usados);
+      if(r)usados.add(r.id);
+      if(ex){if(r)vincular.push({id:ex.id,user_id:r.id})}else{nuevos.push({colegio_id:c,nombre:d.nombre,user_id:r?r.id:null});if(r)conCuenta++}});
+    if(nuevos.length)ok(await sb.from('hz_docentes').insert(nuevos));
+    for(const v of vincular){ok(await sb.from('hz_docentes').update({user_id:v.user_id}).eq('id',v.id));conCuenta++}
+    if(nuevos.length||vincular.length)inf.push(nuevos.length+' docentes nuevos'+(conCuenta?' ('+conCuenta+' con su cuenta vinculada)':''));
+    await cargar();
+    // 5) asignaciones
+    const filas=new Map();let omit=0;
+    o.asignaciones.forEach((a,i)=>{const e=estAsign(i);if(!e.ok){omit++;return}
+      const d=existeDoc(a.docente),sa=existeAsig(a.asignatura);if(!d||!sa){omit++;return}
+      S.grupos.filter(g=>g.grado===a.grupo.grado&&(a.grupo.todos||g.nombre===a.grupo.nombre)).forEach(g=>filas.set(g.id+'|'+sa.id,{colegio_id:c,grupo_id:g.id,asignatura_id:sa.id,docente_id:d.id,horas:a.horas}))});
+    const lote=[...filas.values()];
+    for(let k=0;k<lote.length;k+=400)ok(await sb.from('hz_asignaciones').upsert(lote.slice(k,k+400),{onConflict:'colegio_id,grupo_id,asignatura_id'}));
+    if(lote.length)inf.push(lote.length+' asignaciones');
+    if(omit)salt.push(omit+' asignación(es) no se cargaron (con problemas o con docente, asignatura o grupo no elegido).');
+    // 6) disponibilidad
+    const cl=S.franjas.filter(f=>f.es_clase).sort((a,b)=>a.orden-b.orden);
+    if(I.selNoDisp&&o.noDisp.length){const m=new Map();
+      for(const x of o.noDisp){if(x.errores.length)continue;const d=existeDoc(x.docente);if(!d){salt.push('Disponibilidad de «'+x.docente+'»: ese docente no está en el horario.');continue}
+        const frs=x.horas[0]==='todas'?cl:x.horas.map(n=>cl[n-1]).filter(Boolean);
+        if(!frs.length){salt.push('Disponibilidad de «'+x.docente+'»: esa hora no existe en la jornada (¿cargaste la jornada?).');continue}
+        for(const dia of x.dias)for(const f of frs)m.set(d.id+'|'+dia+'|'+f.id,{colegio_id:c,docente_id:d.id,dia,franja_id:f.id})}
+      const r=[...m.values()];if(r.length){ok(await sb.from('hz_no_disponible').upsert(r,{onConflict:'docente_id,dia,franja_id',ignoreDuplicates:true}));inf.push(r.length+' momentos de no disponibilidad')}}
+    // 7) restricciones
+    const sig=r=>JSON.stringify([r.sobre,r.objetivo,r.alcance,r.grado||null,r.grupo_id||null,r.tipo,r.dias||[],r.franjas||[],r.valor||null,r.fuerza]);
+    const ya=new Set(S.restr.map(sig)),rr2=[];
+    o.restr.forEach((x,i)=>{if(!I.selRestr[i]||x.errores.length)return;
+      let obj=x.objetivo;
+      if(x.sobre==='asignatura'){const a=existeAsig(x.objetivo);if(!a){salt.push('Restricción sobre «'+x.objetivo+'»: esa asignatura no está cargada.');return}obj=a.id}
+      if(x.sobre==='docente'){const d=existeDoc(x.objetivo);if(!d){salt.push('Restricción sobre «'+x.objetivo+'»: ese docente no está cargado.');return}obj=d.id}
+      let gid=null;if(x.alcance==='grupo'){const g=S.grupos.find(y=>y.grado===x.grupo.grado&&y.nombre===x.grupo.nombre);if(!g){salt.push('Restricción: el grupo '+x.grupo.grado+'°'+x.grupo.nombre+' no existe.');return}gid=g.id}
+      let frs=x.franjas;if(frs.length){frs=x.franjas.map(n=>cl[n-1]&&cl[n-1].orden).filter(v=>v!=null);if(!frs.length){salt.push('Restricción: la hora indicada no existe en la jornada.');return}}
+      const row={colegio_id:c,alcance:x.alcance,grado:x.alcance==='grado'?x.grado:null,grupo_id:gid,sobre:x.sobre,objetivo:obj,tipo:x.tipo,dias:x.dias,franjas:frs,valor:x.valor,fuerza:x.fuerza,nota:x.nota};
+      const k=sig(row);if(ya.has(k))return;ya.add(k);rr2.push(row)});
+    if(rr2.length){ok(await sb.from('hz_restricciones').insert(rr2));inf.push(rr2.length+' restricciones')}
+    await cargar();cambio();S.imp=null;
+    S.impMsg=`<b style="color:#059669">✅ Listo. Se cargó:</b><br>${inf.length?inf.map(E).join('<br>'):'nada nuevo (todo ya estaba cargado)'}${salt.length?`<br><br><b style="color:#b45309">Quedó sin cargar:</b><br>${salt.slice(0,15).map(E).join('<br>')}`:''}<br><br>Siguiente paso: revisa las pestañas (Docentes, Asignaciones…) o ve directo a <b>Generar</b>.`;
+    render()})},
   /* jornada */
   toggleDia(d,on){return run(async()=>{let ds=S.dias.filter(x=>x!==d);if(on)ds.push(d);ds.sort();
     if(!ds.length){toast('⚠️','Falta un día','Debe haber al menos un día de clase.');return render()}

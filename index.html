@@ -321,7 +321,7 @@ async function go(t){
   leaveChat();tab=t;
   try{
     if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=1');await DIR.load(t)}
-    if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=1');await HZUI.load(t)}
+    if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=2');await HZUI.load(t)}
     if(t==='sim'){
       await loadAvail();
       const s=await sb.from('simulacros').select('*').order('created_at',{ascending:false});if(s.error)throw s.error;D.sims=s.data;
