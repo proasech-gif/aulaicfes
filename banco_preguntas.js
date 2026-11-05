@@ -15,7 +15,7 @@ const TXT_ALERTA={sin_clave:'sin clave en la fuente',anulada:'anulada por la fue
 if(typeof document!=='undefined'&&document&&!document.getElementById('bqp-css')){const st=document.createElement('style');st.id='bqp-css';
   st.textContent='.bqp-barra{background:#e2e8f0;border-radius:8px;height:10px;overflow:hidden}.bqp-barra>div{background:#059669;height:10px;width:0;transition:width .2s}.bqp-mt{margin-top:.75rem}.bqp-ok{color:#047857}.bqp-mal{color:#b91c1c}.bqp-av{color:#b45309}';
   document.head.appendChild(st)}
-const Q={items:[],resumen:[],cargando:false,ocupado:false};
+const Q={items:[],resumen:[],cargando:false,ocupado:false,errCarga:''};
 const ok=r=>{if(r&&r.error)throw r.error;return(r&&r.data)||[]};
 const esc=s=>typeof E==='function'?E(s):String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const card=h=>`<div class="bg-white rounded-2xl p-4 shadow">${h}</div>`;
@@ -67,9 +67,9 @@ function filaPregunta(p,mat,grado,fuente){
 
 /* ---------- datos de la base ---------- */
 async function cargar(){
-  Q.cargando=true;
+  Q.cargando=true;Q.errCarga='';
   try{
-    const f=await todas(()=>sb.from('questions').select('id,ext_id,subject,status,active,assets,question_keys(correct)').contains('assets',[{paquete:PAQ}]).order('ext_id'));
+    const f=await todas(()=>sb.from('questions').select('id,ext_id,subject,status,active,assets,question_keys(correct)').contains('assets',JSON.stringify([{paquete:PAQ}])).order('ext_id'));
     const m=new Map();
     for(const q of f){
       const r=m.get(q.subject)||{materia:q.subject,total:0,borrador:0,publicadas:0,listas:0,conClave:0,bloqueadas:0,motivos:{},ids:[]};
@@ -80,7 +80,8 @@ async function cargar(){
       m.set(q.subject,r);
     }
     Q.resumen=[...m.values()].sort((a,b)=>a.materia.localeCompare(b.materia,'es'));
-  }finally{Q.cargando=false}
+  }catch(e){Q.errCarga=(e&&e.message)||String(e);throw e}
+  finally{Q.cargando=false}
 }
 
 /* ---------- pantalla ---------- */
@@ -102,6 +103,7 @@ function cuerpoItem(it,i){
     ${D.avisos.length?`<div class="text-xs bqp-av bqp-mt">${D.avisos.slice(0,5).map(esc).join('<br>')}</div>`:''}${estado}`;
 }
 function vResumen(){
+  if(Q.errCarga)return card('<h3 class="font-semibold mb-1">✅ Preguntas separadas en el banco</h3><p class="text-sm bqp-mal">No se pudo leer la lista: '+esc(Q.errCarga)+'</p>');
   if(!Q.resumen.length)return card('<h3 class="font-semibold mb-1">✅ Preguntas separadas en el banco</h3><p class="text-sm text-slate-500">Todavía no hay preguntas separadas cargadas.</p>');
   const filas=Q.resumen.map(r=>{
     const mot=Object.entries(r.motivos).map(([k,v])=>`${v} ${TXT_ALERTA[k]||k}`).join(', ');
