@@ -8,9 +8,9 @@
 (function(){
 'use strict';
 const BUCKET='question-images',PAQ='preguntas_separadas_v1',JSZIP='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-const BLOQUEAN=['sin_clave','anulada','clave_ilegible','incompleta_en_pdf','numeracion_duplicada_en_fuente','sin_recorte','sin_cotejar'];
+const BLOQUEAN=['sin_clave','anulada','clave_ilegible','incompleta_en_pdf','numeracion_duplicada_en_fuente','sin_recorte','sin_cotejar','clave_multiple'];
 const TXT_ALERTA={sin_clave:'sin clave en la fuente',anulada:'anulada por la fuente',clave_ilegible:'clave ilegible',incompleta_en_pdf:'incompleta en el PDF original',
-  numeracion_duplicada_en_fuente:'número repetido en la fuente (clave ambigua)',sin_recorte:'sin recorte',sin_cotejar:'clave sin cotejar',
+  numeracion_duplicada_en_fuente:'número repetido en la fuente (clave ambigua)',sin_recorte:'sin recorte',sin_cotejar:'clave sin cotejar',clave_multiple:'clave doble en la fuente ("A, B")',
   opciones_incompletas_en_texto:'opciones dibujadas (solo en la imagen)',recorte_muy_alto:'imagen muy larga'};
 if(typeof document!=='undefined'&&document&&!document.getElementById('bqp-css')){const st=document.createElement('style');st.id='bqp-css';
   st.textContent='.bqp-barra{background:#e2e8f0;border-radius:8px;height:10px;overflow:hidden}.bqp-barra>div{background:#059669;height:10px;width:0;transition:width .2s}.bqp-mt{margin-top:.75rem}.bqp-ok{color:#047857}.bqp-mal{color:#b91c1c}.bqp-av{color:#b45309}';
