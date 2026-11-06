@@ -91,3 +91,11 @@ html{scroll-behavior:smooth}body{background:radial-gradient(ellipse at 8% 0%,rgb
 .aic-login-form>div{margin-top:0!important;width:100%;max-width:440px}
 @media(max-width:760px){.aic-login{grid-template-columns:1fr;margin:-14px -14px 0}.aic-login-art{padding:26px 18px}.aic-login-art h1{font-size:34px}.aic-login-art p,.aic-login-dots{display:none}.aic-profile{grid-template-columns:1fr}}
 .aic-profile .aic-hero-actions button.ghost{background:#fff!important;color:#172554!important;border:1px solid #cbd5e1}
+
+/* ===== Rector / coordinador ===== */
+.aic-kpis3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.aic-kpis3 .aic-kpi strong{display:block;font-size:26px;color:#102a5c;font-weight:900}.aic-kpis3 .aic-kpi small{display:block;color:#64748b;font-size:12px}
+.aic-row{background:#f8fafd;border:1px solid #e6edf7;border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.aic-main .aic-card .aic-card-head h3{font-size:16px;font-weight:800;color:#102a5c}
+.aic-main .aic-card table th{font-size:11px;letter-spacing:.5px;color:#64748b;text-transform:uppercase;padding:8px 12px 8px 0}
+@media(max-width:760px){.aic-kpis3{grid-template-columns:1fr 1fr}}

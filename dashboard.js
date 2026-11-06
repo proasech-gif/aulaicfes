@@ -18,15 +18,16 @@
     const bands=[0,0,0,0];scores.forEach(s=>{if(s<40)bands[0]++;else if(s<60)bands[1]++;else if(s<80)bands[2]++;else bands[3]++});
     return {all,students:students.size,subjects,recent,trend:Object.entries(daily).slice(-10),avg:mean(scores),best:scores.length?Math.max(...scores):0,bands};
   }
-  const TITLES={prof:['Dashboard académico','Resumen de actividad y desempeño'],cur:['Cursos y estudiantes','Administra tus cursos y la información de tus estudiantes'],simp:['Simulacros y tareas','Crea simulacros tipo ICFES y evalúa el desempeño'],imp:['Imprimir pruebas','Genera pruebas en papel con su hoja de respuestas'],cal:['Calificar respuestas','Califica hojas de respuestas con la cámara'],preg:['Banco de preguntas','Administra las preguntas por área y nivel'],clase:['Aula virtual','Clases en vivo y recursos para tus estudiantes'],mhor:['Mi horario','Consulta y organiza tu horario'],doc:['Docentes','Revisa y aprueba las solicitudes de docentes'],dadm:['Rectores y coordinadores','Revisa y aprueba las solicitudes de directivos'],banco:['Paquetes de preguntas','Carga y publica preguntas en el banco'],dhor:['Horarios','Horarios del colegio'],perfil:['Mi perfil','Tu cuenta y configuración']};
+  const TITLES={prof:['Dashboard académico','Resumen de actividad y desempeño'],cur:['Cursos y estudiantes','Administra tus cursos y la información de tus estudiantes'],simp:['Simulacros y tareas','Crea simulacros tipo ICFES y evalúa el desempeño'],imp:['Imprimir pruebas','Genera pruebas en papel con su hoja de respuestas'],cal:['Calificar respuestas','Califica hojas de respuestas con la cámara'],preg:['Banco de preguntas','Administra las preguntas por área y nivel'],clase:['Aula virtual','Clases en vivo y recursos para tus estudiantes'],mhor:['Mi horario','Consulta y organiza tu horario'],doc:['Docentes','Revisa y aprueba las solicitudes de docentes'],dadm:['Rectores y coordinadores','Revisa y aprueba las solicitudes de directivos'],banco:['Paquetes de preguntas','Carga y publica preguntas en el banco'],dhor:['Horarios','Horarios del colegio'],dcol:['Mi colegio','Resumen y gestión de tu institución'],ddoc:['Docentes','Consulta lo que hacen los docentes de tu colegio'],dhist:['Historial','Registro de acciones recientes'],perfil:['Mi perfil','Tu cuenta y configuración']};
   function navItems(M){
+    if(M&&(M.role==='rector'||M.role==='coordinador')){const l=[['dcol','⌂','Mi colegio'],['ddoc','♙','Docentes'],['dhor','▦','Horarios']];if(M.role==='rector')l.push(['dhist','▤','Historial']);l.push(['perfil','☺','Mi perfil']);return l}
     const l=[['prof','▦','Inicio'],['cur','♙','Cursos y estudiantes'],['simp','▤','Simulacros y tareas'],['imp','▣','Imprimir pruebas'],['cal','✓','Calificar respuestas'],['preg','▧','Banco de preguntas'],['clase','▣','Aula virtual'],['mhor','▦','Mi horario']];
     if(M&&M.is_admin)l.push(['doc','♕','Docentes'],['dadm','⌂','Rectores y coordinadores'],['banco','▤','Paquetes de preguntas']);
     l.push(['perfil','☺','Mi perfil']);return l;
   }
   function shell(D,M,tab,body,live,pend){
     const name=esc(M?.full_name||'Docente'),ini=esc((M?.full_name||'D').slice(0,1).toUpperCase()),t=TITLES[tab]||['AulaICFES',''];
-    const rol=M?.is_admin?'Administrador':'Docente',school=M?.school_other||'';
+    const rol=M?.role==='rector'?'Rector':M?.role==='coordinador'?'Coordinador':M?.is_admin?'Administrador':'Docente',school=M?.school_other||'';
     const navHtml=navItems(M).map(([k,ic,l])=>`<button class="aic-nav ${k===tab?'active':''}" onclick="go('${k}')"><span>${ic}</span>${l}${(k==='doc'&&pend?.doc)?` <em class="aic-badge">${pend.doc}</em>`:''}${(k==='dadm'&&pend?.dir)?` <em class="aic-badge">${pend.dir}</em>`:''}</button>`).join('');
     return `<div class="aic-shell">
       <aside class="aic-sidebar"><div class="aic-brand"><div class="aic-logo">🎓</div><div><b>Aula<span>ICFES</span></b><small>Analiza · Mejora · Avanza</small></div></div>
@@ -44,7 +45,7 @@
   function perfil(M,email){
     const ini=esc((M?.full_name||'D').slice(0,1).toUpperCase());
     const row=(k,v)=>v?`<div class="aic-prow"><small>${k}</small><b>${esc(v)}</b></div>`:'';
-    return `<section class="aic-card aic-profile"><div class="aic-pcard"><div class="aic-avatar big">${ini}</div><h3>${esc(M?.full_name||'')}</h3><p>${M?.is_admin?'Administrador':'Docente'}</p></div>
+    return `<section class="aic-card aic-profile"><div class="aic-pcard"><div class="aic-avatar big">${ini}</div><h3>${esc(M?.full_name||'')}</h3><p>${M?.role==='rector'?'Rector':M?.role==='coordinador'?'Coordinador':M?.is_admin?'Administrador':'Docente'}</p></div>
       <div class="aic-pinfo">${row('Correo',email)}${row('Colegio',M?.school_other)}${row('Asignaturas',(M?.asignaturas||[]).join(', '))}${row('Teléfono',M?.phone)}
       <div class="aic-hero-actions"><button onclick="passModal()">🔑 Cambiar contraseña</button><button class="ghost" style="color:#172554;border-color:#cbd5e1" onclick="logout()">Cerrar sesión</button></div></div></section>`;
   }
