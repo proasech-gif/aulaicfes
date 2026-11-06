@@ -7,7 +7,8 @@
 const DN=['','Lun','Mar','Mié','Jue','Vie','Sáb'],DL=['','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const SEC=[['archivo','📎 Cargar archivo'],['jornada','⏰ Jornada'],['grupos','🏫 Grupos'],['asigs','📚 Asignaturas'],['docs','👩‍🏫 Docentes'],['aulas','🚪 Aulas'],['asign','🔗 Asignaciones'],['restr','📏 Restricciones'],['gen','⚡ Generar'],['vers','🗂️ Versiones']];
 const S={sec:'archivo',colegio:'',dias:[1,2,3,4,5],franjas:[],grupos:[],docentes:[],asigs:[],aulas:[],asigns:[],nd:[],restr:[],vers:[],
-  imp:null,regs:[],impMsg:'',visto:false,gen:null,rev:null,busy:false,vw:{clases:[],titulo:''},verId:'',modo:'grupo',item:'',dispDoc:'',pubOk:false,miDoc:null,iniMi:false,pegarMsg:''};
+  imp:null,regs:[],impMsg:'',visto:false,gen:null,rev:null,busy:false,vw:{clases:[],titulo:''},verId:'',modo:'grupo',item:'',dispDoc:'',pubOk:false,miDoc:null,iniMi:false,pegarMsg:'',
+  nivel:'colegio',tipoH:'regular',em:{desde:'',hasta:'',motivo:'',ausentes:[],maxH:0},base:[]};
 
 /* estilos propios (la hoja de estilos de la app no trae todas las clases) */
 if(!document.getElementById('hz-css')){const st=document.createElement('style');st.id='hz-css';st.textContent='.hz-gap1{gap:.25rem}.hz-end{align-items:flex-end}.hz-mb1{margin-bottom:.25rem}.hz-mb3{margin-bottom:.75rem}.hz-mr1{margin-right:.25rem}.hz-mt3{margin-top:.75rem}.hz-px2{padding-left:.5rem;padding-right:.5rem}.hz-sy1>*+*{margin-top:.25rem}.hz-amber{color:#b45309}.hz-emerald{color:#047857}';document.head.appendChild(st)}
@@ -39,7 +40,7 @@ async function cargar(){
     sb.from('colegios').select('nombre').eq('id',c).single(),
     sb.from('hz_config').select('dias').eq('colegio_id',c).maybeSingle(),
     f('hz_franjas'),f('hz_grupos'),f('hz_docentes'),f('hz_asignaturas'),f('hz_aulas'),f('hz_asignaciones'),f('hz_no_disponible'),f('hz_restricciones'),
-    sb.from('hz_versiones').select('id,nombre,estado,puntuacion,resumen,created_at,publicado_at').eq('colegio_id',c).order('created_at',{ascending:false})]);
+    sb.from('hz_versiones').select('id,nombre,estado,puntuacion,resumen,created_at,publicado_at,tipo,nivel,desde,hasta,motivo').eq('colegio_id',c).order('created_at',{ascending:false})]);
   S.colegio=(col.data&&col.data.nombre)||'';
   S.dias=(cfg.data&&cfg.data.dias&&cfg.data.dias.length?cfg.data.dias:[1,2,3,4,5]).slice().sort();
   S.franjas=fr.sort((a,b)=>a.orden-b.orden);
@@ -50,24 +51,46 @@ async function cargar(){
   S.asigns=asg;S.nd=nd;S.restr=rs.sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
   S.vers=ok(vs);
 }
+const hoyISO=()=>new Date().toLocaleDateString('en-CA');
+const NIV={colegio:'Toda la institución',primaria:'Primaria (0° a 5°)',bachillerato:'Bachillerato (6° a 11°)'};
+const enNivel=(g,n)=>n==='primaria'?g.grado<=5:n==='bachillerato'?g.grado>=6:true;
 async function cargarPublicado(){
-  const v=S.vers.find(x=>x.estado==='publicado');
+  const hoy=hoyISO();
+  const pubs=S.vers.filter(x=>x.estado==='publicado');
+  const em=pubs.find(x=>x.tipo==='emergente'&&x.desde&&x.hasta&&String(x.desde)<=hoy&&hoy<=String(x.hasta));
+  const v=em||pubs.find(x=>x.tipo!=='emergente');
   S.pubOk=!!v;
-  if(v){const cl=await todas(()=>sb.from('hz_clases').select('asignacion_id,dia,franja_id,aula_id').eq('version_id',v.id));S.vw={clases:cl,titulo:v.nombre}}
+  if(v){const cl=await todas(()=>sb.from('hz_clases').select('asignacion_id,dia,franja_id,aula_id').eq('version_id',v.id));S.vw={clases:cl,titulo:em?('🚨 Horario emergente'+(em.motivo?': '+em.motivo:'')+' · hasta '+fd(em.hasta+'T12:00:00')):v.nombre}}
   else S.vw={clases:[],titulo:''};
   S.miDoc=S.docentes.find(d=>d.user_id===M.id)||null;
 }
 async function cargarRegs(){S.regs=ok(await sb.from('profiles').select('id,full_name,email').eq('role','prof').eq('colegio_id',M.colegio_id).eq('teacher_status','aprobado'))}
+function ctxGen(){
+  const gr=S.grupos.filter(g=>enNivel(g,S.nivel)),gset=new Set(gr.map(g=>g.id)),em=S.tipoH==='emergente';
+  const aus=new Set(em?S.em.ausentes:[]);
+  let fr=S.franjas;
+  if(em&&S.em.maxH>0){let n=0;fr=S.franjas.filter(f=>{if(!f.es_clase)return true;n++;return n<=S.em.maxH})}
+  return{gr,gset,aus,fr,em};
+}
 function entrada(){
+  const {gr,gset,aus,fr}=ctxGen(),frs=new Set(fr.map(f=>f.id));
+  const asg=S.asigns.filter(a=>gset.has(a.grupo_id)&&!aus.has(a.docente_id));
+  const ocupado=[];
+  if(S.nivel!=='colegio')S.base.forEach(c=>{const a=S.asigns.find(x=>x.id===c.asignacion_id);if(a&&!gset.has(a.grupo_id))ocupado.push({docente_id:a.docente_id,dia:c.dia,franja_id:c.franja_id})});
   return{dias:S.dias,
-    franjas:S.franjas.map(f=>({id:f.id,orden:f.orden,es_clase:f.es_clase})),
-    grupos:S.grupos.map(g=>({id:g.id,grado:g.grado,nombre:g.nombre})),
+    franjas:fr.map(f=>({id:f.id,orden:f.orden,es_clase:f.es_clase})),
+    grupos:gr.map(g=>({id:g.id,grado:g.grado,nombre:g.nombre})),
     asignaturas:S.asigs.map(a=>({id:a.id,nombre:a.nombre,area:a.area,aula_tipo:a.aula_tipo})),
     docentes:S.docentes.map(d=>({id:d.id,nombre:d.nombre})),
-    asignaciones:S.asigns.map(a=>({id:a.id,docente_id:a.docente_id,grupo_id:a.grupo_id,asignatura_id:a.asignatura_id,horas:a.horas})),
+    asignaciones:asg.map(a=>({id:a.id,docente_id:a.docente_id,grupo_id:a.grupo_id,asignatura_id:a.asignatura_id,horas:a.horas})),
     aulas:S.aulas.map(a=>({id:a.id,tipo:a.tipo,activa:a.activa})),
-    noDisponible:S.nd.map(n=>({docente_id:n.docente_id,dia:n.dia,franja_id:n.franja_id})),
+    noDisponible:S.nd.filter(n=>frs.has(n.franja_id)).map(n=>({docente_id:n.docente_id,dia:n.dia,franja_id:n.franja_id})).concat(ocupado.filter(o=>frs.has(o.franja_id))),
     restricciones:S.restr.map(r=>({id:r.id,alcance:r.alcance,grado:r.grado,grupo_id:r.grupo_id,sobre:r.sobre,objetivo:r.objetivo,tipo:r.tipo,dias:r.dias||[],franjas:r.franjas||[],valor:r.valor,fuerza:r.fuerza}))};
+}
+async function cargarBase(){
+  S.base=[];if(S.nivel==='colegio')return;
+  const v=S.vers.find(x=>x.estado==='publicado'&&x.tipo!=='emergente');if(!v)return;
+  S.base=await todas(()=>sb.from('hz_clases').select('asignacion_id,dia,franja_id,aula_id').eq('version_id',v.id));
 }
 
 /* ---------- cuadrícula del horario (también sirve para imprimir) ---------- */
@@ -194,6 +217,22 @@ function vRestr(){
     <input id="hz_rn" class="${IN} w-full mt-2" placeholder="Nota (opcional)" maxlength="200">
     <div class="hz-mt3">${btn('HZUI.addRestr()','Agregar restricción',BTN)}</div>`)}</div>`;
 }
+function vOpc(){
+  const em=S.tipoH==='emergente',E1=S.em;
+  const opt=Object.entries(NIV).map(([k,l])=>`<option value="${k}" ${S.nivel===k?'selected':''}>${l}</option>`).join('');
+  return card(`<h3 class="font-semibold hz-mb1">🎛️ ¿Qué horario vas a armar?</h3>
+  <div class="grid sm:grid-cols-2 gap-3">
+   <label class="text-sm block">Para quién<select class="${IN} w-full" onchange="HZUI.setNivel(this.value)">${opt}</select></label>
+   <label class="text-sm block">Tipo de horario<select class="${IN} w-full" onchange="HZUI.setTipo(this.value)"><option value="regular" ${em?'':'selected'}>Horario regular del año</option><option value="emergente" ${em?'selected':''}>🚨 Horario emergente (temporal)</option></select></label></div>
+  <p class="text-xs text-slate-500 mt-2">${S.nivel==='colegio'?'Se arma un solo horario para toda la institución, con todas las restricciones que hayas puesto.':'Solo se arman los grupos de este nivel. Los docentes que también dictan en el otro nivel no chocarán con su horario publicado, y al guardar se conserva el horario publicado del otro nivel.'}</p>
+  ${em?`<div class="hz-mt3 grid sm:grid-cols-2 gap-3" style="border-top:1px solid #e5e7eb;padding-top:.75rem">
+   <label class="text-sm block">Desde<input type="date" class="${IN} w-full" value="${E(E1.desde)}" oninput="HZUI.setEm('desde',this.value)"></label>
+   <label class="text-sm block">Hasta<input type="date" class="${IN} w-full" value="${E(E1.hasta)}" oninput="HZUI.setEm('hasta',this.value)"></label>
+   <label class="text-sm block sm:col-span-2">Motivo (ej. paro de transporte, calamidad, jornada reducida)<input class="${IN} w-full" maxlength="200" value="${E(E1.motivo)}" oninput="HZUI.setEm('motivo',this.value)"></label>
+   <label class="text-sm block">Máximo de horas de clase por día (0 = las de siempre)<input type="number" min="0" max="12" class="${IN}" style="width:7rem" value="${E1.maxH}" oninput="HZUI.setEm('maxH',Math.max(0,Math.min(12,+this.value||0)))"></label>
+   <div class="text-sm sm:col-span-2"><div class="font-semibold mb-1">Docentes que no vienen (sus clases se dejan sin dictar)</div><div class="flex flex-wrap gap-3">${S.docentes.map(d=>`<label class="flex items-center hz-gap1"><input type="checkbox" ${E1.ausentes.includes(d.id)?'checked':''} onchange="HZUI.setAus('${d.id}',this.checked)"> ${E(d.nombre)}</label>`).join('')||'<span class="text-xs text-slate-500">Aún no hay docentes cargados.</span>'}</div></div>
+   <p class="text-xs text-slate-500 sm:col-span-2">El horario emergente se usa solo entre esas fechas. Al terminar, los docentes vuelven a ver el horario regular sin que hagas nada. Si recortas las horas por día, algunas clases quedarán sin ubicar: es normal.</p></div>`:''}`);
+}
 function vGen(){
   const E0=entrada(),total=E0.asignaciones.reduce((s,a)=>s+a.horas,0);
   const rev=S.rev?(S.rev.length?`<div class="space-y-2">${S.rev.map(p=>`<div class="border rounded-xl p-3 text-sm" style="border-color:#fca5a5"><div class="font-semibold">⚠️ ${E(p.problema)}</div><div class="text-xs text-slate-600">Causa: ${E(p.causa)}</div><div class="text-xs hz-emerald">Qué hacer: ${E(p.solucion)}</div></div>`).join('')}</div>`:'<p class="text-sm hz-emerald">✅ Todo en orden: no se detectaron problemas de antemano.</p>'):'';
@@ -207,11 +246,11 @@ function vGen(){
       <div class="flex flex-wrap gap-2 hz-end hz-mt3"><input id="hz_vn" class="${IN}" value="Horario ${new Date().toLocaleDateString('es-CO')}" maxlength="80" style="min-width:14rem">${btn('HZUI.guardar(0)','💾 Guardar como borrador')}${btn('HZUI.guardar(1)','📢 Guardar y publicar',BTN)}</div>
       ${falta?`<p class="text-xs hz-amber mt-2">Faltan ${falta} hora(s) por ubicar. Puedes ajustar restricciones o disponibilidad y volver a generar.</p>`:''}`)}${vGrid()}`;
   }
-  return`<div class="space-y-4">${card(`<h3 class="font-semibold hz-mb1">⚡ Generar el horario</h3><p class="text-sm text-slate-600">${S.grupos.length} grupos · ${S.docentes.length} docentes · ${S.asigns.length} asignaciones · ${total} horas por ubicar · ${S.restr.length} restricciones</p>
+  return`<div class="space-y-4">${vOpc()}${card(`<h3 class="font-semibold hz-mb1">⚡ Generar el horario</h3><p class="text-sm text-slate-600">${S.grupos.length} grupos · ${S.docentes.length} docentes · ${S.asigns.length} asignaciones · ${total} horas por ubicar · ${S.restr.length} restricciones</p>
     <div class="flex flex-wrap gap-2 hz-mt3">${btn('HZUI.revisar()','🔍 Revisar antes de generar')}${btn('HZUI.generar()','⚡ Generar horario',BTN)}</div>${rev?`<div class="hz-mt3">${rev}</div>`:''}`)}${res}</div>`;
 }
 function vVers(){
-  const l=S.vers.map(v=>`<tr class="border-t"><td class="py-1">${E(v.nombre)}</td><td>${v.estado==='publicado'?'<b style="color:#059669">Publicado</b>':v.estado==='archivado'?'Archivado':'Borrador'}</td><td>${v.puntuacion==null?'—':v.puntuacion}</td><td>${fd(v.created_at)}</td><td><div class="flex hz-gap1 flex-wrap">${btn(`HZUI.verVersion('${v.id}')`,'Ver')}${v.estado!=='publicado'?btn(`HZUI.publicar('${v.id}')`,'Publicar','bg-emerald-600 text-white'):''}${v.estado!=='publicado'?btn(`HZUI.borrarVersion('${v.id}')`,'Borrar'):''}</div></td></tr>`).join('');
+  const l=S.vers.map(v=>`<tr class="border-t"><td class="py-1">${E(v.nombre)}<div class="text-xs text-slate-500">${v.tipo==='emergente'?'🚨 Emergente · '+fd(v.desde+'T12:00:00')+' → '+fd(v.hasta+'T12:00:00')+(v.motivo?' · '+E(v.motivo):''):'Regular'} · ${NIV[v.nivel||'colegio']}</div></td><td>${v.estado==='publicado'?'<b style="color:#059669">Publicado</b>':v.estado==='archivado'?'Archivado':'Borrador'}</td><td>${v.puntuacion==null?'—':v.puntuacion}</td><td>${fd(v.created_at)}</td><td><div class="flex hz-gap1 flex-wrap">${btn(`HZUI.verVersion('${v.id}')`,'Ver')}${v.estado!=='publicado'?btn(`HZUI.publicar('${v.id}')`,'Publicar','bg-emerald-600 text-white'):''}${v.estado!=='publicado'?btn(`HZUI.borrarVersion('${v.id}')`,'Borrar'):''}</div></td></tr>`).join('');
   return`<div class="space-y-4">${card(`<h3 class="font-semibold mb-2">🗂️ Horarios guardados</h3>${S.vers.length?`<div class="overflow-x-auto"><table class="w-full text-sm"><tr class="text-left text-slate-500"><th>Nombre</th><th>Estado</th><th>Puntos</th><th>Creado</th><th></th></tr>${l}</table></div>`:'<p class="text-sm text-slate-500">Todavía no has guardado ningún horario.</p>'}<p class="text-xs text-slate-500 mt-2">El horario <b>publicado</b> es el que ven los docentes. Al publicar uno nuevo, el anterior queda archivado.</p>`)}${S.verId?vGrid():''}</div>`;
 }
 function vHor(){
@@ -502,10 +541,14 @@ window.HZUI={
     ok(await sb.from('hz_restricciones').insert({colegio_id:M.colegio_id,alcance,grado:alcance==='grado'?+val('hz_rg'):null,grupo_id:alcance==='grupo'?val('hz_rp'):null,sobre,objetivo,tipo,
       dias:(tipo==='solo_dias'||tipo==='nunca_dias')?dias:[],franjas:(tipo==='solo_franjas'||tipo==='nunca_franjas')?franjas:[],valor:tipo==='max_por_dia'?Math.max(1,Math.round(+val('hz_rv')||1)):null,fuerza:val('hz_rf'),nota:val('hz_rn')||null}))})},
   delRestr(id){return mut(async()=>{ok(await sb.from('hz_restricciones').delete().eq('id',id))})},
+  setNivel(v){S.nivel=v;cambio();render()},
+  setTipo(v){S.tipoH=v;cambio();render()},
+  setEm(k,v){S.em[k]=v;cambio();if(k==='maxH')render()},
+  setAus(id,on){const a=S.em.ausentes;S.em.ausentes=on?[...new Set([...a,id])]:a.filter(x=>x!==id);cambio();render()},
   /* generar */
-  async revisar(){return run(async()=>{const H=await engine();S.rev=H.validarFactibilidad(entrada());render()})},
+  async revisar(){return run(async()=>{const H=await engine();await cargarBase();S.rev=H.validarFactibilidad(entrada());render()})},
   async generar(){return run(async()=>{
-    const H=await engine();S.busy=true;S.gen=null;render();await new Promise(r=>setTimeout(r,30));
+    const H=await engine();await cargarBase();S.busy=true;S.gen=null;render();await new Promise(r=>setTimeout(r,30));
     try{const e=entrada(),g=H.generar(e,{maxMs:3000}),v=H.verificar(e,g.clases);
       S.rev=H.validarFactibilidad(e);
       S.gen={...g,errores:v.filter(x=>x.tipo!=='horas'),total:e.asignaciones.reduce((s,a)=>s+a.horas,0)};
@@ -516,11 +559,17 @@ window.HZUI={
     if(g.errores.length&&!confirm('La revisión encontró problemas en este horario. ¿Guardarlo de todos modos?'))return;
     if(publicar&&g.clases.length<g.total&&!confirm('Faltan '+(g.total-g.clases.length)+' hora(s) por ubicar. ¿Publicar de todos modos?'))return;
     const nombre=val('hz_vn')||('Horario '+new Date().toLocaleDateString('es-CO'));
-    const cl=g.clases.map(c=>({asignacion_id:c.asignacion_id,dia:c.dia_semana,franja_id:c.franja_id,aula_id:c.aula_id}));
-    const r=await sb.rpc('hz_guardar_version',{p_colegio:M.colegio_id,p_nombre:nombre,p_puntuacion:g.puntuacion,p_resumen:{ubicadas:g.clases.length,total:g.total,conflictos:g.conflictos.slice(0,30).map(c=>c.descripcion)},p_clases:cl});
+    const cx=ctxGen();
+    if(cx.em&&(!S.em.desde||!S.em.hasta||S.em.hasta<S.em.desde))throw new Error('Para un horario emergente escribe la fecha de inicio y la de fin (el fin no puede ser antes del inicio).');
+    let cl=g.clases.map(c=>({asignacion_id:c.asignacion_id,dia:c.dia_semana,franja_id:c.franja_id,aula_id:c.aula_id}));
+    /* si es solo un nivel, se completa con el horario publicado de los demás grupos */
+    if(S.nivel!=='colegio'){const ya=new Set(cl.map(c=>c.asignacion_id));
+      S.base.forEach(c=>{const a=S.asigns.find(x=>x.id===c.asignacion_id);if(a&&!cx.gset.has(a.grupo_id)&&!cx.aus.has(a.docente_id)&&!ya.has(c.asignacion_id+'|'+c.dia+'|'+c.franja_id))cl.push({asignacion_id:c.asignacion_id,dia:c.dia,franja_id:c.franja_id,aula_id:c.aula_id})})}
+    const r=await sb.rpc('hz_guardar_version',{p_colegio:M.colegio_id,p_nombre:nombre,p_puntuacion:g.puntuacion,p_resumen:{ubicadas:g.clases.length,total:g.total,conflictos:g.conflictos.slice(0,30).map(c=>c.descripcion)},p_clases:cl,
+      p_tipo:cx.em?'emergente':'regular',p_nivel:S.nivel,p_desde:cx.em?S.em.desde:null,p_hasta:cx.em?S.em.hasta:null,p_motivo:cx.em?S.em.motivo:null});
     if(r.error)throw r.error;
     if(publicar){const p=await sb.rpc('hz_publicar',{p_version:r.data});if(p.error)throw p.error}
-    toast('✅',publicar?'Horario publicado':'Horario guardado',publicar?'Los docentes ya pueden verlo en "Mi horario".':'Quedó como borrador en "Versiones".');
+    toast('✅',publicar?'Horario publicado':'Horario guardado',publicar?(cx.em?'Los docentes verán el horario emergente entre las fechas indicadas.':'Los docentes ya pueden verlo en "Mi horario".'):'Quedó como borrador en "Versiones".');
     S.gen=null;S.sec='vers';await cargar();S.verId=r.data;S.vw={clases:cl,titulo:nombre};render()})},
   /* versiones */
   verVersion(id){return run(async()=>{const v=S.vers.find(x=>x.id===id);
