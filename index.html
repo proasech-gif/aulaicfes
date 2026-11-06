@@ -320,6 +320,7 @@ function vCal(){
 async function go(t){
   leaveChat();tab=t;
   try{
+    if(t==='saber'){await loadScript('saber.js?v=1');await SABER.load()}
     if(t==='perfil'){const {data:u}=await sb.auth.getUser();D.email=(u&&u.user&&u.user.email)||''}
     if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=3');await DIR.load(t)}
     if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=4');await HZUI.load(t)}
@@ -876,8 +877,8 @@ function render(){
   if(M.role==='prof'&&M.teacher_status!=='aprobado'){root.innerHTML=vPend();return}
   if(isDir()&&M.teacher_status!=='aprobado'){root.innerHTML=vPendDir();return}
   const prof=M.role==='prof';
-  const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')],['banco','📦 Banco (paquetes)']]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['clase','🎥 Clase'],['mhor','🗓 Mi horario']]:[['sim','📝 Mis simulacros y tareas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
-  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
+  const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')],['banco','📦 Banco (paquetes)']]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['clase','🎥 Clase'],['mhor','🗓 Mi horario']]:[['sim','📝 Mis simulacros y tareas'],['saber','🎯 Saber 11'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
+  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',saber:()=>window.SABER?SABER.view():'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
   if((prof||isDir())&&window.AulaDashboard){
     root.innerHTML=AulaDashboard.shell(D,M,tab,body,vLive(),{doc:D.pend,dir:D.pendDir});
   }else root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${isDir()?(M.role==='rector'?'Rector':'Coordinador'):prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
