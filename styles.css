@@ -71,3 +71,23 @@ html{scroll-behavior:smooth}body{background:radial-gradient(ellipse at 8% 0%,rgb
 #app .aic-sidebar nav button.aic-nav{background:transparent;color:#d5e0f4;border:0;min-height:0;padding:12px 13px!important;font-size:12px!important}
 #app .aic-sidebar nav button.aic-nav:hover{background:rgba(255,255,255,.08);color:#fff}
 #app .aic-sidebar nav button.aic-nav.active{background:#2864e8!important;color:#fff!important}
+
+/* ===== Pantallas del diseño: carcasa común, login dividido, perfil ===== */
+.aic-badge{font-style:normal;background:#f59e0b;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:auto}
+.aic-main .bg-white.rounded-2xl{border:1px solid #e6ecf5;box-shadow:0 6px 20px rgba(15,35,80,.05)!important}
+.aic-main h2.text-xl{color:#102a5c}
+.aic-profile{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start}
+.aic-pcard{text-align:center;padding:10px}.aic-pcard h3{font-size:18px;font-weight:800;color:#102a5c;margin-top:12px}.aic-pcard p{color:#64748b;font-size:13px}
+.aic-avatar.big{width:88px;height:88px;font-size:34px;margin:0 auto}
+.aic-prow{display:grid;grid-template-columns:130px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid #edf1f7;font-size:14px}.aic-prow small{color:#64748b;font-weight:700}
+.aic-profile .aic-hero-actions button{background:#2864e8;color:#fff;border-radius:10px;padding:10px 16px;font-weight:700}
+.aic-login{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:calc(100vh - 40px);margin:-28px clamp(-42px,-3vw,-14px);background:#fff}
+.aic-login-art{background:linear-gradient(160deg,#0c214b,#1456c4 70%,#2a7be4);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:40px;gap:10px}
+.aic-login-art .aic-logo{width:84px;height:84px;font-size:46px;border-radius:24px}
+.aic-login-art h1{font-size:46px;font-weight:900;letter-spacing:-1px}.aic-login-art h1 span{color:#ffc928}
+.aic-login-art b{font-size:17px}.aic-login-art p{max-width:320px;opacity:.85;font-size:15px;margin-top:10px}
+.aic-login-dots{display:flex;gap:8px;margin-top:18px}.aic-login-dots i{width:9px;height:9px;border-radius:50%;background:#ffc928;opacity:.9}.aic-login-dots i:nth-child(2){opacity:.55}.aic-login-dots i:nth-child(3){opacity:.3}
+.aic-login-form{display:flex;align-items:center;justify-content:center;padding:28px;background:#f4f7fc}
+.aic-login-form>div{margin-top:0!important;width:100%;max-width:440px}
+@media(max-width:760px){.aic-login{grid-template-columns:1fr;margin:-14px -14px 0}.aic-login-art{padding:26px 18px}.aic-login-art h1{font-size:34px}.aic-login-art p,.aic-login-dots{display:none}.aic-profile{grid-template-columns:1fr}}
+.aic-profile .aic-hero-actions button.ghost{background:#fff!important;color:#172554!important;border:1px solid #cbd5e1}

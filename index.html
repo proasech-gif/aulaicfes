@@ -320,6 +320,7 @@ function vCal(){
 async function go(t){
   leaveChat();tab=t;
   try{
+    if(t==='perfil'){const {data:u}=await sb.auth.getUser();D.email=(u&&u.user&&u.user.email)||''}
     if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=1');await DIR.load(t)}
     if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=2');await HZUI.load(t)}
     if(t==='banco'){await loadScript('banco.js?v=1');await BANCO.load()}
@@ -708,6 +709,7 @@ function exportCSV(){
 }
 
 /* ---------- Vistas ---------- */
+function authWrap(h){return`<div class="aic-login"><div class="aic-login-art"><div class="aic-logo">🎓</div><h1>Aula<span>ICFES</span></h1><b>Evalúa · Aprende · Mejora</b><p>Tu aliado en el análisis y mejoramiento de los resultados Saber 11</p><div class="aic-login-dots"><i></i><i></i><i></i></div></div><div class="aic-login-form">${h}</div></div>`}
 function vAuth(){
   const m=authMode,T=[['login','Entrar'],['register','Soy estudiante'],['docente','Soy docente'],['directivo','Rector o coordinador']];
   const head=`<h1 class="text-2xl font-extrabold text-indigo-700 text-center">🎓 AulaICFES</h1><p class="text-center text-sm text-slate-500">Clases virtuales y simulacros Pre-ICFES</p><div class="flex flex-wrap gap-2">${T.map(([k,l])=>`<button onclick="setMode('${k}')" class="flex-1 py-2 rounded-lg text-sm ${m===k?'on':'bg-slate-200'}" style="min-width:7rem">${l}</button>`).join('')}</div>`;
@@ -870,13 +872,15 @@ function paintChat(){const b=document.getElementById('chatbox');if(!b)return;b.i
 function render(){
   charts.forEach(c=>c.destroy());charts=[];
   const root=document.getElementById('app');
-  if(!M){root.innerHTML=vAuth();return}
+  if(!M){root.innerHTML=authWrap(vAuth());return}
   if(M.role==='prof'&&M.teacher_status!=='aprobado'){root.innerHTML=vPend();return}
   if(isDir()&&M.teacher_status!=='aprobado'){root.innerHTML=vPendDir();return}
   const prof=M.role==='prof';
   const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')],['banco','📦 Banco (paquetes)']]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['clase','🎥 Clase'],['mhor','🗓 Mi horario']]:[['sim','📝 Mis simulacros y tareas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
-  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
-  root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${isDir()?(M.role==='rector'?'Rector':'Coordinador'):prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
+  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
+  if(prof&&window.AulaDashboard){
+    root.innerHTML=AulaDashboard.shell(D,M,tab,body,vLive(),{doc:D.pend,dir:D.pendDir});
+  }else root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${isDir()?(M.role==='rector'?'Rector':'Coordinador'):prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
   <div id="livebar">${vLive()}</div>
   <nav class="flex gap-2 overflow-x-auto mb-4">${tabs.map(([k,l])=>`<button onclick="go('${k}')" class="px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${tab===k?'on':'bg-white'}">${l}</button>`).join('')}</nav>${body}`;
   if(tab==='prof'&&window.AulaDashboard)AulaDashboard.mount(D,M,charts);
