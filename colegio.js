@@ -97,7 +97,7 @@ function vDet(){
   const subs=[['cur','👥 Cursos y estudiantes'],['sim','🚀 Simulacros y tareas'],['res','📊 Resultados'],['imp','🖨️ Exámenes impresos'],['asi','🎥 Clase y asistencia']];
   const view=({cur:dCur,sim:dSim,res:dRes,imp:dImp,asi:dAsi}[S.sub]||dCur)(X);
   return`<div class="space-y-4">${card(`<button onclick="DIR.back()" class="text-sm text-indigo-700 underline">← Volver a docentes</button><h2 class="text-xl font-bold mt-1">${E(d.full_name)}</h2><p class="text-xs text-slate-500">${E(d.area||'')} · ${E((d.asignaturas||[]).join(', '))} · <b>Solo lectura</b></p>`)}
-  <nav class="flex gap-2 overflow-x-auto">${subs.map(([k,l])=>`<button onclick="DIR.sub('${k}')" class="px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${S.sub===k?'on':'bg-white'}">${l}</button>`).join('')}</nav>${view}</div>`;
+  <nav class="aic-tabs">${subs.map(([k,l])=>`<button onclick="DIR.sub('${k}')" class="px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${S.sub===k?'on':'bg-white'}">${l}</button>`).join('')}</nav>${view}</div>`;
 }
 function dCur(X){
   if(!X.cs.length)return card('<p class="text-sm text-slate-500">Este docente todavía no tiene cursos.</p>');

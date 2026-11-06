@@ -99,3 +99,10 @@ html{scroll-behavior:smooth}body{background:radial-gradient(ellipse at 8% 0%,rgb
 .aic-main .aic-card .aic-card-head h3{font-size:16px;font-weight:800;color:#102a5c}
 .aic-main .aic-card table th{font-size:11px;letter-spacing:.5px;color:#64748b;text-transform:uppercase;padding:8px 12px 8px 0}
 @media(max-width:760px){.aic-kpis3{grid-template-columns:1fr 1fr}}
+
+/* ===== Pestañas sin barra de desplazamiento: se acomodan en cuadrícula ===== */
+#app nav.aic-tabs,.aic-tabs{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px!important;overflow:visible!important;background:transparent!important;border:0!important;padding:0!important;border-radius:0!important}
+.aic-tabs button,#app nav.aic-tabs button{white-space:normal!important;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 12px!important;font-size:13px!important;font-weight:700;line-height:1.2;color:#334a74!important;background:#fff!important;border:1px solid #dbe5f3!important;border-radius:13px!important;box-shadow:0 3px 10px rgba(20,50,110,.06)!important;transition:.16s}
+.aic-tabs button:hover{border-color:#2864e8!important;transform:translateY(-1px);box-shadow:0 6px 16px rgba(40,100,232,.15)!important}
+.aic-tabs button.on,#app nav.aic-tabs button.on{background:linear-gradient(135deg,#2864e8,#1749b8)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 8px 20px rgba(40,100,232,.32)!important}
+@media(max-width:520px){.aic-tabs,#app nav.aic-tabs{grid-template-columns:1fr 1fr}}
