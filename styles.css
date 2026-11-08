@@ -106,3 +106,13 @@ html{scroll-behavior:smooth}body{background:radial-gradient(ellipse at 8% 0%,rgb
 .aic-tabs button:hover{border-color:#2864e8!important;transform:translateY(-1px);box-shadow:0 6px 16px rgba(40,100,232,.15)!important}
 .aic-tabs button.on,#app nav.aic-tabs button.on{background:linear-gradient(135deg,#2864e8,#1749b8)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 8px 20px rgba(40,100,232,.32)!important}
 @media(max-width:520px){.aic-tabs,#app nav.aic-tabs{grid-template-columns:1fr 1fr}}
+
+/* Menú lateral: con muchas opciones ahora se desplaza dentro de su propia columna (no se sale del fondo azul) */
+.aic-sidebar{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#3b5a96 transparent}
+.aic-sidebar::-webkit-scrollbar{width:6px}.aic-sidebar::-webkit-scrollbar-thumb{background:#3b5a96;border-radius:6px}
+.aic-sidebar .aic-brand{flex:0 0 auto}
+.aic-side-label{padding:14px 12px 8px!important}
+.aic-sidebar nav{flex:0 0 auto;gap:2px!important}
+#app .aic-sidebar nav button.aic-nav{padding:9px 12px!important;gap:10px}
+.aic-side-bottom{flex:0 0 auto;position:sticky;bottom:-24px;background:#0b2554;margin-left:-15px;margin-right:-15px;padding:14px 20px 18px!important;z-index:2}
+@media(max-width:760px){.aic-sidebar{overflow:visible}.aic-side-bottom{position:static;margin:0;background:transparent}}
