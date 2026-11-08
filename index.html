@@ -519,7 +519,7 @@ async function delRoster(id){const{error}=await sb.from('roster').delete().eq('i
 function togC(id,on){SF.cs=on?[...new Set([...SF.cs,id])]:SF.cs.filter(x=>x!==id)}
 function allC(){SF.cs=(D.courses||[]).filter(c=>c.grade===SF.g).map(c=>c.id);render()}
 async function createSim(){
-  const av=D.avail||{},have=(av[SF.g]||{})[SF.s]||0,max=Math.min(have,50),title=(SF.t||'').trim();
+  const av=D.avail||{},have=(av[SF.g]||{})[SF.s]||0,max=Math.min(have,120),title=(SF.t||'').trim();
   if(!title)return toast('⚠️','Falta el nombre','Escribe un nombre.');
   if(!(SF.n>=1)||SF.n>max)return toast('⚠️','Número de preguntas no válido','Debe estar entre 1 y '+max+' (las preguntas visibles de esa materia).');
   if(!(SF.m>=1)||SF.m>10)return toast('⚠️','Minutos no válidos','Entre 1 y 10 minutos por pregunta.');
@@ -832,7 +832,7 @@ function vSimP(){
   if(!av[SF.g])SF.g=gs[gs.length-1];
   const subs=Object.keys(av[SF.g]).sort();
   if(!av[SF.g][SF.s])SF.s=subs[0];
-  const have=av[SF.g][SF.s],max=Math.min(have,50);
+  const have=av[SF.g][SF.s],max=Math.min(have,120);
   if(SF.n>max)SF.n=max;
   const gc=cs.filter(c=>c.grade===SF.g),sims=D.sims||[],kn=SF.k==='tarea'?'tarea':'simulacro';
   return`<div class="space-y-4"><div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">🚀 Activar un simulacro o una tarea</h2>
