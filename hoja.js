@@ -38,7 +38,7 @@ function html(L,info){
   h+=txt(28,32,`<span style="font-size:9pt">Estudiante: <b>${esc(info.nombre||'')}</b></span>`);
   h+=txt(28,37.5,`<span style="font-size:9pt">Documento: <b>${esc(info.documento||'')}</b> &nbsp; Curso: <b>${esc(info.curso||'')}</b> &nbsp; Fecha: <b>${esc(info.fecha||'')}</b></span>`);
   h+=txt(28,43,`<span style="font-size:7.5pt;color:#333">Código del examen: ${esc(info.codigo||'')}</span>`);
-  h+=frame(15,47,79,48.5,'NÚMERO DE DOCUMENTO (ya marcado)');h+=frame(108,47,22,48.5,'VERSIÓN');h+=frame(132,47,53,48.5,'INSTRUCCIONES');
+  h+=frame(15,47,79,48.5,'NÚMERO DE DOCUMENTO (ya marcado)');h+=frame(108,47,22,48.5,info.verLabel||'VERSIÓN');h+=frame(132,47,53,48.5,'INSTRUCCIONES');
   L.idlabels.forEach(l=>{h+=txt(l.x-1.2,l.y-1.6,`<span style="font-size:6pt">${l.d}</span>`)});
   const doc=String(info.documento||'').replace(/\D/g,'').padStart(L.idcols.length,'0').slice(-L.idcols.length);
   L.idcols.forEach((col,i)=>col.forEach((o,r)=>{h+=bub(o,String(r)===doc[i])}));

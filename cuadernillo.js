@@ -33,6 +33,7 @@ function css(){
 .cq .cq-ctx .h{font-weight:bold;text-transform:uppercase;font-size:8.5pt;margin-bottom:1.5mm;border-bottom:1px solid #000;padding-bottom:1mm}
 .cq .cq-ctx .tt{font-weight:bold;margin-bottom:1mm}
 .cq .cq-ctx .tx{white-space:pre-wrap;text-align:justify}
+.cq .cq-area{column-span:all;background:#111;color:#fff;font-weight:bold;text-transform:uppercase;letter-spacing:1px;text-align:center;padding:2mm;margin:2mm 0 4mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .cq .cq-blank{min-height:200mm;display:flex;align-items:center;justify-content:center;font-size:10pt;color:#444;border:1px dashed #888}
 .cq-prev{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.72);display:flex;flex-direction:column}
 .cq-prev .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid #cbd5e1}
@@ -45,9 +46,10 @@ function css(){
 }
 /* items: preguntas ordenadas (ya con grupo_key). Devuelve bloques con numeración continua. */
 function prepararPreguntas(items){
-  const out=[];let n=0,i=0;
+  const out=[];let n=0,i=0,lastArea=null;
   while(i<items.length){
     const q=items[i];
+    if(q.area&&q.area!==lastArea){out.push({tipo:'area',titulo:q.area});lastArea=q.area}
     const key=q.grupo_key&&q.stimulus_content?q.grupo_key:null;
     if(key){
       let j=i;const grp=[];
@@ -65,6 +67,7 @@ function qHtml(q,img){
   return`<div class="cq-q"><span class="cq-n">${q._num}.</span><div>${ctx}<div>${e(q.body)}</div>${(q.options||[]).map((o,k)=>`<div class="op"><b>${L[k]}.</b><span>${e(o)}</span></div>`).join('')}</div></div>`;
 }
 function bloqueHtml(b,img){
+  if(b.tipo==='area')return`<div class="cq-area">${e(b.titulo)}</div>`;
   if(b.tipo==='sola')return qHtml(b.preguntas[0],img);
   b.preguntas.forEach(p=>p.__enGrupo=true);
   const enc=b.desde===b.hasta?`Responda la pregunta ${b.desde}`:`Responda las preguntas ${b.desde} a ${b.hasta}`;
@@ -83,7 +86,7 @@ function html(spec){
     <div class="cq-sub">${e(spec.asignatura||'')}</div>
     <table class="cq-id">${filas.map(r=>`<tr><td class="k">${e(r[0])}</td><td>${e(r[1])}</td></tr>`).join('')}</table>
     <div class="cq-ins"><h4>Instrucciones</h4><ol>
-      <li>Este cuadernillo contiene <b>${P.total}</b> preguntas${spec.minutos?` y tiene una duración de <b>${spec.minutos} minutos</b>`:''}.</li>
+      <li>Este cuadernillo contiene <b>${P.total}</b> preguntas${spec.duracion?`. ${e(spec.duracion)}`:spec.minutos?` y tiene una duración de <b>${spec.minutos} minutos</b>`:''}.</li>
       <li>Cada pregunta tiene cuatro opciones de respuesta (A, B, C, D) y <b>solo una</b> es correcta.</li>
       <li>Lea con atención. Algunas preguntas comparten una misma información: está al comienzo del grupo ("Responda las preguntas … de acuerdo con la siguiente información").</li>
       <li>Marque sus respuestas <b>únicamente en la hoja de respuestas</b>, rellenando por completo un solo óvalo por pregunta, con lápiz o bolígrafo negro.</li>
