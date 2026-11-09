@@ -41,16 +41,14 @@ function marcar(){
   const sinDoc=Z.docs.filter(d=>!d.documento).length;
   let c;
   if(Z.ok){
-    c=`<div style="text-align:center;padding:18px 8px"><div style="font-size:56px">${Z.ok.tipo==='entrada'?'✅':'👋'}</div><div style="font-size:24px;font-weight:800;margin-top:6px">${e(Z.ok.nombre)}</div><div style="font-size:20px;margin-top:6px">${Z.ok.tipo==='entrada'?'INGRESO registrado':'SALIDA registrada'}</div><div style="font-size:28px;font-weight:800;color:#0b9865;margin-top:6px">${dia(Z.ok.at)}<br>${hora(Z.ok.at)}</div></div>`;
-  }else if(Z.enc){
-    const d=Z.enc,est=d.ultimo_tipo==='entrada'?`Hoy llegó a las ${hora(d.ultimo_at)}`:d.ultimo_tipo==='salida'?`Hoy salió a las ${hora(d.ultimo_at)}`:'Hoy aún no ha marcado';
-    const b=(t,col,tx)=>`<button ${Z.busy?'disabled':''} onclick="ASIS.m('${t}')" style="flex:1;background:${col};color:#fff;padding:22px 8px;border-radius:14px;font-size:16px;font-weight:800">${tx}</button>`;
-    c=`<div style="text-align:center"><div style="font-size:13px;color:#64748b">Docente</div><div style="font-size:24px;font-weight:800">${e(d.full_name)}</div><div style="font-size:14px;color:#64748b;margin:4px 0 4px">${est}</div><div id="asis-reloj" style="font-size:30px;font-weight:800;margin:8px 0 14px"></div><div style="display:flex;gap:12px">${b('entrada','#16a34a','⬇ ASISTENCIA DE INGRESO')}${b('salida','#dc2626','⬆ ASISTENCIA DE SALIDA')}</div><button class="aic-link" style="margin-top:14px" onclick="ASIS.limpiar()">Cancelar</button></div>`;
+    const sal=Z.ok.tipo==='salida';
+    c=`<div style="text-align:center;padding:10px 4px"><div style="font-size:60px">${sal?'👋':'✅'}</div><div style="font-size:22px;font-weight:800;margin-top:6px">Docente ${e(Z.ok.nombre)}</div><div style="font-size:24px;margin-top:6px;font-weight:700">${sal?'Hasta pronto':'Bienvenido(a)'}</div><div style="font-size:16px;margin-top:4px">${sal?'Tu salida quedó registrada':'Tu llegada quedó registrada'} el</div><div style="font-size:26px;font-weight:800;color:#0b9865;margin-top:4px">${dia(Z.ok.at)}<br>${hora(Z.ok.at)}</div><p style="font-size:12px;color:#64748b;margin-top:10px">La fecha y la hora no se pueden corregir.</p></div>`;
   }else{
-    c=`<label style="display:block;text-align:center;font-weight:700;margin-bottom:8px">Escribe tu número de documento</label><input id="asis-cc" inputmode="numeric" autocomplete="off" placeholder="Ej: 1020304050" value="${e(Z.cc)}" ${big} oninput="ASIS.cc=this.value" onkeydown="if(event.key==='Enter')ASIS.buscarCC()"><button onclick="ASIS.buscarCC()" style="width:100%;margin-top:12px;background:#246be0;color:#fff;padding:18px;border-radius:14px;font-size:20px;font-weight:800">Continuar</button>`;
+    c=`<label style="display:block;text-align:center;font-weight:700;margin-bottom:8px;font-size:16px">Escribe tu número de documento</label><input id="asis-cc" inputmode="numeric" autocomplete="off" placeholder="Número de documento" value="${e(Z.cc)}" ${big} oninput="ASIS.cc=this.value" onkeydown="if(event.key==='Enter')ASIS.enviar()"><button ${Z.busy?'disabled':''} onclick="ASIS.enviar()" style="width:100%;margin-top:12px;background:#16a34a;color:#fff;padding:18px;border-radius:14px;font-size:20px;font-weight:800">Enviar y ver asistencia</button>${Z.err?`<div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:12px;padding:12px;text-align:center;font-weight:700">${e(Z.err)}</div>`:''}`;
   }
-  const ced=sinDoc?`<div style="margin-top:16px;background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:10px;font-size:13px"><b>Falta registrar el documento de:</b> ${e(Z.docs.filter(d=>!d.documento).map(d=>d.full_name).join(', '))}.<br>Cada docente lo registra una sola vez entrando a su cuenta → <b>Mi asistencia</b>.</div>`:'';
-  return`<div class="aic-card" style="padding:16px;margin-bottom:14px;max-width:520px;margin-left:auto;margin-right:auto"><h2 style="font-weight:800;font-size:20px;text-align:center">🕒 Asistencia de docentes</h2><p style="font-size:13px;color:#64748b;text-align:center;margin:4px 0 14px">Este celular queda en la entrada del colegio. Cada docente escribe su documento y marca su asistencia de ingreso o de salida. La fecha y la hora las pone la plataforma y no se pueden corregir.</p>${c}${ced}</div>`;
+  const falta=sinDoc?`<p style="margin-top:14px;font-size:12px;color:#b45309;text-align:center">Sin documento registrado: ${e(Z.docs.filter(d=>!d.documento).map(d=>d.full_name).join(', '))}. Cada docente lo registra en su cuenta → Mi asistencia.</p>`:'';
+  return`<div class="aic-card" style="padding:18px;margin-bottom:14px;max-width:480px;margin-left:auto;margin-right:auto"><h2 style="font-weight:800;font-size:20px;text-align:center">🕒 Asistencia de docentes</h2><p style="font-size:13px;color:#64748b;text-align:center;margin:4px 0 14px">Primer registro del día = llegada. Segundo registro = salida.</p>${c}${falta}</div>
+  <div style="text-align:center;margin-bottom:10px"><button class="aic-link" style="font-size:14px" onclick="ASIS.togHist()">${Z.hist?'▲ Ocultar historial':'📋 Ver historial de asistencias'}</button></div>`;
 }
 function historial(){
   const rs=resumen();
@@ -62,30 +60,24 @@ function historial(){
 }
 const api={
   load,
-  view:()=>`<div>${isDir()?marcar():miDoc()}${historial()}</div>`,
+  view:()=>`<div>${isDir()?marcar():miDoc()}${!isDir()||Z.hist?historial():''}</div>`,
+  togHist(){Z.hist=!Z.hist;R()},
   async guardarMi(){const v=document.getElementById('asis-mi').value;const r=await sb.rpc('asistencia_mi_doc',{p_doc:v});if(r.error)return toast('⚠️','No se guardó',r.error.message);Z.mi=r.data;toast('✅','Documento registrado','Ya puedes marcar tu llegada y salida en el celular de la entrada.');R()},
   set cc(v){Z.cc=v},
-  limpiar(){Z.enc=null;Z.ok=null;Z.cc='';clearInterval(Z.t);R()},
-  async buscarCC(){
-    const v=(document.getElementById('asis-cc')?.value||Z.cc||'').trim();Z.cc=v;
-    if(v.replace(/\D/g,'').length<5)return toast('⚠️','Documento','Escribe tu número de documento.');
-    const r=await sb.rpc('asistencia_buscar',{p_doc:v});
-    if(r.error)return err(r.error);
-    if(!r.data||!r.data.length)return toast('⚠️','No encontrado','Ese documento no está registrado. Avisa al rector o coordinador.');
-    Z.enc=r.data[0];R();api.reloj();
-  },
-  reloj(){clearInterval(Z.t);const f=()=>{const el=document.getElementById('asis-reloj');if(!el){clearInterval(Z.t);return}el.textContent=dia(new Date())+' · '+hora(new Date())};f();Z.t=setInterval(f,1000)},
-  async f(k,v){Z[k]=v;try{await hist()}catch(x){return err(x)}R()},
-  async m(tipo){
-    if(Z.busy||!Z.enc)return;Z.busy=true;
-    const d=Z.enc;
-    const r=await sb.rpc('asistencia_marcar',{p_docente:d.id,p_tipo:tipo});
+  limpiar(){Z.ok=null;Z.err='';Z.cc='';R()},
+  async enviar(){
+    if(Z.busy)return;
+    const v=(document.getElementById('asis-cc')?.value||Z.cc||'').trim();Z.cc=v;Z.err='';
+    if(v.replace(/\D/g,'').length<5){Z.err='Escribe tu número de documento completo.';return R()}
+    Z.busy=true;
+    const r=await sb.rpc('asistencia_registrar',{p_doc:v});
     Z.busy=false;
-    if(r.error){return toast('⚠️','No se marcó',r.error.message)}
-    clearInterval(Z.t);Z.enc=null;Z.cc='';Z.ok={nombre:d.full_name,tipo,at:r.data};
-    try{await load()}catch(x){err(x)}R();
-    setTimeout(()=>{if(Z.ok&&Z.ok.at===r.data){Z.ok=null;R()}},7000);
+    if(r.error){Z.err=r.error.message;R();setTimeout(()=>{if(Z.err){Z.err='';Z.cc='';R()}},8000);return}
+    const x=(r.data||[])[0];Z.cc='';Z.ok={nombre:x.nombre,tipo:x.tipo,at:x.at};
+    try{await load()}catch(y){}R();
+    setTimeout(()=>{if(Z.ok&&Z.ok.at===x.at){Z.ok=null;R()}},10000);
   },
+  async f(k,v){Z[k]=v;try{await hist()}catch(x){return err(x)}R()},
   csv(){
     const rs=resumen();
     const l=[['Docente','Día','Llegada','Salida','Tiempo'],...rs.map(o=>[o.n,dk(o.d),o.ent?hora(o.ent):'',o.sal?hora(o.sal):'',dur(o.ent,o.sal)])];

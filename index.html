@@ -327,10 +327,10 @@ async function go(t){
   try{
     if(t==='saber'){await loadScript('saber.js?v=1');await SABER.load()}
     if(t==='clase'&&M.role==='prof'){await loadScript('aulavirtual.js?v=2')}
-    if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=2');await ACL.load()}
-    if(t==='planeador'||t==='diario'){await loadScript('planeador.js?v=1');await PLN.load()}
+    if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=3');await ACL.load()}
+    if(t==='planeador'||t==='diario'){await loadScript('planeador.js?v=2');await PLN.load()}
     if(t==='subirp'){await loadScript('subirpreg.js?v=2');await SUBP.load()}
-    if(t==='asis'){await loadScript('asistencia.js?v=2');await ASIS.load()}
+    if(t==='asis'){await loadScript('asistencia.js?v=3');await ASIS.load()}
     if(t==='taller'){await loadScript('talleres.js?v=1');await TAL.load()}
     if(['periodo','virtual','plan','saberimp','diag'].includes(t)){
       const MOD={periodo:['periodo.js','PER'],virtual:['virtual.js','VIRT'],plan:['docente.js','DOCP'],diario:['docente.js','DOCP'],saberimp:['saberimp.js','SIMP'],diag:['saberimp.js','SIMP']}[t];
@@ -909,7 +909,7 @@ function render(){
   if(M.role==='prof'&&M.teacher_status!=='aprobado'){root.innerHTML=vPend();return}
   if(isDir()&&M.teacher_status!=='aprobado'){root.innerHTML=vPendDir();return}
   const prof=M.role==='prof';
-  const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')],['banco','📦 Banco (paquetes)']]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['subirp','📥 Subir preguntas'],['clase','🎥 Clase'],['taller','📝 Talleres'],['aclase','✋ Asistencia a clase'],['asis','🕒 Mi asistencia'],['mhor','🗓 Mi horario']]:[['sim','📝 Mis simulacros y tareas'],['periodo','🧾 Exámenes virtuales'],['virtual','📎 Trabajos y entregas'],['aclase','✋ Asistencia a clase'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
+  const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')],['banco','📦 Banco (paquetes)']]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['subirp','📥 Subir preguntas'],['clase','🎥 Clase'],['taller','📝 Talleres'],['aclase','✋ Asistencia a clase'],['asis','🕒 Mi asistencia'],['mhor','🗓 Mi horario']]:[['sim','📝 Mis simulacros y tareas'],['periodo','🧾 Exámenes virtuales'],['virtual','📎 Trabajos y entregas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
   const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',saber:()=>window.SABER?SABER.view():'',periodo:()=>window.PER?PER.view(false):'',saberimp:()=>window.SIMP?SIMP.view():'',asis:()=>window.ASIS?ASIS.view():'',aclase:()=>window.ACL?ACL.view():'',asistencias:()=>window.ACL?ACL.view():'',subirp:()=>window.SUBP?SUBP.view():'',planeador:()=>window.PLN?PLN.view():'',diario:()=>window.PLN?PLN.view():'',taller:()=>window.TAL?TAL.view():'',diag:()=>window.SIMP?SIMP.view():'',virtual:()=>window.VIRT?VIRT.view():'',plan:()=>window.DOCP?DOCP.view('plan'):'',diario:()=>window.DOCP?DOCP.view('diario'):'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
   if((prof||isDir())&&window.AulaDashboard){
     root.innerHTML=AulaDashboard.shell(D,M,tab,body,vLive(),{doc:D.pend,dir:D.pendDir});
@@ -924,6 +924,6 @@ function render(){
 }
 boot();
 </script>
-<script src="dashboard.js?v=4"></script>
+<script src="dashboard.js?v=5"></script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body></html>

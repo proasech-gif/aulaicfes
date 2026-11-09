@@ -33,7 +33,7 @@ function docView(){
   const ab=Z.ses.filter(x=>!x.cerrada_at);
   const asigs=(M.asignaturas||[]).filter(Boolean);
   const abrir=`<div class="aic-card" style="padding:16px;margin-bottom:14px"><h2 style="font-weight:800;font-size:20px">✋ Asistencia a clase</h2>
-   <p style="font-size:13px;color:#64748b;margin:4px 0 10px">Elige el curso y pulsa <b>Abrir asistencia</b>. Los estudiantes escriben su documento en su celular o computador y queda guardada la fecha y la hora.</p>
+   <p style="font-size:13px;color:#64748b;margin:4px 0 10px">Elige el curso y pulsa <b>Abrir asistencia</b>. Aparece un campo donde cada estudiante escribe su número de documento en este dispositivo; la fecha y la hora quedan guardadas.</p>
    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end"><label style="font-size:12px;font-weight:700">Curso<br><select ${inp} onchange="ACL.cid=this.value"><option value="">Elige…</option>${Z.cursos.map(c=>`<option value="${c.id}" ${c.id===Z.cid?'selected':''}>${e(c.grade+'° '+c.name)}</option>`).join('')}</select></label>
    <label style="font-size:12px;font-weight:700">Asignatura<br>${asigs.length?`<select ${inp} onchange="ACL.asig=this.value"><option value="">—</option>${asigs.map(a=>`<option ${a===Z.asig?'selected':''}>${e(a)}</option>`).join('')}</select>`:`<input ${inp} value="${e(Z.asig)}" oninput="ACL.asig=this.value" placeholder="Ej: Matemáticas">`}</label>
    <button onclick="ACL.abrir()" style="background:#16a34a;color:#fff;padding:12px 18px;border-radius:10px;font-weight:800">▶ Abrir asistencia</button></div></div>`;
@@ -41,7 +41,8 @@ function docView(){
   const s=Z.ses.find(x=>x.id===Z.det);
   if(s){
     const pres=Z.lista.filter(x=>x.at).length;
-    cur=`<div class="aic-card" style="padding:16px;margin-bottom:14px;border:2px solid ${s.cerrada_at?'#cbd5e1':'#16a34a'}"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="font-weight:800">${s.cerrada_at?'Clase cerrada':'🟢 Asistencia abierta'} · ${e(cN(s.course_id))} ${e(s.asignatura||'')}</h3>${s.cerrada_at?'':`<button onclick="ACL.cerrar('${s.id}')" style="background:#dc2626;color:#fff;padding:8px 14px;border-radius:8px;font-weight:700">■ Cerrar asistencia</button>`}</div>
+    const kio=s.cerrada_at?'':(Z.okE?`<div style="text-align:center;padding:12px;border:2px solid #16a34a;border-radius:14px;margin-bottom:12px;background:#f0fdf4"><div style="font-size:50px">${Z.okE.rep?'ℹ️':'✅'}</div><div style="font-size:20px;font-weight:800">Querido(a) estudiante ${e(Z.okE.nombre)}</div><div style="font-size:22px;font-weight:700;margin-top:4px">${Z.okE.rep?'Ya tenías tu asistencia registrada':'Bienvenido(a)'}</div><div style="font-size:15px;margin-top:2px">${Z.okE.rep?'Quedó registrada el':'Tu asistencia quedó registrada el'}</div><div style="font-size:24px;font-weight:800;color:#0b9865">${fH(Z.okE.at)}</div></div>`:`<div style="max-width:420px;margin:0 auto 14px;padding:12px;border:2px solid #cbd5e1;border-radius:14px;text-align:center"><div style="font-weight:700;margin-bottom:6px">Estudiante: escribe tu número de documento</div><input id="acl_doc" inputmode="numeric" autocomplete="off" placeholder="Número de documento" onkeydown="if(event.key==='Enter')ACL.enviar('${s.id}')" style="width:100%;font-size:22px;text-align:center;border:2px solid #cbd5e1;border-radius:12px;padding:12px"><button onclick="ACL.enviar('${s.id}')" style="width:100%;margin-top:10px;background:#16a34a;color:#fff;padding:14px;border-radius:12px;font-size:18px;font-weight:800">Enviar y ver asistencia</button>${Z.errE?`<div style="margin-top:10px;color:#b91c1c;font-weight:700">${e(Z.errE)}</div>`:''}</div>`);
+    cur=`<div class="aic-card" style="padding:16px;margin-bottom:14px;border:2px solid ${s.cerrada_at?'#cbd5e1':'#16a34a'}">${kio}<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="font-weight:800">${s.cerrada_at?'Clase cerrada':'🟢 Asistencia abierta'} · ${e(cN(s.course_id))} ${e(s.asignatura||'')}</h3>${s.cerrada_at?'':`<button onclick="ACL.cerrar('${s.id}')" style="background:#dc2626;color:#fff;padding:8px 14px;border-radius:8px;font-weight:700">■ Cerrar asistencia</button>`}</div>
     <div style="font-size:13px;color:#64748b;margin:4px 0">Abierta: ${fH(s.abierta_at)} · <b>${pres}</b> de ${Z.lista.length} presentes ${s.cerrada_at?'':'(se actualiza sola)'}</div>
     <div class="aic-table-wrap"><table style="min-width:480px"><thead><tr><th>ESTUDIANTE</th><th>DOCUMENTO</th><th>HORA</th><th></th></tr></thead><tbody>${Z.lista.map(x=>`<tr><td>${e(x.full_name)}</td><td>${e(x.documento||'—')}</td><td>${x.at?'✅ '+fH(x.at)+(x.manual?' (manual)':''):'<span style="color:#b91c1c">Ausente</span>'}</td><td><button class="aic-link" onclick="ACL.manual('${s.id}','${x.id}',${x.at?'false':'true'})">${x.at?'Quitar':'Marcar presente'}</button></td></tr>`).join('')||'<tr><td colspan="4">Este curso no tiene estudiantes.</td></tr>'}</tbody></table></div>
     <button class="aic-link" style="margin-top:8px" onclick="ACL.csv()">⬇ Descargar Excel</button></div>`;
@@ -61,6 +62,9 @@ function repHtml(){
 }
 function detDir(){return`<div style="margin-top:12px;border-top:1px solid #e2e8f0;padding-top:10px"><b>Lista de la clase</b><div class="aic-table-wrap"><table style="min-width:480px"><thead><tr><th>ESTUDIANTE</th><th>DOCUMENTO</th><th>HORA</th></tr></thead><tbody>${Z.lista.map(x=>`<tr><td>${e(x.full_name)}</td><td>${e(x.documento||'—')}</td><td>${x.at?'✅ '+fH(x.at):'<span style="color:#b91c1c">Ausente</span>'}</td></tr>`).join('')}</tbody></table></div></div>`}
 function estView(){
+  return`<div class="aic-card" style="padding:18px;max-width:520px;margin:auto;text-align:center"><h2 style="font-weight:800">✋ Asistencia a clase</h2><p style="margin-top:8px;color:#64748b">Tu asistencia se registra en el dispositivo de tu docente, escribiendo tu número de documento al llegar a clase.</p></div>`;
+}
+function estViewViejo(){
   const hoy=Z.abiertas;
   if(Z.ok)return`<div class="aic-card" style="padding:24px;text-align:center;max-width:460px;margin:auto"><div style="font-size:56px">✅</div><div style="font-size:22px;font-weight:800">Asistencia registrada</div><div style="font-size:24px;font-weight:800;color:#0b9865;margin-top:8px">${fH(Z.ok)}</div><button class="aic-link" style="margin-top:12px" onclick="ACL.nuevo()">Volver</button></div>`;
   return`<div class="aic-card" style="padding:18px;max-width:520px;margin:auto"><h2 style="font-weight:800;font-size:20px;text-align:center">✋ Asistencia a clase</h2>
@@ -84,6 +88,15 @@ const api={
     const r=await sb.rpc('clase_marcar',{p_ses:id,p_doc:v});
     if(r.error)return toast('⚠️','No se registró',r.error.message);
     Z.ok=r.data;R();
+  },
+  async enviar(id){
+    const v=(document.getElementById('acl_doc')?.value||'').trim();Z.errE='';
+    if(v.replace(/\D/g,'').length<5){Z.errE='Escribe el número de documento completo.';return R()}
+    const r=await sb.rpc('clase_marcar_doc',{p_ses:id,p_doc:v});
+    if(r.error){Z.errE=r.error.message;R();setTimeout(()=>{if(Z.errE){Z.errE='';R()}},6000);return}
+    const x=(r.data||[])[0];Z.okE={nombre:x.nombre,at:x.at,rep:x.repetida};
+    try{await lista();const h=Z.ses.find(y=>y.id===id);}catch(y){}
+    R();setTimeout(()=>{Z.okE=null;R()},7000);
   },
   nuevo(){Z.ok=null;api.recargar()},
   async recargar(){try{await load()}catch(x){return err(x)}R()},
