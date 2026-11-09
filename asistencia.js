@@ -13,7 +13,7 @@ let Z={docs:[],rows:[],desde:'',hasta:hoy(),doc:'',busy:false,q:'',cc:'',enc:nul
 function ini(){const d=new Date();d.setDate(d.getDate()-30);return d.toLocaleDateString('en-CA',{timeZone:'America/Bogota'})}
 async function load(){
   Z.desde=Z.desde||ini();
-  if(isDir()){const r=await sb.rpc('asistencia_docentes');if(r.error)throw r.error;Z.docs=r.data||[]}
+  if(isDir()){const r=await sb.rpc('asistencia_docentes');if(r.error)throw r.error;Z.docs=r.data||[];const e2=await sb.rpc('asistencia_estado');Z.est=(e2.data||[])[0]||{cerrada:false}}
   if(!isDir()){const r=await sb.rpc('asistencia_mi_doc');if(!r.error)Z.mi=r.data||null}
   await hist();
 }
@@ -38,16 +38,19 @@ function miDoc(){
   if(Z.mi)return`<div class="aic-card" style="padding:14px;margin-bottom:14px"><b>🪪 Tu documento:</b> ${e(Z.mi)} <span style="font-size:12px;color:#64748b">· Con este número marcas tu llegada y salida en el celular de la entrada.</span></div>`;
   return`<div class="aic-card" style="padding:14px;margin-bottom:14px"><h3 style="font-weight:800">🪪 Registra tu número de documento</h3><p style="font-size:13px;color:#64748b;margin:4px 0 8px">Se hace una sola vez. Con este número marcarás tu llegada y salida en el celular que el rector dispone en la entrada.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="asis-mi" inputmode="numeric" placeholder="Número de documento" style="flex:1;min-width:180px;border:1px solid #cbd5e1;border-radius:8px;padding:10px"><button onclick="ASIS.guardarMi()" style="background:#246be0;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700">Guardar</button></div></div>`}
 function marcar(){
-  const sinDoc=Z.docs.filter(d=>!d.documento).length;
   let c;
+  const cer=Z.est&&Z.est.cerrada;
   if(Z.ok){
     const sal=Z.ok.tipo==='salida';
-    c=`<div style="text-align:center;padding:10px 4px"><div style="font-size:60px">${sal?'👋':'✅'}</div><div style="font-size:22px;font-weight:800;margin-top:6px">Docente ${e(Z.ok.nombre)}</div><div style="font-size:24px;margin-top:6px;font-weight:700">${sal?'Hasta pronto':'Bienvenido(a)'}</div><div style="font-size:16px;margin-top:4px">${sal?'Tu salida quedó registrada':'Tu llegada quedó registrada'} el</div><div style="font-size:26px;font-weight:800;color:#0b9865;margin-top:4px">${dia(Z.ok.at)}<br>${hora(Z.ok.at)}</div><p style="font-size:12px;color:#64748b;margin-top:10px">La fecha y la hora no se pueden corregir.</p></div>`;
+    c=`<div style="text-align:center;padding:10px 4px"><div style="font-size:60px">${sal?'👋':'✅'}</div><div style="font-size:22px;font-weight:800;margin-top:6px">Docente ${e(Z.ok.nombre)}</div><div style="font-size:24px;margin-top:6px;font-weight:700">${sal?'Hasta pronto':'Bienvenido(a)'}</div><div style="font-size:16px;margin-top:4px">Tu hora de ${sal?'salida':'llegada'} quedó registrada el</div><div style="font-size:26px;font-weight:800;color:#0b9865;margin-top:4px">${dia(Z.ok.at)}<br>${hora(Z.ok.at)}</div></div>`;
+  }else if(cer){
+    c=`<div style="text-align:center;padding:16px;font-weight:700;color:#b91c1c">La asistencia de hoy fue cerrada por el rector.</div>`;
   }else{
-    c=`<label style="display:block;text-align:center;font-weight:700;margin-bottom:8px;font-size:16px">Escribe tu número de documento</label><input id="asis-cc" inputmode="numeric" autocomplete="off" placeholder="Número de documento" value="${e(Z.cc)}" ${big} oninput="ASIS.cc=this.value" onkeydown="if(event.key==='Enter')ASIS.enviar()"><button ${Z.busy?'disabled':''} onclick="ASIS.enviar()" style="width:100%;margin-top:12px;background:#16a34a;color:#fff;padding:18px;border-radius:14px;font-size:20px;font-weight:800">Enviar y ver asistencia</button>${Z.err?`<div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:12px;padding:12px;text-align:center;font-weight:700">${e(Z.err)}</div>`:''}`;
+    const bt=(t,col,tx)=>`<button ${Z.busy?'disabled':''} onclick="ASIS.enviar('${t}')" style="flex:1;background:${col};color:#fff;padding:18px 6px;border-radius:14px;font-size:17px;font-weight:800">${tx}</button>`;
+    c=`<label style="display:block;text-align:center;font-weight:700;margin-bottom:8px;font-size:16px">Escribe tu número de documento</label><input id="asis-cc" inputmode="numeric" autocomplete="off" placeholder="Número de documento" value="${e(Z.cc)}" ${big} oninput="ASIS.cc=this.value"><div style="display:flex;gap:10px;margin-top:12px">${bt('entrada','#16a34a','⬇ Hora de llegada')}${bt('salida','#dc2626','⬆ Hora de salida')}</div>${Z.err?`<div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:12px;padding:12px;text-align:center;font-weight:700">${e(Z.err)}</div>`:''}`;
   }
-  const falta=sinDoc?`<p style="margin-top:14px;font-size:12px;color:#b45309;text-align:center">Sin documento registrado: ${e(Z.docs.filter(d=>!d.documento).map(d=>d.full_name).join(', '))}. Cada docente lo registra en su cuenta → Mi asistencia.</p>`:'';
-  return`<div class="aic-card" style="padding:18px;margin-bottom:14px;max-width:480px;margin-left:auto;margin-right:auto"><h2 style="font-weight:800;font-size:20px;text-align:center">🕒 Asistencia de docentes</h2><p style="font-size:13px;color:#64748b;text-align:center;margin:4px 0 14px">Primer registro del día = llegada. Segundo registro = salida.</p>${c}${falta}</div>
+  const rec=M.role==='rector'?`<div style="text-align:center;margin-top:14px"><button onclick="ASIS.cerrarDia(${cer?'false':'true'})" style="padding:10px 14px;border-radius:10px;font-weight:700;font-size:13px;${cer?'background:#e2e8f0':'background:#fee2e2;color:#b91c1c'}">${cer?'🔓 Reabrir asistencia de hoy':'🔒 Cerrar asistencia de hoy'}</button></div>`:'';
+  return`<div class="aic-card" style="padding:18px;margin-bottom:14px;max-width:480px;margin-left:auto;margin-right:auto"><h2 style="font-weight:800;font-size:20px;text-align:center">🕒 Asistencia de docentes</h2><p style="font-size:13px;color:#64748b;text-align:center;margin:4px 0 14px">Escribe tu documento y toca la hora de llegada o la hora de salida.</p>${c}${rec}</div>
   <div style="text-align:center;margin-bottom:10px"><button class="aic-link" style="font-size:14px" onclick="ASIS.togHist()">${Z.hist?'▲ Ocultar historial':'📋 Ver historial de asistencias'}</button></div>`;
 }
 function historial(){
@@ -65,12 +68,13 @@ const api={
   async guardarMi(){const v=document.getElementById('asis-mi').value;const r=await sb.rpc('asistencia_mi_doc',{p_doc:v});if(r.error)return toast('⚠️','No se guardó',r.error.message);Z.mi=r.data;toast('✅','Documento registrado','Ya puedes marcar tu llegada y salida en el celular de la entrada.');R()},
   set cc(v){Z.cc=v},
   limpiar(){Z.ok=null;Z.err='';Z.cc='';R()},
-  async enviar(){
+  async cerrarDia(c){if(c&&!confirm('¿Cerrar la asistencia de hoy? Nadie podrá registrar llegada ni salida hasta que la reabras.'))return;const r=await sb.rpc('asistencia_cerrar',{p_cerrar:c});if(r.error)return toast('⚠️','No se pudo',r.error.message);await load();R()},
+  async enviar(tipo){
     if(Z.busy)return;
     const v=(document.getElementById('asis-cc')?.value||Z.cc||'').trim();Z.cc=v;Z.err='';
     if(v.replace(/\D/g,'').length<5){Z.err='Escribe tu número de documento completo.';return R()}
     Z.busy=true;
-    const r=await sb.rpc('asistencia_registrar',{p_doc:v});
+    const r=await sb.rpc('asistencia_registrar',{p_doc:v,p_tipo:tipo});
     Z.busy=false;
     if(r.error){Z.err=r.error.message;R();setTimeout(()=>{if(Z.err){Z.err='';Z.cc='';R()}},8000);return}
     const x=(r.data||[])[0];Z.cc='';Z.ok={nombre:x.nombre,tipo:x.tipo,at:x.at};
