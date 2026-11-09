@@ -211,8 +211,8 @@ async function startLive(){
 
 /* ---------- Carga por pestaña ---------- */
 async function loadAvail(){
-  const{data,error}=await sb.from('questions').select('grade,subject').eq('active',true).limit(3000);if(error)throw error;
-  const av={};data.forEach(q=>{(av[q.grade]=av[q.grade]||{});av[q.grade][q.subject]=(av[q.grade][q.subject]||0)+1});D.avail=av;
+  const{data,error}=await sb.rpc('avail_counts');if(error)throw error;
+  const av={};data.forEach(q=>{(av[q.grade]=av[q.grade]||{});av[q.grade][q.subject]=(av[q.grade][q.subject]||0)+Number(q.n)});D.avail=av;
 }
 async function loadCourses(){const c=await sb.from('courses').select('*').eq('teacher_id',M.id).order('grade').order('name');if(c.error)throw c.error;D.courses=c.data}
 function defLT(){const s=D.school||{},c=s.colegios,mu=c?.municipios;return{l1:c?.nombre||s.school_other||'',l2:mu?(mu.nombre+', '+(mu.departamentos?.nombre||'')):'',l3:'',logo:''}}
@@ -326,13 +326,15 @@ async function go(t){
   leaveChat();tab=t;
   try{
     if(t==='saber'){await loadScript('saber.js?v=1');await SABER.load()}
-    if(t==='aclase'){await loadScript('claseasis.js?v=1');await ACL.load()}
-    if(t==='subirp'){await loadScript('subirpreg.js?v=1');await SUBP.load()}
+    if(t==='clase'&&M.role==='prof'){await loadScript('aulavirtual.js?v=2')}
+    if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=2');await ACL.load()}
+    if(t==='planeador'||t==='diario'){await loadScript('planeador.js?v=1');await PLN.load()}
+    if(t==='subirp'){await loadScript('subirpreg.js?v=2');await SUBP.load()}
     if(t==='asis'){await loadScript('asistencia.js?v=2');await ASIS.load()}
     if(t==='taller'){await loadScript('talleres.js?v=1');await TAL.load()}
-    if(['periodo','virtual','plan','diario','saberimp','diag'].includes(t)){
+    if(['periodo','virtual','plan','saberimp','diag'].includes(t)){
       const MOD={periodo:['periodo.js','PER'],virtual:['virtual.js','VIRT'],plan:['docente.js','DOCP'],diario:['docente.js','DOCP'],saberimp:['saberimp.js','SIMP'],diag:['saberimp.js','SIMP']}[t];
-      await loadScript(MOD[0]+'?v=3');await window[MOD[1]].load(t)}
+      await loadScript(MOD[0]+'?v=4');await window[MOD[1]].load(t)}
     if(t==='perfil'){const {data:u}=await sb.auth.getUser();D.email=(u&&u.user&&u.user.email)||''}
     if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=3');await DIR.load(t)}
     if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=4');await HZUI.load(t)}
@@ -601,6 +603,7 @@ async function createJob(){
   const c=(D.courses||[]).find(x=>x.id===PJ.c);
   if(!c)return toast('⚠️','Elige el curso','Selecciona el curso de los estudiantes.');
   if(!(PJ.t||'').trim())return toast('⚠️','Falta el nombre','Escribe el nombre del examen.');
+  if(!(PJ.n>=10&&PJ.n<=120))return toast('⚠️','Número de preguntas','El examen debe tener entre 10 y 120 preguntas.');
   if(!PJ.s)return toast('⚠️','Falta la materia','Elige la materia.');
   toast('⏳','Generando exámenes…','Un momento.');
   const r=await sb.rpc('create_print_job',{p_course:PJ.c,p_title:PJ.t.trim(),p_subject:PJ.s,p_n:PJ.n,p_versions:PJ.v,p_date:PJ.d||null});
@@ -763,7 +766,7 @@ function vAuth(){
   <button onclick="doAuth()" class="w-full py-2 bg-indigo-600 text-white rounded-lg">${reg?'Crear cuenta de estudiante':'Entrar'}</button>
   ${reg?'':'<p class="text-xs text-slate-500 text-center">Estudiantes: tu contraseña inicial es tu número de documento.</p><button onclick="resend()" class="w-full text-xs text-slate-500 underline">Reenviar correo de confirmación</button>'}</div>`}
 function vPend(){const st=M.teacher_status,rej=st==='rechazado';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de docente no fue aprobada':'Tu cuenta de docente está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AulaICFES si crees que es un error.':'El administrador revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión y verás el panel de docente.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div><div><b>Área:</b> ${E(M.area||'')}</div><div><b>Asignaturas:</b> ${E((M.asignaturas||[]).join(', '))}</div><div><b>Grados:</b> ${E((M.grados||[]).join('°, '))}${(M.grados||[]).length?'°':''}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
-const dirTabs=()=>M.role==='rector'?[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia'],['saberimp','🎯 Saber 11'],['diag','🩺 Diagnósticos'],['dhist','🧾 Historial']]:[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia'],['saberimp','🎯 Saber 11'],['diag','🩺 Diagnósticos']];
+const dirTabs=()=>M.role==='rector'?[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia docentes'],['asistencias','✋ Asistencias a clase'],['planeador','📋 Planeadores'],['saberimp','🎯 Saber 11'],['diag','🩺 Diagnósticos'],['dhist','🧾 Historial']]:[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia docentes'],['asistencias','✋ Asistencias a clase'],['planeador','📋 Planeadores'],['saberimp','🎯 Saber 11'],['diag','🩺 Diagnósticos']];
 function vPendDir(){const st=M.teacher_status,rej=st==='rechazado',r=M.role==='rector'?'rector':'coordinador',quien=M.role==='rector'?'El administrador':'El rector de tu colegio o el administrador';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de '+r+' no fue aprobada':'Tu cuenta de '+r+' está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AulaICFES si crees que es un error.':quien+' revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
 function vDoc(){
   const ds=D.docs||[],badge=s=>s==='aprobado'?'✅ Aprobado':s==='rechazado'?'⛔ Rechazado':'🕒 Pendiente';
@@ -780,8 +783,8 @@ function vImp(){
   const cs=D.courses||[],av=D.avail||{},c=cs.find(x=>x.id===PJ.c),L=LH();
   const subs=c?Object.keys(av[c.grade]||{}).sort():[];
   if(c&&!subs.includes(PJ.s))PJ.s=subs[0]||'';
-  const have=c&&PJ.s?((av[c.grade]||{})[PJ.s]||0):0,max=Math.max(1,Math.min(120,have-1));
-  if(PJ.n>max)PJ.n=max;
+  const have=c&&PJ.s?((av[c.grade]||{})[PJ.s]||0):0,max=Math.min(120,have-1);
+  if(PJ.n>max)PJ.n=Math.max(10,max);if(PJ.n<10)PJ.n=10;
   const J=D.job,sts=J?[...new Map(J.exams.map(e=>[e.roster_id,e.roster?.full_name])).entries()]:[],vers=J?[...new Set(J.exams.map(e=>e.version))].sort():[];
   return`<div class="space-y-4"><div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">🏫 1. Membrete del colegio</h2><p class="text-sm text-slate-600">Sale en la parte de arriba de tus exámenes y hojas de respuestas. Ya lo llené con los datos de tu colegio; cámbialo si quieres y pulsa Guardar.</p>
   <div class="grid sm:grid-cols-3 gap-3"><label class="text-sm">Línea 1 (nombre del colegio)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l1)}" oninput="LT.l1=this.value"></label><label class="text-sm">Línea 2 (municipio, resolución…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l2)}" oninput="LT.l2=this.value"></label><label class="text-sm">Línea 3 (área, lema…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l3)}" oninput="LT.l3=this.value"></label></div>
@@ -793,7 +796,7 @@ function vImp(){
   <label class="text-sm">Materia<select class="w-full border rounded-lg p-2 mt-1" ${c?'':'disabled'} onchange="PJ.s=this.value;PJ.refs=[];D.catKey='';render()">${subs.length?subs.map(s=>`<option ${s===PJ.s?'selected':''}>${E(s)}</option>`).join(''):'<option>(elige un curso con preguntas visibles)</option>'}</select></label>
   <label class="text-sm">Nombre del examen<input class="w-full border rounded-lg p-2 mt-1" value="${E(PJ.t)}" oninput="PJ.t=this.value" placeholder="Ej: Evaluación de Química · Periodo 2"></label>
   <label class="text-sm">Fecha del examen (opcional)<input type="date" class="w-full border rounded-lg p-2 mt-1" value="${E(PJ.d)}" onchange="PJ.d=this.value"></label>
-  <label class="text-sm">Preguntas por examen (máx. ${max})<input type="number" min="1" max="${max}" class="w-full border rounded-lg p-2 mt-1" value="${PJ.n}" onchange="PJ.n=+this.value;render()"></label>
+  <label class="text-sm">Preguntas por examen (mínimo 10, máximo ${Math.max(10,max)})<input type="number" min="10" max="${Math.max(10,max)}" class="w-full border rounded-lg p-2 mt-1" value="${PJ.n}" onchange="PJ.n=+this.value;render()"></label>
   <label class="text-sm">Versiones por estudiante (mínimo 3)<input type="number" min="3" max="6" class="w-full border rounded-lg p-2 mt-1" value="${PJ.v}" onchange="PJ.v=Math.max(3,Math.min(6,+this.value||3));render()"></label></div>
   ${c?`<p class="text-xs text-slate-500">Hay ${have} preguntas visibles de ${E(PJ.s)} para ${c.grade}°. Se necesitan al menos ${PJ.n+1} para que las versiones sean distintas.</p>`:''}
   ${(()=>{const key=c&&PJ.s?c.grade+'|'+PJ.s:'';if(key&&D.catKey!==key){D.catKey=key;setTimeout(loadRefs,0)}return refPicker()})()}
@@ -864,6 +867,10 @@ function vEst(){return(D.mine||[]).length?`<div class="grid md:grid-cols-2 gap-4
 function vLb(){return`<div class="bg-white rounded-2xl p-4 shadow"><h3 class="font-semibold mb-2">🏅 Leaderboard${M.role==='prof'?' de tus estudiantes':' de tu curso'}</h3><table class="w-full text-sm"><tr class="text-left text-slate-500"><th>#</th><th>Estudiante</th><th>Grado</th><th>Prom.</th></tr>${(D.lb||[]).map((r,i)=>`<tr class="border-t"><td>${['🥇','🥈','🥉'][i]||i+1}</td><td>${E(r.full_name)}</td><td>${r.grade??''}°</td><td class="font-bold">${r.avg_score}</td></tr>`).join('')}</table></div>`}
 function vProf(){return window.AulaDashboard?AulaDashboard.view(D,M):'<div class="bg-white rounded-2xl p-6">Cargando dashboard…</div>'}
 function vPreg(){
+  const bar=`<div class="bg-white rounded-2xl p-3 shadow mb-3 flex flex-wrap gap-2 items-center"><span class="text-sm">¿Quieres agregar tus propias preguntas al banco?</span><button onclick="go('subirp')" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">📥 Subir preguntas (PDF, Word o escribirlas)</button></div>`;
+  return bar+vPreg0();
+}
+function vPreg0(){
   const adm=!!M.is_admin,av=D.pav||{},gs=Object.keys(av).map(Number).sort((a,b)=>a-b);
   if(!gs.length)return`<div class="bg-white rounded-2xl p-6 shadow text-center text-slate-600">No hay preguntas visibles de tu asignatura todavía.</div>`;
   const subs=Object.keys(av[QF.g]||{}).sort(),st=D.pstat||{on:0,rev:0,tot:0},pages=Math.max(1,Math.ceil((D.pn||0)/10));
@@ -889,7 +896,8 @@ function vVideo(){
   <div class="flex flex-wrap gap-2 items-center"><button onclick="saveClass()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Guardar</button><a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer" class="text-sm text-indigo-600 underline">Crear reunión nueva en Google Meet</a>${live?`<a href="${E(c.video_url)}" target="_blank" rel="noopener noreferrer" class="text-sm text-indigo-600 underline">Abrir mi clase</a>`:''}</div></div>`;
   return`<div class="flex justify-between text-xs mb-2"><span>${badge} · ${E(c.title||'Clase')}</span></div>${live?`<div class="text-center space-y-2 p-4"><div class="text-4xl">🎥</div><p class="text-sm text-slate-600">Tu docente ya inició la clase.</p><a href="${E(c.video_url)}" target="_blank" rel="noopener noreferrer" class="inline-block px-5 py-2 rounded-lg bg-emerald-600 text-white">Unirme a la clase</a></div>`:`<div class="text-center p-4 text-sm text-slate-500"><div class="text-4xl">🕒</div>Tu docente aún no ha iniciado la clase. Esta pantalla se actualiza sola.</div>`}`}
 function paintVideo(){const b=document.getElementById('vbox');if(b)b.innerHTML=vVideo()}
-function vClase(){const prof=M.role==='prof';return`<div class="grid lg:grid-cols-3 gap-4"><div class="lg:col-span-2 space-y-3"><div id="vbox" class="bg-white rounded-2xl p-4 shadow">${vVideo()}</div>
+function vClase(){if(M.role==='prof'&&window.AV&&AV.on())return AV.view();return vClase0()}
+function vClase0(){const prof=M.role==='prof';return`<div class="grid lg:grid-cols-3 gap-4"><div class="lg:col-span-2 space-y-3"><div id="vbox" class="bg-white rounded-2xl p-4 shadow">${vVideo()}</div>
   <div class="bg-white rounded-2xl p-4 shadow"><h3 class="font-semibold mb-2">Asistencia de hoy</h3>${prof?`<div class="grid sm:grid-cols-2 gap-2">${(D.est||[]).map(u=>`<label class="flex items-center gap-2 p-2 border rounded-lg text-sm"><input type="checkbox" ${D.att[u.id]?'checked':''} onchange="toggleAtt('${u.id}',this.checked)"> ${E(u.full_name)} <span class="text-slate-400">${u.grade??''}°</span></label>`).join('')||'<p class="text-sm text-slate-500">Aún no tienes estudiantes registrados.</p>'}</div>`:`<button onclick="toggleAtt(M.id,${!D.me})" class="px-4 py-2 rounded-lg ${D.me?'bg-emerald-600':'bg-indigo-600'} text-white">${D.me?'✅ Asistencia marcada':'Marcar mi asistencia'}</button>`}</div></div>
   <div class="bg-white rounded-2xl p-4 shadow flex flex-col h-[28rem]"><h3 class="font-semibold mb-2">💬 Chat</h3><div id="chatbox" class="flex-1 overflow-y-auto space-y-2 text-sm"></div><div class="flex gap-2 mt-2"><input id="msg" onkeydown="if(event.key==='Enter')sendChat()" class="flex-1 border rounded-lg p-2 text-sm" placeholder="Escribe un mensaje…"><button onclick="sendChat()" class="px-3 bg-indigo-600 text-white rounded-lg">➤</button></div></div></div>`}
 function paintChat(){const b=document.getElementById('chatbox');if(!b)return;b.innerHTML=(D.chat||[]).slice(-50).map(c=>`<div class="${c.user_id===M.id?'text-right':''}"><span class="text-[11px] text-slate-500">${E(c.author_name)}</span><div class="block"><span class="inline-block bg-slate-100 rounded-lg px-3 py-1">${E(c.body)}</span></div></div>`).join('');b.scrollTop=b.scrollHeight}
@@ -902,7 +910,7 @@ function render(){
   if(isDir()&&M.teacher_status!=='aprobado'){root.innerHTML=vPendDir();return}
   const prof=M.role==='prof';
   const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')],['banco','📦 Banco (paquetes)']]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['subirp','📥 Subir preguntas'],['clase','🎥 Clase'],['taller','📝 Talleres'],['aclase','✋ Asistencia a clase'],['asis','🕒 Mi asistencia'],['mhor','🗓 Mi horario']]:[['sim','📝 Mis simulacros y tareas'],['periodo','🧾 Exámenes virtuales'],['virtual','📎 Trabajos y entregas'],['aclase','✋ Asistencia a clase'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
-  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',saber:()=>window.SABER?SABER.view():'',periodo:()=>window.PER?PER.view():'',saberimp:()=>window.SIMP?SIMP.view():'',asis:()=>window.ASIS?ASIS.view():'',aclase:()=>window.ACL?ACL.view():'',subirp:()=>window.SUBP?SUBP.view():'',taller:()=>window.TAL?TAL.view():'',diag:()=>window.SIMP?SIMP.view():'',virtual:()=>window.VIRT?VIRT.view():'',plan:()=>window.DOCP?DOCP.view('plan'):'',diario:()=>window.DOCP?DOCP.view('diario'):'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
+  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',saber:()=>window.SABER?SABER.view():'',periodo:()=>window.PER?PER.view(false):'',saberimp:()=>window.SIMP?SIMP.view():'',asis:()=>window.ASIS?ASIS.view():'',aclase:()=>window.ACL?ACL.view():'',asistencias:()=>window.ACL?ACL.view():'',subirp:()=>window.SUBP?SUBP.view():'',planeador:()=>window.PLN?PLN.view():'',diario:()=>window.PLN?PLN.view():'',taller:()=>window.TAL?TAL.view():'',diag:()=>window.SIMP?SIMP.view():'',virtual:()=>window.VIRT?VIRT.view():'',plan:()=>window.DOCP?DOCP.view('plan'):'',diario:()=>window.DOCP?DOCP.view('diario'):'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
   if((prof||isDir())&&window.AulaDashboard){
     root.innerHTML=AulaDashboard.shell(D,M,tab,body,vLive(),{doc:D.pend,dir:D.pendDir});
   }else root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold text-indigo-700">🎓 AulaICFES</h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${isDir()?(M.role==='rector'?'Rector':'Coordinador'):prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
@@ -916,6 +924,6 @@ function render(){
 }
 boot();
 </script>
-<script src="dashboard.js?v=3"></script>
+<script src="dashboard.js?v=4"></script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body></html>

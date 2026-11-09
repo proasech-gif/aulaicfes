@@ -19,6 +19,7 @@ async function load(){
   if(r.error)throw r.error;Z.lista=r.data||[];
   const s=await sb.from('asignaturas').select('nombre,banco_subject').order('nombre');
   Z.subs=(s.data||[]).filter(x=>x.banco_subject);
+  try{const pl=await sb.from('planes_area').select('asignatura,grado,malla').eq('docente_id',M.id);Z.plan=pl.data||[]}catch(x){Z.plan=[]}
   if(!Z.f)Z.f=nuevoF();
 }
 function rerender(){render()}
@@ -58,7 +59,7 @@ async function guardar(publicar){
 }
 function previa(){
   const v=validar();if(v)return toast('⚠️','Falta algo',v);
-  const vm=window.VMODE&&VMODE.on();
+  const vm=!!(Z.virt&&window.VMODE&&VMODE.on());
   CUAD.vistaPrevia(specDe(Z.f,seleccionadas()),vm?{onPublicar:()=>guardar(true),textoPublicar:'✅ Publicar como examen virtual'}:{onPublicar:()=>CUAD.imprimir(specDe(Z.f,seleccionadas()),false),textoPublicar:'🖨️ Imprimir'});
 }
 async function cargarCuad(id){
@@ -71,8 +72,11 @@ async function cargarCuad(id){
 }
 /* ---------- vista docente ---------- */
 function viewDoc(){
+  const virt=!!(Z.virt&&window.VMODE&&VMODE.on());
   const f=Z.f||nuevoF(),q=(Z.q||'').toLowerCase();
-  const banco=Z.banco.filter(x=>!q||(x.body+' '+(x.stimulus_title||'')+' '+(x.topic||'')).toLowerCase().includes(q));
+  const ws=q.split(/\s+/).filter(w=>w.length>=4);
+  const banco=Z.banco.filter(x=>{if(!q)return true;const t=(x.body+' '+(x.stimulus_title||'')+' '+(x.topic||'')).toLowerCase();return t.includes(q)||(ws.length>0&&ws.some(w=>t.includes(w)))});
+  const temas=(()=>{if(!Z.plan||!f.asig)return[];const out=[];Z.plan.filter(p=>p.asignatura===f.asig).forEach(p=>{((p.malla&&p.malla.periodos)||[]).filter(x=>String(x.n)===String(f.periodo)).forEach(x=>(x.filas||[]).forEach(r=>{if(r.tema&&!out.includes(r.tema))out.push(r.tema)}))});return out})();
   const grupos=[];let last=null;
   banco.forEach(x=>{const k=x.grupo_key&&x.stimulus_content?x.grupo_key:null;if(k&&last&&last.k===k)last.items.push(x);else{last={k,items:[x]};grupos.push(last)}});
   const lista=Z.lista.map(p=>`<div class="aic-card" style="padding:14px;margin-bottom:10px"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
@@ -88,25 +92,26 @@ function viewDoc(){
   const inp='style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px"';
   return`<div style="display:grid;gap:16px">
   <div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:18px">🧾 Nueva prueba de periodo o examen</h2>
-   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">1) Llena los datos. 2) Marca las preguntas del banco. 3) Mira la vista previa. 4) Publícala (examen virtual) o imprímela desde la vista previa.</p>
+   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">1) Llena los datos. 2) Marca las preguntas del banco. 3) Mira la vista previa. 4) Imprímela desde la vista previa.${virt?' Como estás en el Aula virtual, también puedes publicarla como examen virtual y programar cuándo empieza y cuándo termina.':''}</p>
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
     <label style="font-size:13px">Nombre<input ${inp} value="${e(f.titulo)}" oninput="PER.set('titulo',this.value)" placeholder="Ej. Prueba del 2.º periodo"></label>
     <label style="font-size:13px">Asignatura<select ${inp} onchange="PER.set('asig',this.value);PER.banco()"><option value="">— Elegir —</option>${Z.subs.map(s=>`<option ${s.nombre===f.asig?'selected':''}>${e(s.nombre)}</option>`).join('')}</select></label>
     <label style="font-size:13px">Periodo<select ${inp} onchange="PER.set('periodo',this.value)">${[1,2,3,4].map(n=>`<option ${+f.periodo===n?'selected':''}>${n}</option>`).join('')}</select></label>
-    <label style="font-size:13px">Minutos<input type="number" min="5" max="300" ${inp} value="${f.min}" oninput="PER.set('min',this.value)"></label>
-    <label style="font-size:13px">Intentos<input type="number" min="1" max="5" ${inp} value="${f.intentos}" oninput="PER.set('intentos',this.value)"></label>
-    <label style="font-size:13px">Abre<input type="datetime-local" ${inp} value="${f.abre}" onchange="PER.set('abre',this.value)"></label>
-    <label style="font-size:13px">Cierra<input type="datetime-local" ${inp} value="${f.cierra}" onchange="PER.set('cierra',this.value)"></label></div>
+    ${virt?`<label style="font-size:13px">Minutos<input type="number" min="5" max="300" ${inp} value="${f.min}" oninput="PER.set('min',this.value)"></label>`:''}
+    ${virt?`<label style="font-size:13px">Intentos<input type="number" min="1" max="5" ${inp} value="${f.intentos}" oninput="PER.set('intentos',this.value)"></label>`:''}
+    ${virt?`<label style="font-size:13px">Abre<input type="datetime-local" ${inp} value="${f.abre}" onchange="PER.set('abre',this.value)"></label>`:''}
+    ${virt?`<label style="font-size:13px">Cierra<input type="datetime-local" ${inp} value="${f.cierra}" onchange="PER.set('cierra',this.value)"></label>`:''}</div>
    <div style="margin-top:10px;font-size:13px"><b>Cursos que la presentan:</b> ${cursos}</div></div>
   ${f.asig?`<div class="aic-card" style="padding:18px"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><h3 style="font-weight:800">📚 Preguntas del banco · ${e(f.asig)} <span style="color:#4f46e5">(${Z.sel.size} marcadas)</span></h3>
     <input placeholder="Buscar…" value="${e(Z.q)}" oninput="PER.buscar(this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px"></div>
+    ${temas.length?`<div style="margin-top:8px;font-size:13px"><b>Según tu plan de área (periodo ${f.periodo}):</b> <select onchange="PER.buscar(this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px"><option value="">Ver todas las preguntas</option>${temas.map(t=>`<option value="${e(t)}">${e(t)}</option>`).join('')}</select></div>`:`<div style="margin-top:8px;font-size:12px;color:#b45309">Sube tu plan de área (menú “Plan de área”) y aquí podrás filtrar las preguntas por los temas de tu plan.</div>`}
     <div style="max-height:460px;overflow:auto;margin-top:10px;display:grid;gap:8px">
     ${grupos.map(g=>`<div style="border:1px solid #e2e8f0;border-radius:12px;padding:8px">${g.k?`<div style="background:#f8fafc;border-radius:8px;padding:8px;font-size:13px;margin-bottom:6px"><b>${e(g.items[0].stimulus_title||'Contexto compartido')}</b> <button class="aic-link" onclick="PER.grupo('${g.k}')">☑ Marcar todo el grupo (${g.items.length})</button><div style="white-space:pre-wrap;color:#475569;margin-top:4px">${e(g.items[0].stimulus_content)}</div></div>`:''}
       ${g.items.map(x=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 2px;font-size:13px;cursor:pointer"><input type="checkbox" ${Z.sel.has(x.id)?'checked':''} onchange="PER.marca('${x.id}',this.checked)"><span>${x.image_path?`<img src="${IM()}${encodeURI(x.image_path)}" style="max-width:340px;max-height:140px;object-fit:contain;display:block">`:e(x.body)}${x.difficulty?` <small style="color:#64748b">(${x.difficulty})</small>`:''}</span></label>`).join('')}</div>`).join('')||'<p style="color:#64748b;font-size:13px">No hay preguntas para esta asignatura.</p>'}</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
      <button onclick="PER.previa()" style="padding:10px 16px;border-radius:10px;background:#4f46e5;color:#fff;font-weight:700;border:0">👁 Vista previa</button>
      <button onclick="PER.guardar(false)" style="padding:10px 16px;border-radius:10px;background:#e2e8f0;font-weight:700;border:0">💾 Guardar borrador</button>
-     ${window.VMODE&&VMODE.on()?`<button onclick="PER.guardar(true)" style="padding:10px 16px;border-radius:10px;background:#059669;color:#fff;font-weight:700;border:0">✅ Guardar y publicar</button>`:`<button onclick="PER.previa()" style="padding:10px 16px;border-radius:10px;background:#059669;color:#fff;font-weight:700;border:0">🖨️ Imprimir esta prueba</button>`}</div></div>`:''}
+     ${virt?`<button onclick="PER.guardar(true)" style="padding:10px 16px;border-radius:10px;background:#059669;color:#fff;font-weight:700;border:0">✅ Guardar y publicar</button>`:`<button onclick="PER.previa()" style="padding:10px 16px;border-radius:10px;background:#059669;color:#fff;font-weight:700;border:0">🖨️ Imprimir esta prueba</button>`}</div></div>`:''}
   <div class="aic-card" style="padding:18px"><h3 style="font-weight:800;margin-bottom:10px">Mis pruebas</h3>${lista}</div></div>`;
 }
 function detHtml(){
@@ -134,7 +139,7 @@ function viewEst(){
     <button ${usados>=p.max_intentos?'disabled':''} onclick="PER.empezar('${p.id}')" style="padding:9px 16px;border-radius:10px;background:#4f46e5;color:#fff;border:0;font-weight:700;opacity:${usados>=p.max_intentos?.4:1}">${usados>=p.max_intentos?'Intentos agotados':'▶ Presentar'}</button></div>`}).join('')||'<p style="color:#64748b">Tu docente aún no ha publicado exámenes.</p>';
   return`<div><h2 style="font-weight:800;font-size:20px;margin-bottom:10px">🧾 Mis exámenes virtuales</h2>${rows}</div>`;
 }
-function view(){return isEst()?viewEst():viewDoc()}
+function view(v){Z.virt=!!v;return isEst()?viewEst():viewDoc()}
 /* ---------- acciones ---------- */
 const api={
   load,view,

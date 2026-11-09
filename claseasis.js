@@ -3,13 +3,23 @@
 window.ACL=(function(){
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const isDoc=()=>M&&M.role==='prof';
+const isDir=()=>M&&(M.role==='rector'||M.role==='coordinador');
+const d30=()=>{const d=new Date();d.setDate(d.getDate()-30);return d.toLocaleDateString('en-CA',{timeZone:'America/Bogota'})};
 const fH=d=>new Date(d).toLocaleString('es-CO',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'America/Bogota'});
 const R=()=>render();
-let Z={cursos:[],ses:[],cid:'',asig:'',det:null,lista:[],abiertas:[],ok:null,t:null};
+let Z={areas:[],asigs:[],docs:[],rep:[],F:{d:'',h:new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'}),area:'',asig:'',doc:''},cursos:[],ses:[],cid:'',asig:'',det:null,lista:[],abiertas:[],ok:null,t:null};
 const inp='style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;font-size:16px"';
+async function repLoad(){
+  Z.F.d=Z.F.d||d30();
+  const r=await sb.rpc('clase_reporte',{p_desde:Z.F.d,p_hasta:Z.F.h,p_area:Z.F.area||null,p_asig:Z.F.asig||null,p_docente:Z.F.doc||null});
+  if(r.error)throw r.error;Z.rep=r.data||[];
+}
 async function load(){
   clearInterval(Z.t);
+  if(!Z.areas.length){const a=await sb.from('areas').select('nombre').order('nombre');Z.areas=(a.data||[]).map(x=>x.nombre);const g=await sb.from('asignaturas').select('nombre').order('nombre');Z.asigs=(g.data||[]).map(x=>x.nombre)}
+  if(isDir()){const r=await sb.rpc('asistencia_docentes');if(!r.error)Z.docs=r.data||[];await repLoad();return}
   if(isDoc()){
+    await repLoad();
     const c=await sb.from('courses').select('id,name,grade').eq('teacher_id',M.id).order('grade').order('name');if(c.error)throw c.error;Z.cursos=c.data||[];
     const s=await sb.from('clase_sesiones').select('id,course_id,asignatura,abierta_at,cerrada_at,clase_asistencia(count)').eq('docente_id',M.id).order('abierta_at',{ascending:false}).limit(60);
     if(s.error)throw s.error;Z.ses=s.data||[];
@@ -36,9 +46,20 @@ function docView(){
     <div class="aic-table-wrap"><table style="min-width:480px"><thead><tr><th>ESTUDIANTE</th><th>DOCUMENTO</th><th>HORA</th><th></th></tr></thead><tbody>${Z.lista.map(x=>`<tr><td>${e(x.full_name)}</td><td>${e(x.documento||'—')}</td><td>${x.at?'✅ '+fH(x.at)+(x.manual?' (manual)':''):'<span style="color:#b91c1c">Ausente</span>'}</td><td><button class="aic-link" onclick="ACL.manual('${s.id}','${x.id}',${x.at?'false':'true'})">${x.at?'Quitar':'Marcar presente'}</button></td></tr>`).join('')||'<tr><td colspan="4">Este curso no tiene estudiantes.</td></tr>'}</tbody></table></div>
     <button class="aic-link" style="margin-top:8px" onclick="ACL.csv()">⬇ Descargar Excel</button></div>`;
   }
-  const hist=`<div class="aic-card" style="padding:16px"><h3 style="font-weight:800;margin-bottom:8px">📋 Clases anteriores</h3><div class="aic-table-wrap"><table style="min-width:480px"><thead><tr><th>FECHA</th><th>CURSO</th><th>ASIGNATURA</th><th>PRESENTES</th><th></th></tr></thead><tbody>${Z.ses.map(x=>`<tr><td>${fH(x.abierta_at)}</td><td>${e(cN(x.course_id))}</td><td>${e(x.asignatura||'')}</td><td>${(x.clase_asistencia&&x.clase_asistencia[0]?x.clase_asistencia[0].count:0)}</td><td><button class="aic-link" onclick="ACL.ver('${x.id}')">Ver lista</button></td></tr>`).join('')||'<tr><td colspan="5">Aún no hay clases.</td></tr>'}</tbody></table></div></div>`;
+  const hist=repHtml();
   return`<div>${abrir}${cur}${hist}</div>`;
 }
+function repHtml(){
+  const F=Z.F,sel=(k,l,opts,all)=>`<label style="font-size:12px;font-weight:700">${l}<br><select ${inp} style="border:1px solid #cbd5e1;border-radius:8px;padding:8px;max-width:200px" onchange="ACL.f('${k}',this.value)"><option value="">${all}</option>${opts.map(o=>`<option value="${e(o[0])}" ${F[k]===o[0]?'selected':''}>${e(o[1])}</option>`).join('')}</select></label>`;
+  const dt=(k,l)=>`<label style="font-size:12px;font-weight:700">${l}<br><input type="date" value="${F[k]}" onchange="ACL.f('${k}',this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px"></label>`;
+  const tot=Z.rep.reduce((a,x)=>({p:a.p+Number(x.presentes),t:a.t+Number(x.total)}),{p:0,t:0});
+  return`<div class="aic-card" style="padding:16px"><h3 style="font-weight:800;margin-bottom:8px">📋 Asistencias a clase${isDir()?' de los docentes del colegio':''}</h3>
+   <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">${dt('d','Desde')}${dt('h','Hasta')}${sel('area','Área',Z.areas.map(x=>[x,x]),'Todas')}${sel('asig','Asignatura',Z.asigs.map(x=>[x,x]),'Todas')}${isDir()?sel('doc','Docente',Z.docs.map(x=>[x.id,x.full_name]),'Todos'):''}<button onclick="ACL.csvRep()" style="align-self:end;background:#246be0;color:#fff;padding:9px 12px;border-radius:8px;font-weight:700;font-size:13px">⬇ Excel</button></div>
+   <div style="font-size:13px;color:#64748b;margin-bottom:6px">${Z.rep.length} clase(s) · asistencia promedio ${tot.t?Math.round(100*tot.p/tot.t):0} %</div>
+   <div class="aic-table-wrap"><table style="min-width:640px"><thead><tr><th>FECHA</th>${isDir()?'<th>DOCENTE</th>':''}<th>ÁREA</th><th>ASIGNATURA</th><th>CURSO</th><th>PRESENTES</th><th></th></tr></thead><tbody>${Z.rep.map(x=>`<tr><td>${fH(x.fecha)}</td>${isDir()?`<td>${e(x.docente)}</td>`:''}<td>${e(x.area)}</td><td>${e(x.asignatura)}</td><td>${e(x.curso)}</td><td>${x.presentes} de ${x.total}</td><td><button class="aic-link" onclick="ACL.ver('${x.sesion_id}')">Ver lista</button></td></tr>`).join('')||'<tr><td colspan="7">No hay clases con esos filtros.</td></tr>'}</tbody></table></div>
+   ${Z.det&&!isDoc()?detDir():''}</div>`;
+}
+function detDir(){return`<div style="margin-top:12px;border-top:1px solid #e2e8f0;padding-top:10px"><b>Lista de la clase</b><div class="aic-table-wrap"><table style="min-width:480px"><thead><tr><th>ESTUDIANTE</th><th>DOCUMENTO</th><th>HORA</th></tr></thead><tbody>${Z.lista.map(x=>`<tr><td>${e(x.full_name)}</td><td>${e(x.documento||'—')}</td><td>${x.at?'✅ '+fH(x.at):'<span style="color:#b91c1c">Ausente</span>'}</td></tr>`).join('')}</tbody></table></div></div>`}
 function estView(){
   const hoy=Z.abiertas;
   if(Z.ok)return`<div class="aic-card" style="padding:24px;text-align:center;max-width:460px;margin:auto"><div style="font-size:56px">✅</div><div style="font-size:22px;font-weight:800">Asistencia registrada</div><div style="font-size:24px;font-weight:800;color:#0b9865;margin-top:8px">${fH(Z.ok)}</div><button class="aic-link" style="margin-top:12px" onclick="ACL.nuevo()">Volver</button></div>`;
@@ -46,7 +67,9 @@ function estView(){
   ${hoy.length?hoy.map(s=>s.ya?`<div style="margin-top:12px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:12px;text-align:center">✅ Ya registraste tu asistencia a ${e(s.asignatura||'la clase')} a las ${fH(s.ya)}</div>`:`<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:12px;padding:14px"><div style="text-align:center;font-weight:700">${e(s.asignatura||'Clase')} · ${e(s.docente)}</div><input id="acl_${s.id}" inputmode="numeric" placeholder="Escribe tu número de documento" ${inp} style="width:100%;margin-top:10px;font-size:20px;text-align:center;border:2px solid #cbd5e1;border-radius:12px;padding:14px"><button onclick="ACL.marcar('${s.id}')" style="width:100%;margin-top:10px;background:#16a34a;color:#fff;padding:16px;border-radius:12px;font-size:18px;font-weight:800">Registrar mi asistencia</button></div>`).join(''):`<p style="text-align:center;color:#64748b;margin-top:12px">Tu docente aún no ha abierto la asistencia. Cuando la abra, aparecerá aquí.</p><div style="text-align:center"><button class="aic-link" onclick="ACL.recargar()" style="font-size:14px">↻ Actualizar</button></div>`}</div>`;
 }
 const api={
-  load,view:()=>isDoc()?docView():estView(),
+  load,view:()=>isDoc()?docView():isDir()?`<div>${repHtml()}</div>`:estView(),
+  async f(k,v){Z.F[k]=v;try{await repLoad()}catch(x){return err(x)}R()},
+  csvRep(){const l=[['Fecha','Docente','Área','Asignatura','Curso','Presentes','Total'],...Z.rep.map(x=>[fH(x.fecha),x.docente,x.area,x.asignatura,x.curso,x.presentes,x.total])];const t='\ufeff'+l.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download='asistencia_clases.csv';a.click()},
   set cid(v){Z.cid=v},set asig(v){Z.asig=v},
   async abrir(){
     if(!Z.cid)return toast('⚠️','Elige el curso','');
