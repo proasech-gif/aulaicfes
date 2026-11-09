@@ -14,7 +14,9 @@ const fF=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',
 const R=()=>render();
 const norm=d=>String(d||'').replace(/\D/g,'').replace(/^0+/,'');
 const nuevoF=()=>({t:'',d:'',c:[]});
-const nuevoD=()=>({t:'Diagnóstico',d:'',c:[],n:10});
+const OTRAS=['Biología','Química','Física','Lenguaje','Ciencias Sociales','Filosofía','Economía','Ciencias Políticas','Competencias Ciudadanas','Democracia','Ética','Tecnología e Informática','Educación Artística','Educación Física','Educación Económica y Financiera','Religión'];
+const nuevoD=()=>({t:'Diagnóstico',d:'',c:[],n:10,a:[...AREAS]});
+const colsDe=f=>{const k=[...AREAS];f.forEach(x=>Object.keys(x.areas).forEach(a=>{if(!k.includes(a))k.push(a)}));return k.filter(a=>AREAS.includes(a)?f.some(x=>x.areas[a]):true)};
 async function load(t){
   Z.mode=t==='diag'?'diag':'saberimp';
   if(!Z.f)Z.f=nuevoF();if(!Z.fd)Z.fd=nuevoD();
@@ -78,7 +80,8 @@ async function crearSaber(){
 async function crearDiag(){
   const f=Z.fd;if(!f.c.length)return toast('⚠️','Elige los grupos','Marca uno o más grupos.');
   toast('⏳','Armando diagnósticos…','Uno por cada grupo.');
-  const r=await sb.rpc('create_diag',{p_courses:f.c,p_title:f.t||'Diagnóstico',p_date:f.d||null,p_per_area:+f.n||10});
+  if(!f.a.length)return toast('⚠️','Elige qué evaluar','Marca al menos un área o asignatura.');
+  const r=await sb.rpc('create_diag',{p_courses:f.c,p_title:f.t||'Diagnóstico',p_date:f.d||null,p_per_area:+f.n||10,p_areas:f.a});
   if(r.error)return err(r.error);
   toast('✅','Diagnósticos creados',r.data.length+' grupo(s).');
   Z.fd=nuevoD();await load('diag');R();if(r.data.length===1)await abrir(r.data[0]);
@@ -144,8 +147,8 @@ function agrupar(){
 }
 function csv(){
   const dg=Z.cont.imp.kind==='diagnostico',f=agrupar();
-  const head=['Estudiante','Documento','Curso',...AREAS.map(a=>a+' %'),dg?'Total %':'Global estimado (0-500)'];
-  const rows=[head].concat(f.map(x=>{const tot=Object.values(x.areas).reduce((s,v)=>({c:s.c+v.c,t:s.t+v.t}),{c:0,t:0});return[x.name,x.doc||'',x.course,...AREAS.map(a=>x.areas[a]?pc(x.areas[a].c,x.areas[a].t):''),dg?pc(tot.c,tot.t):global(x.areas)??'']}));
+  const head=['Estudiante','Documento','Curso',...colsDe(f).map(a=>a+' %'),dg?'Total %':'Global estimado (0-500)'];
+  const rows=[head].concat(f.map(x=>{const tot=Object.values(x.areas).reduce((s,v)=>({c:s.c+v.c,t:s.t+v.t}),{c:0,t:0});return[x.name,x.doc||'',x.course,...colsDe(f).map(a=>x.areas[a]?pc(x.areas[a].c,x.areas[a].t):''),dg?pc(tot.c,tot.t):global(x.areas)??'']}));
   const t='﻿'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download='resultados_'+(Z.cont.imp.codigo||'')+'.csv';a.click();
 }
@@ -169,6 +172,7 @@ function formCrear(){
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px"><label style="font-size:13px">Nombre<input ${inp} value="${e(f.t)}" oninput="SIMP.set('t',this.value)" placeholder="${dg?'Diagnóstico 2027':'Simulacro 1 · 2026'}"></label>
    <label style="font-size:13px">Fecha de aplicación<input type="date" ${inp} value="${f.d}" onchange="SIMP.set('d',this.value)"></label>
    ${dg?`<label style="font-size:13px">Preguntas por área (2 a 20)<input type="number" min="2" max="20" ${inp} value="${f.n}" oninput="SIMP.set('n',this.value)"></label>`:''}</div>
+  ${dg?`<div style="margin-top:10px;font-size:13px"><b>¿Qué evaluar?</b> <button class="aic-link" onclick="SIMP.areas('icfes')">☑ Las 5 áreas del ICFES</button> <button class="aic-link" onclick="SIMP.areas('ninguna')">Quitar todo</button><div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px">${[...AREAS,...OTRAS].map(a=>`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" ${f.a.includes(a)?'checked':''} onchange="SIMP.area('${a}',this.checked)">${a}</label>`).join('')}</div><p style="font-size:12px;color:#64748b;margin-top:4px">Las 5 áreas del ICFES: Lectura Crítica, Matemáticas, Sociales y Ciudadanas, Ciencias Naturales e Inglés. Puedes marcar solo una área, una asignatura o varias.</p></div>`:''}
   <div style="margin-top:10px;font-size:13px"><b>${dg?'Grupos':'Cursos que lo presentan'}:</b> ${dg?`<button class="aic-link" onclick="SIMP.todos()">☑ Todos los grupos</button>`:''}<br>${cursosBox(f.c,fn)}</div>
   <button onclick="SIMP.${dg?'crearDiag':'crearSaber'}()" ${B('#4f46e5',dg?'🩺 Crear diagnósticos':'🎯 Crear simulacro')}</button></div>`;
 }
@@ -214,9 +218,9 @@ function resHtml(){
   let gr='';
   if(dg){const g={};f.forEach(x=>Object.entries(x.grados).forEach(([k,v])=>{const o=g[k]=g[k]||{c:0,t:0};o.c+=v.c;o.t+=v.t}));
     gr=`<div style="margin-top:10px"><b style="font-size:13px">Dominio por grado anterior (grupo completo)</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">${Object.keys(g).sort((a,b)=>a-b).map(k=>{const p=pc(g[k].c,g[k].t);return`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:6px 10px;font-size:13px;background:${p<50?'#fff1f2':p<70?'#fffbeb':'#ecfdf5'}">Grado ${k}.°<br><b>${p}%</b></div>`}).join('')}</div><p style="font-size:12px;color:#64748b">Los grados en rojo son los temas que el grupo debe reforzar.</p></div>`}
-  return`<div class="aic-table-wrap" style="margin-top:8px"><table><thead><tr><th>ESTUDIANTE</th><th>CURSO</th>${AREAS.map(a=>`<th>${CORTA[a]}</th>`).join('')}<th>${dg?'TOTAL':'GLOBAL EST.'}</th></tr></thead><tbody>
-   ${f.map(x=>{const tot=Object.values(x.areas).reduce((s,v)=>({c:s.c+v.c,t:s.t+v.t}),{c:0,t:0});return`<tr><td><b>${e(x.name)}</b></td><td>${e(x.course)}</td>${AREAS.map(a=>`<td>${x.areas[a]&&x.areas[a].t?pc(x.areas[a].c,x.areas[a].t)+'%':'—'}</td>`).join('')}<td><b>${dg?pc(tot.c,tot.t)+'%':(global(x.areas)??'—')}</b></td></tr>`}).join('')}
-   <tr style="background:#f1f5fb"><td colspan="2"><b>Promedio del grupo</b></td>${AREAS.map(a=>`<td><b>${prom(a)}${prom(a)==='—'?'':'%'}</b></td>`).join('')}<td></td></tr></tbody></table></div>
+  return`<div class="aic-table-wrap" style="margin-top:8px"><table><thead><tr><th>ESTUDIANTE</th><th>CURSO</th>${colsDe(f).map(a=>`<th>${CORTA[a]||a}</th>`).join('')}<th>${dg?'TOTAL':'GLOBAL EST.'}</th></tr></thead><tbody>
+   ${f.map(x=>{const tot=Object.values(x.areas).reduce((s,v)=>({c:s.c+v.c,t:s.t+v.t}),{c:0,t:0});return`<tr><td><b>${e(x.name)}</b></td><td>${e(x.course)}</td>${colsDe(f).map(a=>`<td>${x.areas[a]&&x.areas[a].t?pc(x.areas[a].c,x.areas[a].t)+'%':'—'}</td>`).join('')}<td><b>${dg?pc(tot.c,tot.t)+'%':(global(x.areas)??'—')}</b></td></tr>`}).join('')}
+   <tr style="background:#f1f5fb"><td colspan="2"><b>Promedio del grupo</b></td>${colsDe(f).map(a=>`<td><b>${prom(a)}${prom(a)==='—'?'':'%'}</b></td>`).join('')}<td></td></tr></tbody></table></div>
    ${dg?'':'<p style="font-size:12px;color:#64748b">Global estimado (0-500) con la ponderación del ICFES. Si falta una sección, el estimado se calcula con las áreas calificadas; el puntaje oficial se calcula con otro método.</p>'}${gr}`;
 }
 function lista(){
@@ -226,6 +230,8 @@ function lista(){
 function view(){return`<div style="display:grid;gap:16px">${formCrear()}${lista()}</div>`}
 return{load,view,
   set(k,v){(Z.mode==='diag'?Z.fd:Z.f)[k]=v},
+  area(a,on){const s=new Set(Z.fd.a);on?s.add(a):s.delete(a);Z.fd.a=[...s]},
+  areas(m){Z.fd.a=m==='icfes'?[...AREAS]:[];R()},
   cursoS(id,on){const s=new Set(Z.f.c);on?s.add(id):s.delete(id);Z.f.c=[...s]},
   cursoD(id,on){const s=new Set(Z.fd.c);on?s.add(id):s.delete(id);Z.fd.c=[...s];},
   todos(){Z.fd.c=Z.cursos.map(c=>c.id);R()},

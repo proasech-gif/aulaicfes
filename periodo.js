@@ -58,7 +58,8 @@ async function guardar(publicar){
 }
 function previa(){
   const v=validar();if(v)return toast('⚠️','Falta algo',v);
-  CUAD.vistaPrevia(specDe(Z.f,seleccionadas()),{onPublicar:()=>guardar(true),textoPublicar:'✅ Publicar como examen virtual'});
+  const vm=window.VMODE&&VMODE.on();
+  CUAD.vistaPrevia(specDe(Z.f,seleccionadas()),vm?{onPublicar:()=>guardar(true),textoPublicar:'✅ Publicar como examen virtual'}:{onPublicar:()=>CUAD.imprimir(specDe(Z.f,seleccionadas()),false),textoPublicar:'🖨️ Imprimir'});
 }
 async function cargarCuad(id){
   const p=Z.lista.find(x=>x.id===id);
@@ -105,7 +106,7 @@ function viewDoc(){
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
      <button onclick="PER.previa()" style="padding:10px 16px;border-radius:10px;background:#4f46e5;color:#fff;font-weight:700;border:0">👁 Vista previa</button>
      <button onclick="PER.guardar(false)" style="padding:10px 16px;border-radius:10px;background:#e2e8f0;font-weight:700;border:0">💾 Guardar borrador</button>
-     <button onclick="PER.guardar(true)" style="padding:10px 16px;border-radius:10px;background:#059669;color:#fff;font-weight:700;border:0">✅ Guardar y publicar</button></div></div>`:''}
+     ${window.VMODE&&VMODE.on()?`<button onclick="PER.guardar(true)" style="padding:10px 16px;border-radius:10px;background:#059669;color:#fff;font-weight:700;border:0">✅ Guardar y publicar</button>`:`<button onclick="PER.previa()" style="padding:10px 16px;border-radius:10px;background:#059669;color:#fff;font-weight:700;border:0">🖨️ Imprimir esta prueba</button>`}</div></div>`:''}
   <div class="aic-card" style="padding:18px"><h3 style="font-weight:800;margin-bottom:10px">Mis pruebas</h3>${lista}</div></div>`;
 }
 function detHtml(){
