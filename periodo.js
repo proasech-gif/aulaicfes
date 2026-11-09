@@ -18,7 +18,7 @@ async function load(){
   const r=await sb.from('periodo_pruebas').select('*,periodo_targets(course_id),periodo_items(count)').order('created_at',{ascending:false});
   if(r.error)throw r.error;Z.lista=r.data||[];
   const s=await sb.from('asignaturas').select('nombre,banco_subject').order('nombre');
-  Z.subs=(s.data||[]).filter(x=>x.banco_subject);
+  Z.subs=(s.data||[]).filter(x=>x.banco_subject&&(M.is_admin||!(M.asignaturas&&M.asignaturas.length)||M.asignaturas.includes(x.nombre)||(M.banco_subjects||[]).includes(x.banco_subject)));
   try{const pl=await sb.from('planes_area').select('asignatura,grado,malla').eq('docente_id',M.id);Z.plan=pl.data||[]}catch(x){Z.plan=[]}
   if(!Z.f)Z.f=nuevoF();
 }

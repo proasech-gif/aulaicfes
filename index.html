@@ -327,14 +327,14 @@ async function go(t){
   try{
     if(t==='saber'){await loadScript('saber.js?v=1');await SABER.load()}
     if(t==='clase'&&M.role==='prof'){await loadScript('aulavirtual.js?v=2')}
-    if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=4');await ACL.load()}
-    if(t==='planeador'||t==='diario'){await loadScript('planeador.js?v=2');await PLN.load()}
-    if(t==='subirp'){await loadScript('subirpreg.js?v=2');await SUBP.load()}
+    if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=5');await ACL.load()}
+    if(t==='planeador'||t==='diario'){await loadScript('planeador.js?v=3');await PLN.load()}
+    if(t==='subirp'){await loadScript('subirpreg.js?v=3');await SUBP.load()}
     if(t==='asis'){await loadScript('asistencia.js?v=4');await ASIS.load()}
     if(t==='taller'){await loadScript('talleres.js?v=1');await TAL.load()}
     if(['periodo','virtual','plan','saberimp','diag'].includes(t)){
       const MOD={periodo:['periodo.js','PER'],virtual:['virtual.js','VIRT'],plan:['docente.js','DOCP'],diario:['docente.js','DOCP'],saberimp:['saberimp.js','SIMP'],diag:['saberimp.js','SIMP']}[t];
-      await loadScript(MOD[0]+'?v=4');await window[MOD[1]].load(t)}
+      await loadScript(MOD[0]+'?v=5');await window[MOD[1]].load(t)}
     if(t==='perfil'){const {data:u}=await sb.auth.getUser();D.email=(u&&u.user&&u.user.email)||''}
     if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=3');await DIR.load(t)}
     if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=4');await HZUI.load(t)}
@@ -422,6 +422,7 @@ async function saveClass(){
 }
 
 /* ---------- Cursos y estudiantes (docente) ---------- */
+function misGrados(){const g=(M&&M.grados&&M.grados.length)?[...M.grados].sort((x,y)=>x-y):[6,7,8,9,10,11];if(!g.includes(CF.g))CF.g=g[0];return g}
 async function createCourse(){
   const name=(CF.name||'').trim();if(!name)return toast('⚠️','Falta el nombre','Escribe el nombre del curso, por ejemplo A o 901.');
   const{error}=await sb.from('courses').insert({grade:CF.g,name});
@@ -827,7 +828,7 @@ function vCur(){
   const cs=D.courses||[],stu=D.stu||[],all=D.roster||[],ro=all.filter(r=>r.email&&!stu.some(u=>(u.email||'')===r.email));
   const cname=id=>{const c=cs.find(x=>x.id===id);return c?c.grade+'° '+c.name:'—'},cur=cs.find(c=>c.id===RF.c);
   return`<div class="space-y-4"><div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">👥 Mis cursos</h2>
-  <div class="grid sm:grid-cols-3 gap-3"><label class="text-sm">Grado<select class="w-full border rounded-lg p-2 mt-1" onchange="CF.g=+this.value">${[6,7,8,9,10,11].map(g=>`<option ${g==CF.g?'selected':''}>${g}</option>`).join('')}</select></label>
+  <div class="grid sm:grid-cols-3 gap-3"><label class="text-sm">Grado<select class="w-full border rounded-lg p-2 mt-1" onchange="CF.g=+this.value">${misGrados().map(g=>`<option ${g==CF.g?'selected':''}>${g}</option>`).join('')}</select></label>
   <label class="text-sm">Nombre del curso<input class="w-full border rounded-lg p-2 mt-1" value="${E(CF.name)}" oninput="CF.name=this.value" placeholder="Ej: A o 901"></label><div class="flex items-center"><button onclick="createCourse()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Agregar curso</button></div></div>
   ${cs.length?`<div class="space-y-2">${cs.map(c=>`<div class="flex flex-wrap items-center justify-between gap-2 border rounded-xl p-3"><div><b>${c.grade}° ${E(c.name)}</b> <span class="text-xs text-slate-500">· ${all.filter(r=>r.course_id===c.id).length} en la lista · ${stu.filter(u=>u.course_id===c.id).length} con cuenta</span></div><button onclick="delCourse('${c.id}','${E(c.name).replace(/'/g,'')}')" class="px-3 py-1.5 rounded-lg bg-slate-200 text-xs">Borrar</button></div>`).join('')}</div>`:'<p class="text-sm text-slate-500">Aún no tienes cursos.</p>'}</div>
   <div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">📋 Cargar la lista de un curso</h2><p class="text-sm text-slate-600">Cada fila debe traer el <b>nombre</b> y el <b>número de documento</b> del estudiante (el documento sale en los exámenes impresos) y, si lo tienes, su <b>correo</b>: con el correo, el estudiante queda en su curso cuando se registre y puede presentar simulacros en la plataforma. Sin correo solo sirve para imprimir.</p>

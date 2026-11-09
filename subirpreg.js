@@ -7,7 +7,7 @@ let Z={subs:[],f:null,m:'uno',txt:'',prev:[],mis:0};
 const nuevo=()=>({subject:Z.f?Z.f.subject:'',grade:Z.f?Z.f.grade:'',competency:'',stimulus_title:'',stimulus_content:'',body:'',options:['','','',''],correct:0,explanation:''});
 async function load(){
   const s=await sb.from('asignaturas').select('nombre,banco_subject').order('nombre');
-  const seen=new Set();Z.subs=(s.data||[]).filter(x=>x.banco_subject&&!seen.has(x.banco_subject)&&seen.add(x.banco_subject));
+  const seen=new Set();const mias=M.banco_subjects||[];Z.subs=(s.data||[]).filter(x=>x.banco_subject&&!seen.has(x.banco_subject)&&seen.add(x.banco_subject)&&(M.is_admin||mias.includes(x.banco_subject)));
   if(!Z.f)Z.f=nuevo();
   const c=await sb.from('questions').select('id',{count:'exact',head:true}).eq('autor_id',M.id);Z.mis=c.count||0;
 }
@@ -61,7 +61,7 @@ async function leerArchivo(f){
 function form(){
   const f=Z.f;
   const comun=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"><label style="font-size:13px">Asignatura<select ${inp} onchange="SUBP.set('subject',this.value)"><option value="">Elige…</option>${Z.subs.map(s=>`<option value="${e(s.banco_subject)}" ${f.subject===s.banco_subject?'selected':''}>${e(s.nombre)}</option>`).join('')}</select></label>
-   <label style="font-size:13px">Grado<select ${inp} onchange="SUBP.set('grade',this.value)"><option value="">Elige…</option>${[0,1,2,3,4,5,6,7,8,9,10,11].map(g=>`<option value="${g}" ${String(f.grade)===String(g)?'selected':''}>${g===0?'Transición':g+'°'}</option>`).join('')}</select></label>
+   <label style="font-size:13px">Grado<select ${inp} onchange="SUBP.set('grade',this.value)"><option value="">Elige…</option>${((M.grados&&M.grados.length&&!M.is_admin)?M.grados:[0,1,2,3,4,5,6,7,8,9,10,11]).map(g=>`<option value="${g}" ${String(f.grade)===String(g)?'selected':''}>${g===0?'Transición':g+'°'}</option>`).join('')}</select></label>
    <label style="font-size:13px">Competencia (opcional)<input ${inp} value="${e(f.competency)}" oninput="SUBP.set('competency',this.value,1)" placeholder="Ej: Razonamiento"></label></div>`;
   if(Z.m==='uno')return`${comun}
    <label style="font-size:13px;display:block;margin-top:10px">Texto o contexto (opcional, si la pregunta lleva lectura)<textarea rows="4" ${inp} oninput="SUBP.set('stimulus_content',this.value,1)">${e(f.stimulus_content)}</textarea></label>

@@ -31,7 +31,7 @@ async function lista(){const r=await sb.rpc('clase_lista',{p_ses:Z.det});if(r.er
 const cN=id=>{const c=Z.cursos.find(x=>x.id===id);return c?(c.grade+'° '+c.name):''};
 function docView(){
   const ab=Z.ses.filter(x=>!x.cerrada_at);
-  const mias=(M.asignaturas||[]).filter(Boolean),lista0=mias.length?mias:Z.asigs;
+  const mias=(M.asignaturas||[]).filter(Boolean),lista0=mias;
   const areasM=[...new Set(lista0.map(a=>Z.amap[a]).filter(Boolean))];
   const asigsA=lista0.filter(a=>!Z.area||Z.amap[a]===Z.area);
   const abrir=`<div class="aic-card" style="padding:16px;margin-bottom:14px"><h2 style="font-weight:800;font-size:20px">✋ Asistencia a clase</h2>

@@ -15,7 +15,10 @@ const R=()=>render();
 const norm=d=>String(d||'').replace(/\D/g,'').replace(/^0+/,'');
 const nuevoF=()=>({t:'',d:'',c:[]});
 const OTRAS=['Biología','Química','Física','Lenguaje','Ciencias Sociales','Filosofía','Economía','Ciencias Políticas','Competencias Ciudadanas','Democracia','Ética','Tecnología e Informática','Educación Artística','Educación Física','Educación Económica y Financiera','Religión'];
-const nuevoD=()=>({t:'Diagnóstico',d:'',c:[],n:10,a:[...AREAS]});
+const ICM={'Lectura Crítica':['Lectura Crítica','Lengua Castellana','Lenguaje'],'Matemáticas':['Matemáticas'],'Sociales y Ciudadanas':['Ciencias Sociales','Competencias Ciudadanas','Economía','Ciencias Políticas','Democracia','Filosofía'],'Ciencias Naturales':['Ciencias Naturales','Biología','Química','Física','Agroambiental'],'Inglés':['Inglés']};
+const soloMio=()=>M&&M.role==='prof'&&!M.is_admin;
+const permitido=a=>{if(!soloMio())return true;const m=M.asignaturas||[];return m.includes(a)||(ICM[a]||[]).some(x=>m.includes(x))};
+const nuevoD=()=>({t:'Diagnóstico',d:'',c:[],n:10,a:AREAS.filter(permitido)});
 const colsDe=f=>{const k=[...AREAS];f.forEach(x=>Object.keys(x.areas).forEach(a=>{if(!k.includes(a))k.push(a)}));return k.filter(a=>AREAS.includes(a)?f.some(x=>x.areas[a]):true)};
 async function load(t){
   Z.mode=t==='diag'?'diag':'saberimp';
@@ -172,7 +175,7 @@ function formCrear(){
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px"><label style="font-size:13px">Nombre<input ${inp} value="${e(f.t)}" oninput="SIMP.set('t',this.value)" placeholder="${dg?'Diagnóstico 2027':'Simulacro 1 · 2026'}"></label>
    <label style="font-size:13px">Fecha de aplicación<input type="date" ${inp} value="${f.d}" onchange="SIMP.set('d',this.value)"></label>
    ${dg?`<label style="font-size:13px">Preguntas por área (2 a 20)<input type="number" min="2" max="20" ${inp} value="${f.n}" oninput="SIMP.set('n',this.value)"></label>`:''}</div>
-  ${dg?`<div style="margin-top:10px;font-size:13px"><b>¿Qué evaluar?</b> <button class="aic-link" onclick="SIMP.areas('icfes')">☑ Las 5 áreas del ICFES</button> <button class="aic-link" onclick="SIMP.areas('ninguna')">Quitar todo</button><div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px">${[...AREAS,...OTRAS].map(a=>`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" ${f.a.includes(a)?'checked':''} onchange="SIMP.area('${a}',this.checked)">${a}</label>`).join('')}</div><p style="font-size:12px;color:#64748b;margin-top:4px">Las 5 áreas del ICFES: Lectura Crítica, Matemáticas, Sociales y Ciudadanas, Ciencias Naturales e Inglés. Puedes marcar solo una área, una asignatura o varias.</p></div>`:''}
+  ${dg?`<div style="margin-top:10px;font-size:13px"><b>¿Qué evaluar?</b> <button class="aic-link" onclick="SIMP.areas('icfes')">☑ Las 5 áreas del ICFES</button> <button class="aic-link" onclick="SIMP.areas('ninguna')">Quitar todo</button><div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px">${[...AREAS,...OTRAS].filter(permitido).map(a=>`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" ${f.a.includes(a)?'checked':''} onchange="SIMP.area('${a}',this.checked)">${a}</label>`).join('')}</div><p style="font-size:12px;color:#64748b;margin-top:4px">Solo aparecen las áreas y asignaturas que dictas. Puedes marcar una sola o varias.</p></div>`:''}
   <div style="margin-top:10px;font-size:13px"><b>${dg?'Grupos':'Cursos que lo presentan'}:</b> ${dg?`<button class="aic-link" onclick="SIMP.todos()">☑ Todos los grupos</button>`:''}<br>${cursosBox(f.c,fn)}</div>
   <button onclick="SIMP.${dg?'crearDiag':'crearSaber'}()" ${B('#4f46e5',dg?'🩺 Crear diagnósticos':'🎯 Crear simulacro')}</button></div>`;
 }
@@ -231,7 +234,7 @@ function view(){return`<div style="display:grid;gap:16px">${formCrear()}${lista(
 return{load,view,
   set(k,v){(Z.mode==='diag'?Z.fd:Z.f)[k]=v},
   area(a,on){const s=new Set(Z.fd.a);on?s.add(a):s.delete(a);Z.fd.a=[...s]},
-  areas(m){Z.fd.a=m==='icfes'?[...AREAS]:[];R()},
+  areas(m){Z.fd.a=m==='icfes'?AREAS.filter(permitido):[];R()},
   cursoS(id,on){const s=new Set(Z.f.c);on?s.add(id):s.delete(id);Z.f.c=[...s]},
   cursoD(id,on){const s=new Set(Z.fd.c);on?s.add(id):s.delete(id);Z.fd.c=[...s];},
   todos(){Z.fd.c=Z.cursos.map(c=>c.id);R()},

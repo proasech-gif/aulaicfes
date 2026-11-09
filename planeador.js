@@ -39,7 +39,7 @@ const dayTabs=()=>Z.cur.datos.tipo!=='semana'?'':`<div style="display:flex;flex-
 const grid=(n,cols,pref,fl)=>`<div class="aic-table-wrap"><table style="min-width:640px"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${Array.from({length:n},(_,i)=>`<tr>${fl.map((f,j)=>j===0&&pref?`<td style="font-size:12px"><b>${e(pref[i][0])}</b><br>${e(pref[i][1])}</td>`:`<td><textarea rows="2" style="width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:4px;font-size:13px" oninput="PLN.g('${sk(f[0])}',${i},'${f[1]}',this.value)">${e(((Z.cur.datos[sk(f[0])]||[])[i]||{})[f[1]]||'')}</textarea></td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 const H=t=>`<h3 style="font-weight:800;color:#1e4a7c;margin:18px 0 6px;border-bottom:2px solid #1e4a7c;padding-bottom:4px">${t}</h3>`;
 function form(){
-  const c=Z.cur,asigs=[...new Set([...(M.asignaturas||[]),...Z.planes.map(p=>p.asignatura),c.asignatura])].filter(Boolean);
+  const c=Z.cur,asigs=[...new Set([...(M.asignaturas||[]),c.asignatura])].filter(Boolean);
   const grados=[...new Set(Z.cursos.map(x=>x.grade))],grupos=Z.cursos.filter(x=>String(x.grade)===String(c.grado));
   const filas=filasPlan();
   return`<div class="aic-card" style="padding:16px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="font-weight:800;font-size:20px">📓 Día a día pedagógico</h2><button class="aic-link" onclick="PLN.cerrar()" style="font-size:14px">← Volver a mis planeadores</button></div>
