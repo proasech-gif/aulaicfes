@@ -116,3 +116,17 @@ html{scroll-behavior:smooth}body{background:radial-gradient(ellipse at 8% 0%,rgb
 #app .aic-sidebar nav button.aic-nav{padding:9px 12px!important;gap:10px}
 .aic-side-bottom{flex:0 0 auto;position:sticky;bottom:-24px;background:#0b2554;margin-left:-15px;margin-right:-15px;padding:14px 20px 18px!important;z-index:2}
 @media(max-width:760px){.aic-sidebar{overflow:visible}.aic-side-bottom{position:static;margin:0;background:transparent}}
+
+/* ===== Versión celular (v2) ===== */
+html{-webkit-text-size-adjust:100%}
+body{padding-bottom:env(safe-area-inset-bottom)}
+@media(max-width:760px){
+  input,select,textarea{font-size:16px!important}
+  button{min-height:40px}
+  .aic-link{font-size:13px!important;padding:6px 4px}
+  .aic-table-wrap td{font-size:13px}.aic-table-wrap th{font-size:10px}
+  .aic-table-wrap table{min-width:560px}
+  iframe{max-width:100%}
+  .aic-card{overflow-wrap:anywhere}
+}
+@media(display-mode:standalone){body{padding-top:env(safe-area-inset-top)}}
