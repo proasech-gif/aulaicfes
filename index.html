@@ -76,6 +76,7 @@ async function boot(){
   if(!isDir())startLive();
   if(session.user.user_metadata&&session.user.user_metadata.pw_initial===true&&M.role==='est')toast('🔑','Cambia tu contraseña','Tu contraseña inicial es tu documento. Cámbiala con el botón 🔑 Contraseña de arriba.');
   if(M.is_admin){const c=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('role','prof').eq('teacher_status','pendiente');D.pend=c.count||0;const c2=await sb.from('profiles').select('id',{count:'exact',head:true}).in('role',['rector','coordinador']).eq('teacher_status','pendiente');D.pendDir=c2.count||0}
+  try{await loadMembrete()}catch(x){}
   await go(isDir()?'dcol':M.role==='prof'?'prof':'sim');
 }
 sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'){M=null;leaveChat();if(liveChan){sb.removeChannel(liveChan);liveChan=null}render()}});
@@ -89,7 +90,7 @@ async function setMode(m){
   if(m==='docente'||m==='directivo'){
     if(!D.deps){const r=await sb.from('departamentos').select('id,nombre').order('nombre');D.deps=r.data||[]}
     await loadCat();
-    if(m==='directivo')await loadScript('colegio.js?v=3');
+    if(m==='directivo')await loadScript('colegio.js?v=4');
   }
   render();
 }
@@ -334,9 +335,9 @@ async function go(t){
     if(t==='taller'){await loadScript('talleres.js?v=1');await TAL.load()}
     if(['periodo','virtual','plan','saberimp','diag'].includes(t)){
       const MOD={periodo:['periodo.js','PER'],virtual:['virtual.js','VIRT'],plan:['docente.js','DOCP'],diario:['docente.js','DOCP'],saberimp:['saberimp.js','SIMP'],diag:['saberimp.js','SIMP']}[t];
-      await loadScript(MOD[0]+'?v=5');await window[MOD[1]].load(t)}
+      await loadScript(MOD[0]+'?v=6');await window[MOD[1]].load(t)}
     if(t==='perfil'){const {data:u}=await sb.auth.getUser();D.email=(u&&u.user&&u.user.email)||''}
-    if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=3');await DIR.load(t)}
+    if(['dcol','ddoc','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=4');await DIR.load(t)}
     if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=4');await HZUI.load(t)}
     if(t==='banco'){await loadScript('banco.js?v=1');await BANCO.load()}
     if(t==='sim'){
@@ -355,7 +356,7 @@ async function go(t){
       const r=await sb.from('roster').select('*').order('full_name');D.roster=(r.data||[]).filter(x=>ids.includes(x.course_id))}
     if(t==='imp'){
       await loadAvail();await loadCourses();
-      const l=await sb.from('letterheads').select('*').eq('teacher_id',M.id).maybeSingle();D.letter=l.data||null;
+      await loadMembrete();
       const p=await sb.from('profiles').select('school_other,colegios(nombre,codinst,municipios(nombre,departamentos(nombre)))').eq('id',M.id).single();D.school=p.data||{};
       const j=await sb.from('print_jobs').select('*,courses(grade,name)').order('created_at',{ascending:false}).limit(30);D.jobs=j.data||[];
       const r=await sb.from('roster').select('id,course_id');D.rcount={};(r.data||[]).forEach(x=>{D.rcount[x.course_id]=(D.rcount[x.course_id]||0)+1});
@@ -552,16 +553,31 @@ async function addT(simId){const s=document.getElementById('add_'+simId);if(!s||
 async function delT(simId,cid){const{error}=await sb.from('simulacro_targets').delete().eq('simulacro_id',simId).eq('course_id',cid);if(error)return err(error);go('simp')}
 
 /* ---------- Imprimir: membrete, exámenes y hojas de respuestas ---------- */
+function editorMembrete(){return`<div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">🏫 Membrete institucional</h2><p class="text-sm text-slate-600">Sale automáticamente en la parte de arriba de todos los documentos de tu colegio: exámenes, simulacros, diagnósticos, talleres, hojas de respuestas y planeadores. Solo el rector y el coordinador pueden cambiarlo. Los docentes lo usan sin poder modificarlo.</p>
+  <div class="grid sm:grid-cols-3 gap-3"><label class="text-sm">Línea 1 (nombre del colegio)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l1)}" oninput="LT.l1=this.value"></label><label class="text-sm">Línea 2 (municipio, resolución…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l2)}" oninput="LT.l2=this.value"></label><label class="text-sm">Línea 3 (área, lema…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l3)}" oninput="LT.l3=this.value"></label></div>
+  <div class="flex flex-wrap items-center gap-3">${LT.logo?`<img src="${LOGO}${encodeURI(LT.logo)}" style="height:60px;width:auto;border:1px solid #e2e8f0;border-radius:8px"><button onclick="delLogo()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-xs">Quitar logo</button>`:'<span class="text-xs text-slate-500">Sin logo</span>'}<label class="text-sm">Subir logo (PNG o JPG, máx. 1 MB)<input type="file" accept="image/png,image/jpeg" class="block mt-1" onchange="pickLogo(this.files[0])"></label></div>
+  <div class="border rounded-xl p-3 text-center text-sm"><div class="text-xs text-slate-500 mb-1">Vista previa</div>${LT.logo?`<img src="${LOGO}${encodeURI(LT.logo)}" style="height:40px;width:auto;display:inline-block;vertical-align:middle"> `:''}<b>${E(LT.l1)}</b><div class="text-xs">${E(LT.l2)}</div><div class="text-xs">${E(LT.l3)}</div></div>
+  <button onclick="saveLetter()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Guardar membrete</button></div>`}
+async function loadMembrete(){
+  D.letter=null;
+  if(M&&M.colegio_id){const c=await sb.from('colegio_membrete').select('*').eq('colegio_id',M.colegio_id).maybeSingle();
+    if(c.data)D.letter=c.data}
+  if(!D.letter&&M&&M.role==='prof'){const l=await sb.from('letterheads').select('*').eq('teacher_id',M.id).maybeSingle();D.letter=l.data||null}
+  if(!D.letter&&M&&M.colegio_id&&!D.school){const p=await sb.from('profiles').select('school_other,colegios(nombre,codinst,municipios(nombre,departamentos(nombre)))').eq('id',M.id).single();D.school=p.data||{}}
+  try{LT=LH()}catch(x){}
+}
 async function saveLetter(){
-  const row={teacher_id:M.id,line1:(LT.l1||'').trim()||null,line2:(LT.l2||'').trim()||null,line3:(LT.l3||'').trim()||null,logo_path:LT.logo||null,updated_at:new Date().toISOString()};
-  const{error}=await sb.from('letterheads').upsert(row,{onConflict:'teacher_id'});if(error)return err(error);
-  D.letter=row;toast('✅','Membrete guardado','Saldrá en tus exámenes y hojas de respuestas.');render();
+  if(!isDir()&&!(M&&M.is_admin))return toast('⚠️','No permitido','Solo el rector o el coordinador pueden cambiar el membrete.');
+  if(!M.colegio_id)return toast('⚠️','Sin colegio','Tu cuenta no tiene colegio asignado.');
+  const row={colegio_id:M.colegio_id,line1:(LT.l1||'').trim()||null,line2:(LT.l2||'').trim()||null,line3:(LT.l3||'').trim()||null,logo_path:LT.logo||null,updated_by:M.id,updated_at:new Date().toISOString()};
+  const{error}=await sb.from('colegio_membrete').upsert(row,{onConflict:'colegio_id'});if(error)return err(error);
+  D.letter=row;toast('✅','Membrete guardado','Saldrá en todos los documentos del colegio.');render();
 }
 async function pickLogo(f){
   if(!f)return;
   if(!/^image\/(png|jpeg)$/.test(f.type))return toast('⚠️','Formato no válido','El logo debe ser una imagen PNG o JPG.');
   if(f.size>1048576)return toast('⚠️','Logo muy pesado','El logo debe pesar menos de 1 MB.');
-  const path=M.id+'/logo-'+Date.now()+'.'+(f.type==='image/png'?'png':'jpg');
+  const path='colegio-'+M.colegio_id+'/logo-'+Date.now()+'.'+(f.type==='image/png'?'png':'jpg');
   const{error}=await sb.storage.from('school-logos').upload(path,f,{contentType:f.type});if(error)return err(error);
   LT.logo=path;await saveLetter();
 }
@@ -787,11 +803,8 @@ function vImp(){
   const have=c&&PJ.s?((av[c.grade]||{})[PJ.s]||0):0,max=Math.min(120,have-1);
   if(PJ.n>max)PJ.n=Math.max(10,max);if(PJ.n<10)PJ.n=10;
   const J=D.job,sts=J?[...new Map(J.exams.map(e=>[e.roster_id,e.roster?.full_name])).entries()]:[],vers=J?[...new Set(J.exams.map(e=>e.version))].sort():[];
-  return`<div class="space-y-4"><div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">🏫 1. Membrete del colegio</h2><p class="text-sm text-slate-600">Sale en la parte de arriba de tus exámenes y hojas de respuestas. Ya lo llené con los datos de tu colegio; cámbialo si quieres y pulsa Guardar.</p>
-  <div class="grid sm:grid-cols-3 gap-3"><label class="text-sm">Línea 1 (nombre del colegio)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l1)}" oninput="LT.l1=this.value"></label><label class="text-sm">Línea 2 (municipio, resolución…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l2)}" oninput="LT.l2=this.value"></label><label class="text-sm">Línea 3 (área, lema…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l3)}" oninput="LT.l3=this.value"></label></div>
-  <div class="flex flex-wrap items-center gap-3">${LT.logo?`<img src="${LOGO}${encodeURI(LT.logo)}" style="height:60px;width:auto;border:1px solid #e2e8f0;border-radius:8px"><button onclick="delLogo()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-xs">Quitar logo</button>`:'<span class="text-xs text-slate-500">Sin logo</span>'}<label class="text-sm">Subir logo (PNG o JPG, máx. 1 MB)<input type="file" accept="image/png,image/jpeg" class="block mt-1" onchange="pickLogo(this.files[0])"></label></div>
-  <div class="border rounded-xl p-3 text-center text-sm"><div class="text-xs text-slate-500 mb-1">Vista previa</div>${LT.logo?`<img src="${LOGO}${encodeURI(LT.logo)}" style="height:40px;width:auto;display:inline-block;vertical-align:middle"> `:''}<b>${E(LT.l1)}</b><div class="text-xs">${E(LT.l2)}</div><div class="text-xs">${E(LT.l3)}</div></div>
-  <button onclick="saveLetter()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Guardar membrete</button></div>
+  return`<div class="space-y-4">${isDir()?editorMembrete():`<div class="bg-white rounded-2xl p-4 shadow space-y-2"><h2 class="text-xl font-bold">🏫 1. Membrete del colegio</h2><p class="text-sm text-slate-600">Este membrete lo define el rector o el coordinador y sale solo en todos tus documentos. Si necesita un cambio, pídeselo a ellos.</p>
+  <div class="border rounded-xl p-3 text-center text-sm">${L.logo?`<img src="${LOGO}${encodeURI(L.logo)}" style="height:40px;width:auto;display:inline-block;vertical-align:middle"> `:''}<b>${E(L.l1)}</b><div class="text-xs">${E(L.l2)}</div><div class="text-xs">${E(L.l3)}</div></div></div>`}
   <div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">🖨️ 2. Generar exámenes para imprimir</h2><p class="text-sm text-slate-600">Cada estudiante de la lista recibe <b>${PJ.v} exámenes distintos</b> (versiones ${[...Array(PJ.v).keys()].map(i=>vl(i+1)).join(', ')}), cada uno con su código, su nombre, su número de documento y su hoja de respuestas. Para que salga el documento, la lista del curso debe traerlo.</p>
   <div class="grid sm:grid-cols-2 gap-3"><label class="text-sm">Curso<select class="w-full border rounded-lg p-2 mt-1" onchange="PJ.c=this.value;PJ.s='';PJ.refs=[];D.cat=[];D.catKey='';render()"><option value="">Elige un curso</option>${cs.map(x=>`<option value="${x.id}" ${x.id===PJ.c?'selected':''}>${x.grade}° ${E(x.name)} (${(D.rcount||{})[x.id]||0} en lista)</option>`).join('')}</select></label>
   <label class="text-sm">Materia<select class="w-full border rounded-lg p-2 mt-1" ${c?'':'disabled'} onchange="PJ.s=this.value;PJ.refs=[];D.catKey='';render()">${subs.length?subs.map(s=>`<option ${s===PJ.s?'selected':''}>${E(s)}</option>`).join(''):'<option>(elige un curso con preguntas visibles)</option>'}</select></label>

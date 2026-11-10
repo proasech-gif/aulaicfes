@@ -80,8 +80,12 @@ async function crearSaber(){
   if(r.error)return err(r.error);
   Z.f=nuevoF();await load('saberimp');R();await abrir(r.data);
 }
+function totHtml(){const f=Z.fd,t=(+f.n||0)*(f.a||[]).length,bien=t>=20&&t<=120;
+  return`<b>Total del diagnóstico: ${t} preguntas</b> <span style="color:${bien?'#15803d':'#b91c1c'}">${bien?'✔ válido':'✖ debe estar entre 20 y 120'}</span>`}
+function totDiag(){const el=document.getElementById('dg-tot');if(el)el.innerHTML=totHtml()}
 async function crearDiag(){
   const f=Z.fd;if(!f.c.length)return toast('⚠️','Elige los grupos','Marca uno o más grupos.');
+  const tt=(+f.n||0)*(f.a||[]).length;if(f.a.length&&(tt<20||tt>120))return toast('⚠️','Cantidad no válida','El diagnóstico debe tener entre 20 y 120 preguntas en total. Ahora tiene '+tt+'. Cambia las preguntas por área o las áreas marcadas.');
   toast('⏳','Armando diagnósticos…','Uno por cada grupo.');
   if(!f.a.length)return toast('⚠️','Elige qué evaluar','Marca al menos un área o asignatura.');
   const r=await sb.rpc('create_diag',{p_courses:f.c,p_title:f.t||'Diagnóstico',p_date:f.d||null,p_per_area:+f.n||10,p_areas:f.a});
@@ -174,7 +178,8 @@ function formCrear(){
   ${dg?'':`<div style="margin-bottom:10px">${estructura()}</div>`}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px"><label style="font-size:13px">Nombre<input ${inp} value="${e(f.t)}" oninput="SIMP.set('t',this.value)" placeholder="${dg?'Diagnóstico 2027':'Simulacro 1 · 2026'}"></label>
    <label style="font-size:13px">Fecha de aplicación<input type="date" ${inp} value="${f.d}" onchange="SIMP.set('d',this.value)"></label>
-   ${dg?`<label style="font-size:13px">Preguntas por área (2 a 20)<input type="number" min="2" max="20" ${inp} value="${f.n}" oninput="SIMP.set('n',this.value)"></label>`:''}</div>
+   ${dg?`<label style="font-size:13px">Preguntas por área<input type="number" min="1" max="120" ${inp} value="${f.n}" oninput="SIMP.set('n',this.value);SIMP.tot()"></label>`:''}</div>
+  ${dg?`<div id="dg-tot" style="margin-top:8px;font-size:13px">${totHtml()}</div>`:''}
   ${dg?`<div style="margin-top:10px;font-size:13px"><b>¿Qué evaluar?</b> <button class="aic-link" onclick="SIMP.areas('icfes')">☑ Las 5 áreas del ICFES</button> <button class="aic-link" onclick="SIMP.areas('ninguna')">Quitar todo</button><div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px">${[...AREAS,...OTRAS].filter(permitido).map(a=>`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" ${f.a.includes(a)?'checked':''} onchange="SIMP.area('${a}',this.checked)">${a}</label>`).join('')}</div><p style="font-size:12px;color:#64748b;margin-top:4px">Solo aparecen las áreas y asignaturas que dictas. Puedes marcar una sola o varias.</p></div>`:''}
   <div style="margin-top:10px;font-size:13px"><b>${dg?'Grupos':'Cursos que lo presentan'}:</b> ${dg?`<button class="aic-link" onclick="SIMP.todos()">☑ Todos los grupos</button>`:''}<br>${cursosBox(f.c,fn)}</div>
   <button onclick="SIMP.${dg?'crearDiag':'crearSaber'}()" ${B('#4f46e5',dg?'🩺 Crear diagnósticos':'🎯 Crear simulacro')}</button></div>`;
@@ -233,6 +238,7 @@ function lista(){
 function view(){return`<div style="display:grid;gap:16px">${formCrear()}${lista()}</div>`}
 return{load,view,
   set(k,v){(Z.mode==='diag'?Z.fd:Z.f)[k]=v},
+  tot:totDiag,
   area(a,on){const s=new Set(Z.fd.a);on?s.add(a):s.delete(a);Z.fd.a=[...s]},
   areas(m){Z.fd.a=m==='icfes'?AREAS.filter(permitido):[];R()},
   cursoS(id,on){const s=new Set(Z.f.c);on?s.add(id):s.delete(id);Z.f.c=[...s]},
