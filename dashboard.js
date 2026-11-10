@@ -39,7 +39,7 @@
     const rol=M?.role==='rector'?'Rector':M?.role==='coordinador'?'Coordinador':M?.is_admin?'Administrador':'Docente',school=M?.school_other||'';
     const navHtml=navItems(M).map(([k,ic,l])=>`<button class="aic-nav ${k===tab?'active':''}" onclick="go('${k}')"><span>${ic}</span>${l}${(k==='doc'&&pend?.doc)?` <em class="aic-badge">${pend.doc}</em>`:''}${(k==='dadm'&&pend?.dir)?` <em class="aic-badge">${pend.dir}</em>`:''}</button>`).join('');
     return `<div class="aic-shell">
-      <aside class="aic-sidebar"><div class="aic-brand"><img class="aic-brand-full" src="branding/aula360/aula360-logo-horizontal.png" alt="AULA360 · Aprende, practica, evalúa"><img class="aic-brand-ico" src="branding/aula360/aula360-pwa-192.png" alt=""><b class="aic-brand-txt">AULA<span>360</span></b></div>
+      <aside class="aic-sidebar"><div class="aic-brand"><img class="aic-brand-full" src="aula360-logo-horizontal.png" alt="AULA360 · Aprende, practica, evalúa"><img class="aic-brand-ico" src="aula360-pwa-192.png" alt=""><b class="aic-brand-txt">AULA<span>360</span></b></div>
         <button class="aic-hamb" aria-label="Abrir menú" onclick="this.closest('.aic-sidebar').classList.toggle('open')"><i></i><i></i><i></i><em>Menú</em></button>
         <div class="aic-back" onclick="this.closest('.aic-sidebar').classList.remove('open')"></div>
         <div class="aic-drawer">
