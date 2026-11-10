@@ -156,7 +156,7 @@ function vReg(headHtml){
   <label class="text-sm block">Departamento<select class="w-full border rounded-lg p-2 mt-1" onchange="onDep(this.value)"><option value="">Elige tu departamento…</option>${deps.map(d=>`<option value="${d.id}" ${String(d.id)===String(RG.dep)?'selected':''}>${E(d.nombre)}</option>`).join('')}</select></label>
   <label class="text-sm block">Municipio<select class="w-full border rounded-lg p-2 mt-1" ${RG.dep?'':'disabled'} onchange="onMun(this.value)"><option value="">Elige tu municipio…</option>${muns.map(x=>`<option value="${x.id}" ${String(x.id)===String(RG.mun)?'selected':''}>${E(x.nombre)}</option>`).join('')}</select></label>
   <label class="text-sm block">Colegio<input id="colq" class="w-full border rounded-lg p-2 mt-1" placeholder="Escribe para buscar tu colegio…" ${RG.mun?'':'disabled'} value="${E(RG.q)}" oninput="RG.q=this.value;paintCols()"><select id="colsel" class="w-full border rounded-lg p-2 mt-1" ${RG.mun?'':'disabled'} onchange="RG.col=this.value">${colOpts()}</select></label>
-  <p class="text-xs text-slate-500">Tu colegio debe estar en la lista. Si no aparece, escribe al administrador de AulaICFES.</p>
+  <p class="text-xs text-slate-500">Tu colegio debe estar en la lista. Si no aparece, escribe al administrador de AULA360.</p>
   <button onclick="doAuth()" class="w-full py-2 bg-indigo-600 text-white rounded-lg">Enviar mi registro</button></div>`;
 }
 async function doReg(){

@@ -148,7 +148,7 @@ function vAsigs(){
   const l=S.asigs.map(a=>`<tr class="border-t"><td class="py-1">${E(a.nombre)}</td><td>${E(a.area)}</td><td>${E(a.aula_tipo||'—')}</td><td>${btn(`HZUI.delAsig('${a.id}')`,'Quitar')}</td></tr>`).join('');
   return card(`<h3 class="font-semibold mb-2">📚 Asignaturas</h3>${S.asigs.length?`<div class="overflow-x-auto"><table class="w-full text-sm"><tr class="text-left text-slate-500"><th>Asignatura</th><th>Área</th><th>Aula especial</th><th></th></tr>${l}</table></div>`:'<p class="text-sm text-slate-500 mb-2">Todavía no hay asignaturas.</p>'}
     <div class="flex flex-wrap gap-2 hz-end hz-mt3"><input id="hz_anom" class="${IN}" placeholder="Asignatura"><input id="hz_aare" class="${IN}" placeholder="Área (ej. Ciencias Naturales)"><input id="hz_atip" class="${IN}" placeholder="Tipo de aula (opcional)">${btn('HZUI.addAsig()','Agregar',BTN)}</div>
-    <div class="hz-mt3">${btn('HZUI.cargarCatalogo()','📥 Cargar las asignaturas del catálogo de AulaICFES','bg-emerald-600 text-white')}</div>
+    <div class="hz-mt3">${btn('HZUI.cargarCatalogo()','📥 Cargar las asignaturas del catálogo de AULA360','bg-emerald-600 text-white')}</div>
     <p class="text-xs text-slate-500 mt-2">El área es importante: con ella puedes poner reglas como "Matemáticas solo lunes y miércoles". Si una asignatura necesita un aula especial (laboratorio, sala de sistemas), escribe su tipo.</p>`);
 }
 function vDocs(){
@@ -160,7 +160,7 @@ function vDocs(){
   if(dd)disp=card(`<h3 class="font-semibold hz-mb1">Disponibilidad de ${E(dd.nombre)}</h3><p class="text-xs text-slate-500 mb-2">Toca las casillas en las que <b>NO</b> puede dar clase (quedan en rojo).</p><div class="overflow-x-auto"><table class="text-sm" style="border-collapse:collapse"><tr><th></th>${S.dias.map(d=>`<th ${TD}>${DN[d]}</th>`).join('')}</tr>${clasesF().map(f=>`<tr><td ${TD}>${E(f.nombre)}</td>${S.dias.map(d=>{const no=S.nd.some(n=>n.docente_id===dd.id&&n.dia===d&&n.franja_id===f.id);return`<td onclick="HZUI.toggleND('${dd.id}',${d},'${f.id}')" style="border:1px solid #cbd5e1;padding:10px;cursor:pointer;text-align:center;background:${no?'#fecaca':'#ecfdf5'}">${no?'✕':'✓'}</td>`}).join('')}</tr>`).join('')}</table></div><div class="mt-2">${btn('HZUI.cerrarDisp()','Cerrar')}</div>`);
   return`<div class="space-y-4">${card(`<h3 class="font-semibold mb-2">👩‍🏫 Docentes del horario</h3><div class="space-y-2">${l||'<p class="text-sm text-slate-500">Todavía no hay docentes.</p>'}</div>
     <div class="flex flex-wrap gap-2 hz-end hz-mt3"><input id="hz_dnom" class="${IN}" placeholder="Nombre del docente">${btn('HZUI.addDoc()','Agregar',BTN)}</div>
-    <div class="hz-mt3">${btn('HZUI.traerDocentes()','📥 Traer los docentes registrados en AulaICFES de mi colegio','bg-emerald-600 text-white')}</div>
+    <div class="hz-mt3">${btn('HZUI.traerDocentes()','📥 Traer los docentes registrados en AULA360 de mi colegio','bg-emerald-600 text-white')}</div>
     <p class="text-xs text-slate-500 mt-2">Los docentes con cuenta podrán ver su propio horario en la pestaña "Mi horario". Puedes agregar también docentes que aún no tienen cuenta.</p>`)}${disp}</div>`;
 }
 function vAulas(){

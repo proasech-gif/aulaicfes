@@ -1,4 +1,4 @@
-/* AulaICFES — Dashboard docente profesional
+/* AULA360 — Dashboard docente profesional
    Consume exclusivamente los intentos y perfiles ya cargados por la aplicación.
    No genera resultados ficticios ni altera el esquema de Supabase. */
 (function(){
@@ -35,11 +35,11 @@
     l.push(['perfil','☺','Mi perfil']);return l;
   }
   function shell(D,M,tab,body,live,pend){
-    const name=esc(M?.full_name||'Docente'),ini=esc((M?.full_name||'D').slice(0,1).toUpperCase()),t=TITLES[tab]||['AulaICFES',''];
+    const name=esc(M?.full_name||'Docente'),ini=esc((M?.full_name||'D').slice(0,1).toUpperCase()),t=TITLES[tab]||['AULA360',''];
     const rol=M?.role==='rector'?'Rector':M?.role==='coordinador'?'Coordinador':M?.is_admin?'Administrador':'Docente',school=M?.school_other||'';
     const navHtml=navItems(M).map(([k,ic,l])=>`<button class="aic-nav ${k===tab?'active':''}" onclick="go('${k}')"><span>${ic}</span>${l}${(k==='doc'&&pend?.doc)?` <em class="aic-badge">${pend.doc}</em>`:''}${(k==='dadm'&&pend?.dir)?` <em class="aic-badge">${pend.dir}</em>`:''}</button>`).join('');
     return `<div class="aic-shell">
-      <aside class="aic-sidebar"><div class="aic-brand"><div class="aic-logo">🎓</div><div><b>Aula<span>ICFES</span></b><small>Analiza · Mejora · Avanza</small></div></div>
+      <aside class="aic-sidebar"><div class="aic-brand"><img class="aic-brand-full" src="branding/aula360/aula360-logo-horizontal.png" alt="AULA360 · Aprende, practica, evalúa"><img class="aic-brand-ico" src="branding/aula360/aula360-pwa-192.png" alt=""><b class="aic-brand-txt">AULA<span>360</span></b></div>
         <button class="aic-hamb" aria-label="Abrir menú" onclick="this.closest('.aic-sidebar').classList.toggle('open')"><i></i><i></i><i></i><em>Menú</em></button>
         <div class="aic-back" onclick="this.closest('.aic-sidebar').classList.remove('open')"></div>
         <div class="aic-drawer">
@@ -82,7 +82,7 @@
         <section class="aic-lower-grid"><article class="aic-card"><div class="aic-card-head"><div><h3>Distribución de resultados</h3><p>Rangos de puntaje de los intentos</p></div></div>${has?`<div class="aic-dist">${[['0–39',s.bands[0],'low'],['40–59',s.bands[1],'mid'],['60–79',s.bands[2],'good'],['80–100',s.bands[3],'high']].map(([l,n,c])=>`<div class="aic-dist-row"><div><span>${l} puntos</span><b>${n}</b></div><div class="aic-track"><i class="${c}" style="width:${s.all.length?n/s.all.length*100:0}%"></i></div></div>`).join('')}</div>`:'<div class="aic-empty compact">Sin datos suficientes.</div>'}</article>
           <article class="aic-card"><div class="aic-card-head"><div><h3>Promedios por asignatura</h3><p>Ordenados de mayor a menor</p></div><button class="aic-link" onclick="go('prof')">Actualizar ↗</button></div>${has?`<div class="aic-subject-list">${subjectRows.map(([k,v],i)=>`<div class="aic-subject-row"><span class="aic-subject-dot dot${i%5}"></span><span>${esc(k)}</span><b>${fmt(mean(v))}</b><small>${v.length} ${v.length===1?'intento':'intentos'}</small></div>`).join('')}</div>`:'<div class="aic-empty compact">Los promedios aparecerán al registrar resultados.</div>'}</article></section>
         <section class="aic-card aic-recent"><div class="aic-card-head"><div><h3>Actividad reciente</h3><p>Últimos resultados registrados en tus cursos</p></div><button class="aic-link" onclick="exportCSV()">↓ Exportar CSV</button></div>${recent.length?`<div class="aic-table-wrap"><table><thead><tr><th>ESTUDIANTE</th><th>CURSO</th><th>ASIGNATURA</th><th>SIMULACRO / TAREA</th><th>PUNTAJE</th><th>FECHA</th></tr></thead><tbody>${recent.map(a=>`<tr><td><b>${esc(a.profiles?.full_name||'Estudiante')}</b></td><td>${esc(a.profiles?.courses?.name||'—')}</td><td>${esc(a.subject||'—')}</td><td>${esc(a.simulacros?.title||'Actividad')}</td><td><span class="aic-score ${Number(a.score)>=80?'score-high':Number(a.score)>=60?'score-mid':'score-low'}">${fmt(a.score)}</span></td><td>${date(a.created_at)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aic-empty compact">Todavía no hay actividad registrada. Crea un simulacro y asígnalo a uno de tus cursos.</div>'}</section>
-        <footer class="aic-footer"><span>🎓 <b>AulaICFES</b> · Herramientas para mejorar el aprendizaje</span><span>Los indicadores se actualizan con los datos disponibles en la plataforma.</span></footer>
+        <footer class="aic-footer"><span><b>AULA360</b> · Aprende, practica, evalúa</span><span>Los indicadores se actualizan con los datos disponibles en la plataforma.</span></footer>
       </div>`;
   }
   function mount(D,M,charts){
