@@ -40,9 +40,13 @@
     const navHtml=navItems(M).map(([k,ic,l])=>`<button class="aic-nav ${k===tab?'active':''}" onclick="go('${k}')"><span>${ic}</span>${l}${(k==='doc'&&pend?.doc)?` <em class="aic-badge">${pend.doc}</em>`:''}${(k==='dadm'&&pend?.dir)?` <em class="aic-badge">${pend.dir}</em>`:''}</button>`).join('');
     return `<div class="aic-shell">
       <aside class="aic-sidebar"><div class="aic-brand"><div class="aic-logo">🎓</div><div><b>Aula<span>ICFES</span></b><small>Analiza · Mejora · Avanza</small></div></div>
+        <button class="aic-hamb" aria-label="Abrir menú" onclick="this.closest('.aic-sidebar').classList.toggle('open')"><i></i><i></i><i></i><em>Menú</em></button>
+        <div class="aic-back" onclick="this.closest('.aic-sidebar').classList.remove('open')"></div>
+        <div class="aic-drawer">
         <div class="aic-side-label">MENÚ PRINCIPAL</div><nav>${navHtml}</nav>
         <button onclick="toggleVirtual()" style="margin:10px 6px 0;padding:10px;border-radius:10px;font-weight:800;font-size:12px;background:${VMODE.on()?'#16a34a':'#ffffff22'};color:#fff;text-align:center;width:calc(100% - 12px)">${VMODE.on()?'💻 Modo virtual: ACTIVADO':'🖨️ Modo virtual: apagado'}<br><small style="font-weight:400">${VMODE.on()?'Toca para volver a solo imprimir':'Toca para activar lo virtual'}</small></button>
         <div class="aic-side-bottom"><div class="aic-avatar">${ini}</div><div><b>${name}</b><small>${rol}</small></div><button onclick="logout()" title="Cerrar sesión">↗</button></div>
+        </div>
       </aside>
       <main class="aic-main">
         <header class="aic-top"><div><div class="aic-eyebrow">ESPACIO DE TRABAJO</div><h1>${t[0]}</h1><p>${school?esc(school)+' · ':''}${t[1]}</p></div>
