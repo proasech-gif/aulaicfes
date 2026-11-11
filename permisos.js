@@ -8,7 +8,7 @@ const ft=x=>x?new Date(x).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'s
 const isDir=()=>M&&(M.role==='rector'||M.role==='coordinador');
 const R=()=>render();
 const MOTIVOS=['Cita médica o examen','Calamidad doméstica','Licencia por luto','Diligencia personal','Capacitación o formación','Licencia de maternidad o paternidad','Representación institucional','Otro'];
-let Z={dir:[],perm:[],fmt:[],f:{dest:'',motivo:'',desde:'',hasta:'',hd:'',hh:'',detalle:'',comp:''},ult:null,busy:false};
+let Z={cf:null,cfSecs:'',cfFile:null,cfNombre:'',dir:[],perm:[],fmt:[],f:{dest:'',motivo:'',desde:'',hasta:'',hd:'',hh:'',detalle:'',comp:''},ult:null,busy:false};
 const inp='style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px"';
 const nom=id=>((Z.dir.find(p=>p.id===id)||{}).full_name)||(id===M.id?M.full_name:'—');
 const per=id=>Z.dir.find(p=>p.id===id)||null;
@@ -19,6 +19,7 @@ async function load(){
   const p=await sb.from('permisos').select('*').order('created_at',{ascending:false}).limit(100);if(p.error)throw p.error;Z.perm=p.data||[];
   const f=await sb.from('permiso_formatos').select('*');Z.fmt=f.data||[];
   // nombres de los solicitantes (para rector/coordinador)
+  if(isDir()){const c=await sb.from('clase_formato').select('*').eq('colegio_id',M.colegio_id||0).maybeSingle();Z.cf=c.data||null;if(Z.cf&&!Z.cfSecs)Z.cfSecs=(Z.cf.secciones||[]).join('\n')}
   Z.ult=null;
 }
 /* ---------- Documentos imprimibles ---------- */
@@ -88,6 +89,11 @@ function vDir(){
    <div style="display:flex;flex-wrap:wrap;gap:12px">${celda('docente','solicitud')}${celda('docente','recibido')}</div>
    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px">${celda('administrativo','solicitud')}${celda('administrativo','recibido')}</div>
    <div style="margin-top:10px"><button class="aic-link" onclick="PERM.imprimirBlancoAdm()">🖨️ Imprimir el formato de la plataforma para administrativos</button></div></div>
+  <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">✨ Formato de preparación de clase</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Sube el formato de preparación de clase de tu colegio (Word o PDF). La plataforma lee sus secciones y los docentes podrán elegir este formato en <b>Preparar clase con IA</b>. Si no subes ninguno, usan el de la plataforma.</p>
+   ${Z.cf&&Z.cf.nombre?`<div style="font-size:13px;margin-bottom:8px">📄 Formato actual: <b>${e(Z.cf.nombre)}</b> · ${(Z.cf.secciones||[]).length} secciones <button class="aic-link" onclick="PERM.quitarCF()">🗑 Quitar</button></div>`:''}
+   <input type="file" accept=".pdf,.docx" onchange="PERM.leerCF(this.files[0])" style="font-size:13px">
+   <label style="font-size:13px;display:block;margin-top:10px">Secciones del formato (una por línea; corrígelas si hace falta)<textarea rows="7" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px" oninput="PERM.cfSecs=this.value">${e(Z.cfSecs)}</textarea></label>
+   <div style="margin-top:8px"><button onclick="PERM.guardarCF()" style="background:#16a34a;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">💾 Guardar formato</button></div></div>
   <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">🗓 Permisos pendientes (${pend.length})</h3>${pend.map(fila).join('')||'<p style="font-size:13px;color:#64748b">No hay permisos por responder.</p>'}</div>
   <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">Permisos respondidos</h3>${resp.map(fila).join('')||'<p style="font-size:13px;color:#64748b">Aún no hay respuestas.</p>'}</div></div>`;
 }
@@ -113,6 +119,37 @@ const api={
     if(estado==='negado'&&!c&&!confirm('¿No aprobar sin escribir un comentario?'))return;
     const r=await sb.rpc('permiso_responder',{p_id:id,p_estado:estado,p_resp:c});if(r.error)return err(r.error);
     toast('✅','Respuesta enviada','Puedes avisarle también por WhatsApp o correo.');await load();R();
+  },
+  set cfSecs(v){Z.cfSecs=v},
+  async leerCF(f){
+    if(!f)return;const ext=(f.name.split('.').pop()||'').toLowerCase();
+    if(!['pdf','docx'].includes(ext))return toast('⚠️','Formato no válido','Sube un Word (.docx) o un PDF.');
+    toast('⏳','Leyendo el formato…',f.name);
+    try{
+      const lines=await readFile(f,ext==='pdf'?'pdf':'word'),seen=new Set(),out=[];
+      lines.forEach(l=>{l=String(l||'').replace(/\s*;\s*/g,' · ').trim();if(l.length>=3&&l.length<=70&&!seen.has(l.toLowerCase())){seen.add(l.toLowerCase());out.push(l)}});
+      Z.cfSecs=out.slice(0,30).join('\n');Z.cfFile=f;Z.cfNombre=f.name;
+      toast('✅','Secciones leídas','Revisa la lista y pulsa Guardar formato.');
+    }catch(x){return err(x)}
+    R();
+  },
+  async guardarCF(){
+    const secs=Z.cfSecs.split(/\n/).map(x=>x.trim()).filter(Boolean).slice(0,40);
+    if(!secs.length)return toast('⚠️','Escribe o sube las secciones del formato','');
+    let path=Z.cf&&Z.cf.path||null,nombre=Z.cf&&Z.cf.nombre||Z.cfNombre||'Formato del colegio';
+    if(Z.cfFile){
+      const np=M.colegio_id+'/clase-'+Date.now()+'-'+Z.cfFile.name.replace(/[^\w.\-]+/g,'_');
+      const up=await sb.storage.from('formatos-colegio').upload(np,Z.cfFile);if(up.error)return err(up.error);
+      if(path)sb.storage.from('formatos-colegio').remove([path]);path=np;nombre=Z.cfFile.name;
+    }
+    const w=await sb.from('clase_formato').upsert({colegio_id:M.colegio_id,path,nombre,secciones:secs,updated_by:M.id,updated_at:new Date().toISOString()},{onConflict:'colegio_id'});
+    if(w.error)return err(w.error);
+    Z.cfFile=null;toast('✅','Formato guardado','Los docentes ya pueden elegirlo.');await load();R();
+  },
+  async quitarCF(){
+    if(!confirm('¿Quitar el formato de clase del colegio? Los docentes usarán el de la plataforma.'))return;
+    const d=await sb.from('clase_formato').delete().eq('colegio_id',M.colegio_id);if(d.error)return err(d.error);
+    if(Z.cf&&Z.cf.path)sb.storage.from('formatos-colegio').remove([Z.cf.path]);Z.cf=null;Z.cfSecs='';await load();R();
   },
   async subirFmt(clase,persona,f){
     if(!f)return;
