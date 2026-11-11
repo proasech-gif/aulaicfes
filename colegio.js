@@ -3,7 +3,7 @@
    Todo es de SOLO LECTURA, salvo aprobar o rechazar cuentas (rector y administrador). */
 (function(){
 'use strict';
-const S={school:null,sum:{},pend:[],staff:[],docs:[],sel:'',sub:'cur',det:null,hist:[],names:{},adm:[]};
+const S={coos:[],pick:'',cpick:'',csel:'',cdet:null,school:null,sum:{},pend:[],staff:[],docs:[],sel:'',sub:'cur',det:null,hist:[],names:{},adm:[]};
 const ok=r=>{if(r&&r.error)throw r.error;return(r&&r.data)||[]};
 const av=a=>a.length?Math.round(a.reduce((x,y)=>x+(+y||0),0)/a.length):0;
 const fd=x=>{if(!x)return'—';const d=new Date(String(x).length===10?x+'T00:00:00':x);return d.toLocaleDateString('es-CO')};
@@ -56,7 +56,12 @@ async function loadDet(tid){
     jids.length?sb.from('print_results').select('job_id,nota').in('job_id',jids):{data:[]},
     sids.length?sb.from('attendance').select('user_id,session_date,present').in('user_id',sids).order('session_date',{ascending:false}).limit(2000):{data:[]}
   ]);
-  S.det={cs,ro:ok(ro),st:stu,si:ok(si),jb:jobs,cl:(cl&&cl.data)||null,at:ok(at),pr:ok(pr),ad:ok(ad)};
+  const [pl,pa,nt]=await Promise.all([
+    sb.from('planeaciones').select('fecha,curso,asignatura,tema,estado,cumplimiento').eq('docente_id',tid).order('fecha',{ascending:false}).limit(60),
+    sb.from('planes_area').select('asignatura,grado,anio,archivo_nombre,malla').eq('docente_id',tid).order('anio',{ascending:false}),
+    sb.from('mensajes').select('id,texto,created_at,leido_at').eq('de_id',M.id).eq('para_id',tid).eq('tipo','nota').order('created_at',{ascending:false}).limit(30)
+  ]);
+  S.det={cs,ro:ok(ro),st:stu,si:ok(si),jb:jobs,cl:(cl&&cl.data)||null,at:ok(at),pr:ok(pr),ad:ok(ad),pl:ok(pl),pa:ok(pa),notas:ok(nt)};
 }
 async function loadDocs(){
   S.docs=ok(await sb.from('profiles').select('id,full_name,email,phone,teacher_status,area,asignaturas,grados,created_at,courses!courses_teacher_id_fkey(grade,name)').eq('role','prof').eq('colegio_id',M.colegio_id).order('full_name'));
@@ -89,16 +94,35 @@ function vCol(){
 }
 function vDocs(){
   if(S.sel)return vDet();
-  const l=S.docs.map(d=>`<div class="bg-white rounded-2xl p-4 shadow"><div class="flex flex-wrap items-center justify-between gap-2"><div><div class="font-semibold">${E(d.full_name)} <span class="text-xs text-slate-500">${ST(d.teacher_status)}</span></div><div class="text-xs text-slate-500">${E(d.email||'')} · ${E(d.phone||'')}</div>${d.area?`<div class="text-xs text-slate-500">Área: ${E(d.area)} · Asignaturas: ${E((d.asignaturas||[]).join(', '))}</div>`:''}${(d.grados||[]).length?`<div class="text-xs text-slate-500">Grados: ${d.grados.map(g=>g+'°').join(', ')}</div>`:''}${(d.courses||[]).length?`<div class="text-xs text-slate-500">Cursos: ${[...d.courses].sort((a,b)=>a.grade-b.grade||String(a.name).localeCompare(String(b.name))).map(c=>c.grade+'° '+E(c.name)).join(', ')}</div>`:''}</div><button onclick="DIR.open('${d.id}')" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">Ver todo lo que ha hecho</button></div></div>`).join('');
-  return`<div class="space-y-4">${card('<h3 class="font-bold" style="color:#102a5c;font-size:17px">Docentes de tu colegio</h3><p class="text-sm text-slate-600">Elige un docente para ver, solo para consulta, sus cursos, estudiantes, simulacros, resultados, exámenes impresos y asistencia. No se puede modificar nada desde aquí.</p>')}${l||card('<p class="text-sm text-slate-500">Todavía no hay docentes registrados con el colegio de tu catálogo.</p>')}</div>`;
+  const opts=S.docs.filter(d=>d.teacher_status==='aprobado').map(d=>`<option value="${d.id}" ${S.pick===d.id?'selected':''}>${E(d.full_name)}${d.area?' · '+E(d.area):''}</option>`).join('');
+  const d=S.docs.find(x=>x.id===S.pick);
+  const info=d?`<div class="text-xs text-slate-500 mt-2">${E(d.email||'')} · ${E(d.phone||'')}${d.area?'<br>Área: '+E(d.area)+' · Asignaturas: '+E((d.asignaturas||[]).join(', ')):''}${(d.grados||[]).length?'<br>Grados: '+d.grados.map(g=>g+'°').join(', '):''}</div>`:'';
+  return`<div class="space-y-4">${card(`<h3 class="font-bold" style="color:#102a5c;font-size:17px">👩‍🏫 Docentes de tu colegio</h3><p class="text-sm text-slate-600">Elige un docente de la lista y entra a su entorno para ver todo lo que ha hecho. Es solo para consulta: desde aquí no se puede modificar nada. También puedes dejarle una nota.</p>
+   ${S.docs.length?`<div class="flex flex-wrap gap-2 items-end mt-3"><label class="text-sm" style="flex:1;min-width:220px">Docente<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.pick(this.value)"><option value="">Elige un docente…</option>${opts}</select></label><button onclick="DIR.entrar()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm" ${S.pick?'':'disabled style="opacity:.5"'}>Entrar a su entorno</button></div>${info}`:'<p class="text-sm text-slate-500 mt-2">Todavía no hay docentes registrados con el colegio de tu catálogo.</p>'}`)}</div>`;
 }
 function vDet(){
   const d=S.docs.find(x=>x.id===S.sel),X=S.det;
   if(!d||!X)return card('<p class="text-sm text-slate-500">Cargando…</p>');
-  const subs=[['cur','👥 Cursos y estudiantes'],['sim','🚀 Simulacros y tareas'],['res','📊 Resultados'],['imp','🖨️ Exámenes impresos'],['asi','🎥 Clase y asistencia']];
-  const view=({cur:dCur,sim:dSim,res:dRes,imp:dImp,asi:dAsi}[S.sub]||dCur)(X);
-  return`<div class="space-y-4">${card(`<button onclick="DIR.back()" class="text-sm text-indigo-700 underline">← Volver a docentes</button><h2 class="text-xl font-bold mt-1">${E(d.full_name)}</h2><p class="text-xs text-slate-500">${E(d.area||'')} · ${E((d.asignaturas||[]).join(', '))} · <b>Solo lectura</b></p>`)}
+  const subs=[['cur','👥 Cursos y estudiantes'],['sim','🚀 Simulacros y tareas'],['res','📊 Resultados'],['imp','🖨️ Exámenes impresos'],['asi','🎥 Clase y asistencia'],['pla','📅 Día a día'],['par','🗂 Plan de área'],['not','📝 Dejar nota']];
+  const view=({cur:dCur,sim:dSim,res:dRes,imp:dImp,asi:dAsi,pla:dPla,par:dPar,not:dNot}[S.sub]||dCur)(X);
+  return`<div class="space-y-4">${card(`<button onclick="DIR.back()" class="text-sm text-indigo-700 underline">← Cambiar de docente</button><h2 class="text-xl font-bold mt-1">${E(d.full_name)}</h2><p class="text-xs text-slate-500">${E(d.area||'')} · ${E((d.asignaturas||[]).join(', '))} · <b>Solo lectura</b></p>`)}
   <nav class="aic-tabs">${subs.map(([k,l])=>`<button onclick="DIR.sub('${k}')" class="px-4 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${S.sub===k?'on':'bg-white'}">${l}</button>`).join('')}</nav>${view}</div>`;
+}
+
+function dPla(X){
+  const rows=(X.pl||[]).map(p=>[fd(p.fecha),E(p.curso||''),E(p.asignatura||''),E(p.tema||'—'),E(p.estado||''),p.cumplimiento?E(p.cumplimiento):'—']);
+  return card(`<h3 class="font-semibold mb-2">📅 Día a día pedagógico (últimas ${rows.length})</h3>${tbl(['Fecha','Curso','Asignatura','Tema','Estado','Cumplimiento'],rows)}`);
+}
+function dPar(X){
+  const rows=(X.pa||[]).map(p=>[E(p.asignatura),p.grado+'°',p.anio,E(p.archivo_nombre||'—'),(p.malla&&Object.keys(p.malla).length)?'Sí':'No']);
+  return card(`<h3 class="font-semibold mb-2">🗂 Planes de área subidos</h3>${tbl(['Asignatura','Grado','Año','Archivo','Con malla organizada'],rows)}`);
+}
+function dNot(X){
+  const ns=(X.notas||[]).map(n=>`<div class="aic-row" style="padding:8px 0;border-bottom:1px solid #e2e8f0"><div class="text-xs text-slate-500">${ft(n.created_at)} · ${n.leido_at?'✔ Leída':'Sin leer'}</div><div class="text-sm">${E(n.texto||'')}</div></div>`).join('');
+  return card(`<h3 class="font-semibold mb-2">📝 Nota para ${E((S.docs.find(x=>x.id===S.sel)||{}).full_name||'')}</h3><p class="text-xs text-slate-500 mb-2">La nota le aparece en su entorno, en <b>Mensajes</b>, y puedes avisarle también por WhatsApp o correo.</p>
+   <textarea id="dir-nota" rows="3" class="w-full border rounded-lg p-2" placeholder="Escribe la nota…"></textarea>
+   <div class="flex flex-wrap gap-2 mt-2"><button onclick="DIR.nota('${S.sel}')" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm">Dejar nota</button></div>
+   <h4 class="font-semibold mt-4 mb-1 text-sm">Notas que ya dejaste</h4>${ns||'<p class="text-sm text-slate-500">Todavía no hay notas.</p>'}`);
 }
 function dCur(X){
   if(!X.cs.length)return card('<p class="text-sm text-slate-500">Este docente todavía no tiene cursos.</p>');
@@ -133,6 +157,35 @@ function dAsi(X){
   return`<div class="space-y-4">${card(`<h3 class="font-semibold mb-2">🎥 Clase</h3><p class="text-sm text-slate-600">${c.title?E(c.title):'Sin clase configurada'}${c.is_live?' · <b style="color:#dc2626">● EN VIVO</b>':''}</p><p class="text-xs text-slate-500">Última actualización: ${ft(c.updated_at)}</p>`)}
   ${card(`<h3 class="font-semibold mb-2">Asistencia (${dates.length} clases con registro)</h3>${tbl(['Estudiante','Asistencias','% de asistencia'],per)}`)}
   ${card(`<h3 class="font-semibold mb-2">Por fecha</h3>${tbl(['Fecha','Presentes'],dates.slice(0,15).map(f=>[fd(f),X.ad.filter(a=>a.session_date===f&&a.present).length]))}`)}</div>`;
+}
+
+async function loadCoo(){
+  S.coos=ok(await sb.from('profiles').select('id,full_name,email,phone,role,teacher_status,created_at').eq('role','coordinador').eq('colegio_id',M.colegio_id).neq('id',M.id).order('full_name'));
+}
+async function loadCooDet(id){
+  const [si,nt,pm]=await Promise.all([
+    sb.from('saber_imp').select('id,kind,title,exam_date,created_at').eq('creator_id',id).order('created_at',{ascending:false}).limit(40),
+    sb.from('mensajes').select('id,texto,created_at,leido_at').eq('de_id',M.id).eq('para_id',id).eq('tipo','nota').order('created_at',{ascending:false}).limit(30),
+    sb.from('permisos').select('estado,respondido_por,respondido_at').eq('respondido_por',id).limit(200)
+  ]);
+  S.cdet={si:ok(si),notas:ok(nt),pm:ok(pm)};
+}
+function vCoo(){
+  if(S.csel)return vCooDet();
+  const opts=S.coos.map(c=>`<option value="${c.id}" ${S.cpick===c.id?'selected':''}>${E(c.full_name)}${c.teacher_status==='aprobado'?'':' ('+ST(c.teacher_status)+')'}</option>`).join('');
+  return`<div class="space-y-4">${card(`<h3 class="font-bold" style="color:#102a5c;font-size:17px">🧑‍💼 Coordinadores de tu colegio</h3><p class="text-sm text-slate-600">Elige un coordinador de la lista y entra a su entorno para revisar lo que ha hecho. Solo es de consulta: no se puede cambiar nada. Puedes dejarle una nota.</p>
+   ${S.coos.length?`<div class="flex flex-wrap gap-2 items-end mt-3"><label class="text-sm" style="flex:1;min-width:220px">Coordinador<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.cpick(this.value)"><option value="">Elige un coordinador…</option>${opts}</select></label><button onclick="DIR.centrar()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm" ${S.cpick?'':'disabled style="opacity:.5"'}>Entrar a su entorno</button></div>`:'<p class="text-sm text-slate-500 mt-2">Todavía no hay otros coordinadores en tu colegio.</p>'}`)}</div>`;
+}
+function vCooDet(){
+  const c=S.coos.find(x=>x.id===S.csel),X=S.cdet;
+  if(!c||!X)return card('<p class="text-sm text-slate-500">Cargando…</p>');
+  const resp=X.pm.filter(p=>p.estado!=='pendiente').length;
+  const sims=X.si.map(x=>[x.kind==='diagnostico'?'🩺 Diagnóstico':'🎯 Simulacro',E(x.title),fd(x.exam_date),ft(x.created_at)]);
+  const ns=X.notas.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #e2e8f0"><div class="text-xs text-slate-500">${ft(n.created_at)} · ${n.leido_at?'✔ Leída':'Sin leer'}</div><div class="text-sm">${E(n.texto||'')}</div></div>`).join('');
+  return`<div class="space-y-4">${card(`<button onclick="DIR.cback()" class="text-sm text-indigo-700 underline">← Cambiar de coordinador</button><h2 class="text-xl font-bold mt-1">${E(c.full_name)}</h2><p class="text-xs text-slate-500">${E(c.email||'')} · ${E(c.phone||'')} · <b>Solo consulta</b></p>`)}
+   ${card(`<h3 class="font-semibold mb-2">Actividad</h3><p class="text-sm">Permisos que ha respondido: <b>${resp}</b></p>`)}
+   ${card(`<h3 class="font-semibold mb-2">🎯 Simulacros y diagnósticos que ha creado</h3>${tbl(['Tipo','Título','Fecha de aplicación','Creado'],sims)}`)}
+   ${card(`<h3 class="font-semibold mb-2">📝 Dejar nota</h3><textarea id="dir-cnota" rows="3" class="w-full border rounded-lg p-2" placeholder="Escribe la nota…"></textarea><div class="mt-2"><button onclick="DIR.cnota('${c.id}')" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm">Dejar nota</button></div><h4 class="font-semibold mt-4 mb-1 text-sm">Notas que ya dejaste</h4>${ns||'<p class="text-sm text-slate-500">Todavía no hay notas.</p>'}`)}</div>`;
 }
 function vHist(){
   const nmOf=id=>S.names[id]?.full_name;
@@ -179,13 +232,25 @@ async function doReg(){
 window.DIR={
   async load(t){
     if(t==='dcol')await loadCol();
-    else if(t==='ddoc')await loadDocs();
+    else if(t==='ddoc'){S.sel='';S.det=null;await loadDocs()}
     else if(t==='dhist')await loadHist();
+    else if(t==='dcoo'){S.csel='';S.cdet=null;await loadCoo()}
     else if(t==='dadm')await loadAdm();
   },
-  view(t){return({dcol:vCol,ddoc:vDocs,dhist:vHist,dadm:vAdm}[t]||(()=>''))()},
+  view(t){return({dcol:vCol,ddoc:vDocs,dcoo:vCoo,dhist:vHist,dadm:vAdm}[t]||(()=>''))()},
   async open(id){S.sel=id;S.sub='cur';S.det=null;render();try{await loadDet(id)}catch(e){S.sel='';err(e)}render()},
   back(){S.sel='';S.det=null;render()},
+  pick(v){S.pick=v;render()},
+  entrar(){if(S.pick)DIR.open(S.pick)},
+  cpick(v){S.cpick=v;render()},
+  async centrar(){if(!S.cpick)return;S.csel=S.cpick;S.cdet=null;render();try{await loadCooDet(S.csel)}catch(e){S.csel='';err(e)}render()},
+  cback(){S.csel='';S.cdet=null;render()},
+  async nota(id){const t=(document.getElementById('dir-nota')?.value||'').trim();if(!t)return toast('⚠️','Escribe la nota','');
+    const r=await sb.rpc('mensaje_enviar',{p_para:id,p_tipo:'nota',p_asunto:'Nota de '+(RL[M.role]||''),p_texto:t});if(r.error)return err(r.error);
+    toast('✅','Nota enviada','El docente la verá en Mensajes.');await loadDet(id);S.sub='not';render()},
+  async cnota(id){const t=(document.getElementById('dir-cnota')?.value||'').trim();if(!t)return toast('⚠️','Escribe la nota','');
+    const r=await sb.rpc('mensaje_enviar',{p_para:id,p_tipo:'nota',p_asunto:'Nota de '+(RL[M.role]||''),p_texto:t});if(r.error)return err(r.error);
+    toast('✅','Nota enviada','El coordinador la verá en Mensajes.');await loadCooDet(id);render()},
   sub(k){S.sub=k;render()},
   async setSt(id,st){
     const{error}=await sb.from('profiles').update({teacher_status:st}).eq('id',id);
