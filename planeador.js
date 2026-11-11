@@ -202,8 +202,8 @@ const api={
     }catch(x){toast('⚠️','No se envió',x.message||'')}
   },
   async borrar(id){if(!confirm('¿Borrar este borrador?'))return;const r=await sb.from('planeador_diario').delete().eq('id',id);if(r.error)return err(r.error);await load();R()},
-  imprimir(){doPrint(printHtml(Z.cur))},
-  async imprimirId(id){const r=await sb.from('planeador_diario').select('*').eq('id',id).single();if(r.error)return err(r.error);doPrint(printHtml(r.data))},
+  imprimir(){doPrint(printHtml(Z.cur),{hoja:true})},
+  async imprimirId(id){const r=await sb.from('planeador_diario').select('*').eq('id',id).single();if(r.error)return err(r.error);doPrint(printHtml(r.data),{hoja:true})},
   /* directivos */
   async modo(m){const r=await sb.from('planeador_config').upsert({colegio_id:M.colegio_id,modo:m,updated_by:M.id,updated_at:new Date().toISOString()});if(r.error)return err(r.error);Z.cfg={...Z.cfg,modo:m,colegio_id:M.colegio_id};toast('✅','Guardado',m==='propio'?'Tus docentes usarán el formato del colegio.':'Tus docentes usarán el formato de la plataforma.');R()},
   async subirFmt(){
@@ -216,7 +216,7 @@ const api={
   async formato(){const p=Z.cfg&&Z.cfg.archivo_path;if(!p)return toast('⚠️','Sin formato','Tu rector aún no ha subido el formato.');const u=await sb.storage.from('planeador-formatos').createSignedUrl(p,300,{download:Z.cfg.archivo_nombre||true});if(u.error)return err(u.error);window.open(u.data.signedUrl,'_blank')},
   async bajar(p){const u=await sb.storage.from('planeador-formatos').createSignedUrl(p,300);if(u.error)return err(u.error);window.open(u.data.signedUrl,'_blank')},
   verRec(id){Z.ver=Z.rec.find(x=>x.id===id)||null;R()},cerrarVer(){Z.ver=null;R()},
-  imprimirRec(id){const x=Z.rec.find(y=>y.id===id);if(!x)return;if(x.datos&&x.datos.archivo)return api.bajar(x.datos.archivo.path);doPrint(printHtml(x))},
+  imprimirRec(id){const x=Z.rec.find(y=>y.id===id);if(!x)return;if(x.datos&&x.datos.archivo)return api.bajar(x.datos.archivo.path);doPrint(printHtml(x),{hoja:true})},
   async revisado(id){const r=await sb.rpc('planeador_revisar',{p_id:id});if(r.error)return err(r.error);await load();R()}
 };
 return api;

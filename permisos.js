@@ -93,10 +93,10 @@ function vDir(){
 }
 const api={
   load,view:()=>isDir()?vDir():vDoc(),f:Z.f,
-  imprimirBlanco(clase){const sol=null;doPrint(clase==='solicitud'?htmlSolicitud(solPropio(),'docente'):htmlRecibido(solPropio(),'docente'))},
-  imprimirBlancoAdm(){doPrint(htmlSolicitud(null,'administrativo'))},
-  imprimirForm(){const f=Z.f;doPrint(htmlSolicitud(solPropio({motivo:f.motivo,fecha_desde:f.desde,fecha_hasta:f.hasta,hora_desde:f.hd,hora_hasta:f.hh,detalle:f.detalle,compensacion:f.comp,destinatario_id:f.dest}),'docente'))},
-  imprimirId(id,clase){const p=Z.perm.find(x=>x.id===id);if(!p)return;doPrint(clase==='solicitud'?htmlSolicitud(p,'docente'):htmlRecibido(p,'docente'))},
+  imprimirBlanco(clase){const sol=null;doPrint(clase==='solicitud'?htmlSolicitud(solPropio(),'docente'):htmlRecibido(solPropio(),'docente'),{hoja:true})},
+  imprimirBlancoAdm(){doPrint(htmlSolicitud(null,'administrativo'),{hoja:true})},
+  imprimirForm(){const f=Z.f;doPrint(htmlSolicitud(solPropio({motivo:f.motivo,fecha_desde:f.desde,fecha_hasta:f.hasta,hora_desde:f.hd,hora_hasta:f.hh,detalle:f.detalle,compensacion:f.comp,destinatario_id:f.dest}),'docente'),{hoja:true})},
+  imprimirId(id,clase){const p=Z.perm.find(x=>x.id===id);if(!p)return;doPrint(clase==='solicitud'?htmlSolicitud(p,'docente'):htmlRecibido(p,'docente'),{hoja:true})},
   async enviar(){
     if(Z.busy)return;const f=Z.f;
     if(!f.dest)return toast('⚠️','Elige a quién se lo envías','');if(!f.motivo)return toast('⚠️','Elige el motivo','');if(!f.desde||!f.hasta)return toast('⚠️','Elige las fechas','');

@@ -13,7 +13,7 @@ const pc=(c,t)=>t?Math.round(100*c/t):null;
 const fF=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'';
 const R=()=>render();
 const norm=d=>String(d||'').replace(/\D/g,'').replace(/^0+/,'');
-const nuevoF=()=>({t:'',d:'',c:[]});
+const nuevoF=()=>({t:'',d:'',c:[],g:11});
 const OTRAS=['Biología','Química','Física','Lenguaje','Ciencias Sociales','Filosofía','Economía','Ciencias Políticas','Competencias Ciudadanas','Democracia','Ética','Tecnología e Informática','Educación Artística','Educación Física','Educación Económica y Financiera','Religión'];
 const ICM={'Lectura Crítica':['Lectura Crítica','Lengua Castellana','Lenguaje'],'Matemáticas':['Matemáticas'],'Sociales y Ciudadanas':['Ciencias Sociales','Competencias Ciudadanas','Economía','Ciencias Políticas','Democracia','Filosofía'],'Ciencias Naturales':['Ciencias Naturales','Biología','Química','Física','Agroambiental'],'Inglés':['Inglés']};
 const soloMio=()=>M&&M.role==='prof'&&!M.is_admin;
@@ -76,7 +76,7 @@ async function crearSaber(){
   const f=Z.f;if(!f.t.trim())return toast('⚠️','Falta el nombre','Escribe el nombre del simulacro.');
   if(!f.c.length)return toast('⚠️','Elige los cursos','Marca al menos un curso.');
   toast('⏳','Armando el simulacro…','254 preguntas, estructura ICFES.');
-  const r=await sb.rpc('create_saber_imp',{p_title:f.t.trim(),p_date:f.d||null,p_courses:f.c});
+  const r=await sb.rpc('create_saber_imp',{p_title:f.t.trim(),p_date:f.d||null,p_courses:f.c,p_grado:f.g||11});
   if(r.error)return err(r.error);
   Z.f=nuevoF();await load('saberimp');R();await abrir(r.data);
 }
@@ -177,6 +177,7 @@ function formCrear(){
   <p style="font-size:13px;color:#64748b;margin:4px 0 10px">${dg?'Se crea <b>un diagnóstico para cada grupo</b> que marques, con temas y preguntas de los grados anteriores a ese grupo (Lectura Crítica, Matemáticas, Sociales, Ciencias Naturales e Inglés). Se imprime y se califica con la hoja de respuestas.':'Estructura oficial del ICFES: <b>3 cuadernillos</b> (Sección 1, Sección 2 e Inglés) y una hoja de respuestas por estudiante, con sus datos.'}</p>
   ${dg?'':`<div style="margin-bottom:10px">${estructura()}</div>`}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px"><label style="font-size:13px">Nombre<input ${inp} value="${e(f.t)}" oninput="SIMP.set('t',this.value)" placeholder="${dg?'Diagnóstico 2027':'Simulacro 1 · 2026'}"></label>
+   ${dg?'':`<label style="font-size:13px">Grado del simulacro<select ${inp} onchange="SIMP.set('g',+this.value)">${[...Array(11).keys()].map(i=>i+1).map(g=>`<option value="${g}" ${f.g===g?'selected':''}>${g}°</option>`).join('')}</select></label>`}
    <label style="font-size:13px">Fecha de aplicación<input type="date" ${inp} value="${f.d}" onchange="SIMP.set('d',this.value)"></label>
    ${dg?`<label style="font-size:13px">Preguntas por área<input type="number" min="1" max="120" ${inp} value="${f.n}" oninput="SIMP.set('n',this.value);SIMP.tot()"></label>`:''}</div>
   ${dg?`<div id="dg-tot" style="margin-top:8px;font-size:13px">${totHtml()}</div>`:''}

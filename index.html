@@ -217,8 +217,9 @@ async function loadAvail(){
   const av={};data.forEach(q=>{(av[q.grade]=av[q.grade]||{});av[q.grade][q.subject]=(av[q.grade][q.subject]||0)+Number(q.n)});D.avail=av;
 }
 async function loadCourses(){const c=await sb.from('courses').select('*').eq('teacher_id',M.id).order('grade').order('name');if(c.error)throw c.error;D.courses=c.data}
-function defLT(){const s=D.school||{},c=s.colegios,mu=c?.municipios;return{l1:c?.nombre||s.school_other||'',l2:mu?(mu.nombre+', '+(mu.departamentos?.nombre||'')):'',l3:'',logo:''}}
-function LH(){return D.letter?{l1:D.letter.line1||'',l2:D.letter.line2||'',l3:D.letter.line3||'',logo:D.letter.logo_path||''}:defLT()}
+function defLT(){const s=D.school||{},c=s.colegios,mu=c?.municipios;return{l1:c?.nombre||s.school_other||'',l2:mu?(mu.nombre+', '+(mu.departamentos?.nombre||'')):'',l3:'',logo:'',hoja:'',papel:'carta',mt:3.5,mb:2.5,ml:2}}
+const PAPEL={carta:[21.59,27.94,'Carta (21,6 × 27,9 cm)'],oficio:[21.59,33.02,'Oficio (21,6 × 33,0 cm)'],legal:[21.59,35.56,'Legal (21,6 × 35,6 cm)'],a4:[21,29.7,'A4 (21 × 29,7 cm)'],a5:[14.8,21,'A5 (14,8 × 21 cm)'],ejecutivo:[18.41,26.67,'Ejecutivo (18,4 × 26,7 cm)'],tabloide:[27.94,43.18,'Tabloide (27,9 × 43,2 cm)'],a3:[29.7,42,'A3 (29,7 × 42 cm)']};
+function LH(){const d=D.letter;if(!d)return defLT();return{l1:d.line1||'',l2:d.line2||'',l3:d.line3||'',logo:d.logo_path||'',hoja:d.hoja_path||'',papel:d.papel||'carta',mt:d.margen_sup??3.5,mb:d.margen_inf??2.5,ml:d.margen_lat??2}}
 
 /* ===== Calificar hojas por foto: usa los exámenes impresos y las claves guardadas en la plataforma ===== */
 const CAL={jobId:'',job:null,exams:[],done:new Set(),items:[],busy:false};
@@ -334,11 +335,12 @@ async function go(t){
     if(t==='subirp'){await loadScript('subirpreg.js?v=3');await SUBP.load()}
     if(t==='asis'){await loadScript('asistencia.js?v=4');await ASIS.load()}
     if(t==='taller'){await loadScript('talleres.js?v=1');await TAL.load()}
+    if(t==='listas'){await loadScript('listados.js?v=1');await LST.load()}
     if(t==='msgs'){await loadScript('mensajes.js?v=1');await MSG.load()}
     if(t==='permisos'){await loadScript('permisos.js?v=1');await PERM.load()}
     if(['periodo','virtual','plan','saberimp','diag'].includes(t)){
       const MOD={periodo:['periodo.js','PER'],virtual:['virtual.js','VIRT'],plan:['docente.js','DOCP'],diario:['docente.js','DOCP'],saberimp:['saberimp.js','SIMP'],diag:['saberimp.js','SIMP']}[t];
-      await loadScript(MOD[0]+'?v=6');await window[MOD[1]].load(t)}
+      await loadScript(MOD[0]+'?v=7');await window[MOD[1]].load(t)}
     if(t==='perfil'){const {data:u}=await sb.auth.getUser();D.email=(u&&u.user&&u.user.email)||''}
     if(['dcol','ddoc','dcoo','dhist','dadm'].includes(t)){await loadScript('colegio.js?v=5');await DIR.load(t)}
     if(['dhor','mhor'].includes(t)){await loadScript('horarios.js?v=4');await HZUI.load(t)}
@@ -515,6 +517,17 @@ async function pickFile(file){
   render();
 }
 function reviewText(){RF.fname='';setRows((RF.txt||'').split(/\n/));render()}
+async function traerListaColegio(){
+  if(!RF.c)return toast('⚠️','Elige el curso','Selecciona primero el curso.');
+  const r=await sb.rpc('lista_colegio_curso',{p_course:RF.c});if(r.error)return err(r.error);
+  const rows=(r.data||[]).map(x=>({email:x.email||null,full_name:x.full_name,document:x.document}));
+  const c=D.courses.find(x=>x.id===RF.c);
+  if(!rows.length)return toast('⚠️','El rector no ha subido ese grupo','No hay listado del colegio para '+c.grade+'° '+c.name+'. Pídele al rector o al coordinador que lo suba, o súbelo tú.');
+  let ok=0,conf=0;
+  for(let i=0;i<rows.length;i+=400){const q=await sb.rpc('assign_roster',{p_course:RF.c,p_rows:rows.slice(i,i+400)});if(q.error)return err(q.error);ok+=q.data.ok;conf+=(+q.data.conflicts||0)}
+  toast('✅','Listado traído',ok+' estudiantes en '+c.grade+'° '+c.name+'.'+(conf?' '+conf+' ya pertenecen a otro docente y no se cargaron.':''));
+  go('cur');
+}
 async function loadRoster(){
   if(!RF.c)return toast('⚠️','Elige el curso','Selecciona el curso al que pertenece esta lista.');
   if(RF.bad&&RF.bad.length)return toast('⚠️','Faltan datos en '+RF.bad.length+' fila(s)','Todos los estudiantes deben tener nombre completo y documento. Corrige la lista y vuelve a subirla.');
@@ -556,11 +569,19 @@ async function addT(simId){const s=document.getElementById('add_'+simId);if(!s||
 async function delT(simId,cid){const{error}=await sb.from('simulacro_targets').delete().eq('simulacro_id',simId).eq('course_id',cid);if(error)return err(error);go('simp')}
 
 /* ---------- Imprimir: membrete, exámenes y hojas de respuestas ---------- */
-function editorMembrete(){return`<div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">🏫 Membrete institucional</h2><p class="text-sm text-slate-600">Sale automáticamente en la parte de arriba de todos los documentos de tu colegio: exámenes, simulacros, diagnósticos, talleres, hojas de respuestas y planeadores. Solo el rector y el coordinador pueden cambiarlo. Los docentes lo usan sin poder modificarlo.</p>
-  <div class="grid sm:grid-cols-3 gap-3"><label class="text-sm">Línea 1 (nombre del colegio)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l1)}" oninput="LT.l1=this.value"></label><label class="text-sm">Línea 2 (municipio, resolución…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l2)}" oninput="LT.l2=this.value"></label><label class="text-sm">Línea 3 (área, lema…)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l3)}" oninput="LT.l3=this.value"></label></div>
-  <div class="flex flex-wrap items-center gap-3">${LT.logo?`<img src="${LOGO}${encodeURI(LT.logo)}" style="height:60px;width:auto;border:1px solid #e2e8f0;border-radius:8px"><button onclick="delLogo()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-xs">Quitar logo</button>`:'<span class="text-xs text-slate-500">Sin logo</span>'}<label class="text-sm">Subir logo (PNG o JPG, máx. 1 MB)<input type="file" accept="image/png,image/jpeg" class="block mt-1" onchange="pickLogo(this.files[0])"></label></div>
-  <div class="border rounded-xl p-3 text-center text-sm"><div class="text-xs text-slate-500 mb-1">Vista previa</div>${LT.logo?`<img src="${LOGO}${encodeURI(LT.logo)}" style="height:40px;width:auto;display:inline-block;vertical-align:middle"> `:''}<b>${E(LT.l1)}</b><div class="text-xs">${E(LT.l2)}</div><div class="text-xs">${E(LT.l3)}</div></div>
-  <button onclick="saveLetter()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Guardar membrete</button></div>`}
+function editorMembrete(){
+  const P=PAPEL[LT.papel]||PAPEL.carta,ratio=P[1]/P[0],w=200,h=Math.round(w*ratio);
+  const mt=(+LT.mt||0)/P[1]*100,mb=(+LT.mb||0)/P[1]*100,ml=(+LT.ml||0)/P[0]*100;
+  const prev=`<div style="position:relative;width:${w}px;height:${h}px;border:1px solid #94a3b8;background:#fff ${LT.hoja?`url('${LOGO}${encodeURI(LT.hoja)}') center/100% 100% no-repeat`:''};box-shadow:0 2px 8px #0002"><div style="position:absolute;left:${ml}%;right:${ml}%;top:${mt}%;bottom:${mb}%;border:1px dashed #2563eb;color:#2563eb;font-size:10px;display:flex;align-items:center;justify-content:center;text-align:center">Aquí va el texto<br>del documento</div></div>`;
+  return`<div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">📄 Hoja membretada</h2><p class="text-sm text-slate-600">Sube la hoja membretada de tu colegio (una página completa, como imagen PNG o JPG) y elige el tipo de papel, igual que en Word. Saldrá de fondo en los exámenes, claves, permisos y planeadores de todo el colegio. Solo el rector y el coordinador pueden cambiarla; los docentes la usan sin poder modificarla. Las hojas de respuestas no la llevan, para que se puedan calificar por foto.</p>
+  <div class="flex flex-wrap gap-4"><div class="space-y-3" style="flex:1;min-width:250px">
+   <label class="text-sm block">Nombre del colegio (para los textos de los documentos)<input class="w-full border rounded-lg p-2 mt-1" value="${E(LT.l1)}" oninput="LT.l1=this.value"></label>
+   <label class="text-sm block">Tipo de papel<select class="w-full border rounded-lg p-2 mt-1" onchange="LT.papel=this.value;render()">${Object.entries(PAPEL).map(([k,v])=>`<option value="${k}" ${LT.papel===k?'selected':''}>${v[2]}</option>`).join('')}</select></label>
+   <div class="grid grid-cols-3 gap-2"><label class="text-xs">Margen de arriba (cm)<input type="number" step="0.5" min="0" max="10" class="w-full border rounded-lg p-2 mt-1" value="${LT.mt}" onchange="LT.mt=this.value;render()"></label><label class="text-xs">Margen de abajo (cm)<input type="number" step="0.5" min="0" max="10" class="w-full border rounded-lg p-2 mt-1" value="${LT.mb}" onchange="LT.mb=this.value;render()"></label><label class="text-xs">Márgenes laterales (cm)<input type="number" step="0.5" min="0" max="6" class="w-full border rounded-lg p-2 mt-1" value="${LT.ml}" onchange="LT.ml=this.value;render()"></label></div>
+   <div class="flex flex-wrap items-center gap-3">${LT.hoja?'<button onclick="delHoja()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-xs">Quitar hoja membretada</button>':'<span class="text-xs text-slate-500">Todavía no has subido la hoja</span>'}<label class="text-sm">Subir hoja membretada (PNG o JPG, máx. 6 MB)<input type="file" accept="image/png,image/jpeg" class="block mt-1" onchange="pickHoja(this.files[0])"></label></div>
+   <button onclick="saveLetter()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Guardar</button></div>
+  <div style="text-align:center"><div class="text-xs text-slate-500 mb-1">Vista previa (el recuadro azul es donde va el texto)</div>${prev}</div></div></div>`;
+}
 async function loadMembrete(){
   D.letter=null;
   if(M&&M.colegio_id){const c=await sb.from('colegio_membrete').select('*').eq('colegio_id',M.colegio_id).maybeSingle();
@@ -570,12 +591,22 @@ async function loadMembrete(){
   try{LT=LH()}catch(x){}
 }
 async function saveLetter(){
-  if(!isDir()&&!(M&&M.is_admin))return toast('⚠️','No permitido','Solo el rector o el coordinador pueden cambiar el membrete.');
+  if(!isDir()&&!(M&&M.is_admin))return toast('⚠️','No permitido','Solo el rector o el coordinador pueden cambiar la hoja membretada.');
   if(!M.colegio_id)return toast('⚠️','Sin colegio','Tu cuenta no tiene colegio asignado.');
-  const row={colegio_id:M.colegio_id,line1:(LT.l1||'').trim()||null,line2:(LT.l2||'').trim()||null,line3:(LT.l3||'').trim()||null,logo_path:LT.logo||null,updated_by:M.id,updated_at:new Date().toISOString()};
+  const n=(v,d,mx)=>{v=+v;return isNaN(v)?d:Math.max(0,Math.min(mx,v))};
+  const row={colegio_id:M.colegio_id,line1:(LT.l1||'').trim()||null,line2:(LT.l2||'').trim()||null,line3:(LT.l3||'').trim()||null,logo_path:LT.logo||null,hoja_path:LT.hoja||null,papel:LT.papel||'carta',margen_sup:n(LT.mt,3.5,10),margen_inf:n(LT.mb,2.5,10),margen_lat:n(LT.ml,2,6),updated_by:M.id,updated_at:new Date().toISOString()};
   const{error}=await sb.from('colegio_membrete').upsert(row,{onConflict:'colegio_id'});if(error)return err(error);
-  D.letter=row;toast('✅','Membrete guardado','Saldrá en todos los documentos del colegio.');render();
+  D.letter=row;toast('✅','Hoja membretada guardada','Saldrá en los documentos del colegio.');render();
 }
+async function pickHoja(f){
+  if(!f)return;
+  if(!/^image\/(png|jpeg)$/.test(f.type))return toast('⚠️','Formato no válido','Sube la hoja membretada como imagen PNG o JPG (una página completa).');
+  if(f.size>6*1048576)return toast('⚠️','Imagen muy pesada','Máximo 6 MB.');
+  const path='colegio-'+M.colegio_id+'/hoja-'+Date.now()+'.'+(f.type==='image/png'?'png':'jpg');
+  const{error}=await sb.storage.from('school-logos').upload(path,f,{contentType:f.type});if(error)return err(error);
+  LT.hoja=path;await saveLetter();
+}
+async function delHoja(){LT.hoja='';await saveLetter()}
 async function pickLogo(f){
   if(!f)return;
   if(!/^image\/(png|jpeg)$/.test(f.type))return toast('⚠️','Formato no válido','El logo debe ser una imagen PNG o JPG.');
@@ -650,7 +681,7 @@ async function delJob(id,t){
 const fch=d=>new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
 const vl=n=>'ABCDEF'[n-1]||String(n);
 function lhHtml(h){
-  const L=LH();
+  const L=LH();if(L.hoja)return'';
   return`<div class="lh">${L.logo?`<img src="${LOGO}${encodeURI(L.logo)}" style="height:${h}mm;width:auto">`:''}<div class="t"><div class="l1">${E(L.l1)}</div>${L.l2?`<div>${E(L.l2)}</div>`:''}${L.l3?`<div>${E(L.l3)}</div>`:''}</div></div>`;
 }
 function qHtml(q,i){
@@ -685,11 +716,20 @@ function keyHtml(ex){
   const J=D.job.job;
   return`<div class="pg">${lhHtml(14)}<div class="ti">CLAVES DE RESPUESTA · ${E(J.title)} · ${E(J.subject)} · ${E(D.job.cname)} (solo para el docente)</div><table class="kt"><tr><th>Estudiante</th><th>Documento</th><th>Ver.</th><th>Código</th><th>Clave (número de pregunta + respuesta correcta)</th></tr>${ex.map(e=>`<tr><td>${E(e.roster?.full_name)}</td><td>${E(e.roster?.document||'')}</td><td>${vl(e.version)}</td><td>${E(e.code)}</td><td>${e.answer_key.split('').map((c,i)=>(i+1)+c).join(' ')}</td></tr>`).join('')}</table></div>`;
 }
-async function doPrint(html){
+async function doPrint(html,opts){
   let a=document.getElementById('printarea');if(a)a.remove();
+  let st=document.getElementById('hoja-style');if(st)st.remove();
+  const L=opts&&opts.hoja?LH():null;
+  if(L&&L.hoja){
+    const P=PAPEL[L.papel]||PAPEL.carta;
+    html=`<img class="hoja-bg" src="${LOGO+encodeURI(L.hoja)}" style="position:fixed;left:0;top:0;width:${P[0]}cm;height:${P[1]}cm;z-index:-1"><table style="width:100%;border-collapse:collapse"><thead><tr><td style="height:${L.mt}cm;padding:0"></td></tr></thead><tbody><tr><td style="padding:0 ${L.ml}cm;vertical-align:top">${html}</td></tr></tbody><tfoot><tr><td style="height:${L.mb}cm;padding:0"></td></tr></tfoot></table>`;
+    st=document.createElement('style');st.id='hoja-style';
+    st.textContent=`@media print{@page{size:${P[0]}cm ${P[1]}cm;margin:0}#printarea{background:transparent!important;padding:0}}`;
+    document.head.appendChild(st);
+  }
   a=document.createElement('div');a.id='printarea';a.innerHTML=html;document.body.appendChild(a);
   await Promise.all([...a.querySelectorAll('img')].map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r;setTimeout(r,8000)})));
-  window.onafterprint=()=>{const x=document.getElementById('printarea');if(x)x.remove()};
+  window.onafterprint=()=>{const x=document.getElementById('printarea');if(x)x.remove();const y=document.getElementById('hoja-style');if(y)y.remove()};
   window.print();
 }
 async function printKind(k){
@@ -698,7 +738,7 @@ async function printKind(k){
   if(k==='sh'){try{if(typeof HOJA==='undefined')await loadScript('hoja.js?v=3')}catch(e){return err(e)}}
   const ex=D.job.exams.filter(e=>(!PJ.st||e.roster_id===PJ.st)&&(!PJ.ver||String(e.version)===PJ.ver));
   if(!ex.length)return toast('⚠️','Nada para imprimir','Revisa los filtros de estudiante y versión.');
-  doPrint(k==='ex'?ex.map(examHtml).join(''):k==='sh'?ex.map(sheetHtml).join(''):keyHtml(ex));
+  doPrint(k==='ex'?ex.map(examHtml).join(''):k==='sh'?ex.map(sheetHtml).join(''):keyHtml(ex),{hoja:k!=='sh'});
 }
 
 /* ---------- Banco de preguntas ---------- */
@@ -806,8 +846,8 @@ function vImp(){
   const have=c&&PJ.s?((av[c.grade]||{})[PJ.s]||0):0,max=Math.min(120,have-1);
   if(PJ.n>max)PJ.n=Math.max(10,max);if(PJ.n<10)PJ.n=10;
   const J=D.job,sts=J?[...new Map(J.exams.map(e=>[e.roster_id,e.roster?.full_name])).entries()]:[],vers=J?[...new Set(J.exams.map(e=>e.version))].sort():[];
-  return`<div class="space-y-4">${isDir()?editorMembrete():`<div class="bg-white rounded-2xl p-4 shadow space-y-2"><h2 class="text-xl font-bold">🏫 1. Membrete del colegio</h2><p class="text-sm text-slate-600">Este membrete lo define el rector o el coordinador y sale solo en todos tus documentos. Si necesita un cambio, pídeselo a ellos.</p>
-  <div class="border rounded-xl p-3 text-center text-sm">${L.logo?`<img src="${LOGO}${encodeURI(L.logo)}" style="height:40px;width:auto;display:inline-block;vertical-align:middle"> `:''}<b>${E(L.l1)}</b><div class="text-xs">${E(L.l2)}</div><div class="text-xs">${E(L.l3)}</div></div></div>`}
+  return`<div class="space-y-4">${isDir()?editorMembrete():`<div class="bg-white rounded-2xl p-4 shadow space-y-2"><h2 class="text-xl font-bold">📄 1. Hoja membretada del colegio</h2><p class="text-sm text-slate-600">La hoja membretada la define el rector o el coordinador y sale sola en tus documentos. Si necesita un cambio, pídeselo a ellos.</p>
+  <div class="border rounded-xl p-3 text-center text-sm">${L.hoja?`<img src="${LOGO}${encodeURI(L.hoja)}" style="height:120px;width:auto;display:inline-block;border:1px solid #cbd5e1">`:`${L.logo?`<img src="${LOGO}${encodeURI(L.logo)}" style="height:40px;width:auto;display:inline-block;vertical-align:middle"> `:''}<b>${E(L.l1)}</b>`}</div></div>`}
   <div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">🖨️ 2. Generar exámenes para imprimir</h2><p class="text-sm text-slate-600">Cada estudiante de la lista recibe <b>${PJ.v} exámenes distintos</b> (versiones ${[...Array(PJ.v).keys()].map(i=>vl(i+1)).join(', ')}), cada uno con su código, su nombre, su número de documento y su hoja de respuestas. Para que salga el documento, la lista del curso debe traerlo.</p>
   <div class="grid sm:grid-cols-2 gap-3"><label class="text-sm">Curso<select class="w-full border rounded-lg p-2 mt-1" onchange="PJ.c=this.value;PJ.s='';PJ.refs=[];D.cat=[];D.catKey='';render()"><option value="">Elige un curso</option>${cs.map(x=>`<option value="${x.id}" ${x.id===PJ.c?'selected':''}>${x.grade}° ${E(x.name)} (${(D.rcount||{})[x.id]||0} en lista)</option>`).join('')}</select></label>
   <label class="text-sm">Materia<select class="w-full border rounded-lg p-2 mt-1" ${c?'':'disabled'} onchange="PJ.s=this.value;PJ.refs=[];D.catKey='';render()">${subs.length?subs.map(s=>`<option ${s===PJ.s?'selected':''}>${E(s)}</option>`).join(''):'<option>(elige un curso con preguntas visibles)</option>'}</select></label>
@@ -847,7 +887,7 @@ function vCur(){
   <div class="grid sm:grid-cols-3 gap-3"><label class="text-sm">Grado<select class="w-full border rounded-lg p-2 mt-1" onchange="CF.g=+this.value">${misGrados().map(g=>`<option ${g==CF.g?'selected':''}>${g}</option>`).join('')}</select></label>
   <label class="text-sm">Nombre del curso<input class="w-full border rounded-lg p-2 mt-1" value="${E(CF.name)}" oninput="CF.name=this.value" placeholder="Ej: A o 901"></label><div class="flex items-center"><button onclick="createCourse()" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">Agregar curso</button></div></div>
   ${cs.length?`<div class="space-y-2">${cs.map(c=>`<div class="flex flex-wrap items-center justify-between gap-2 border rounded-xl p-3"><div><b>${c.grade}° ${E(c.name)}</b> <span class="text-xs text-slate-500">· ${all.filter(r=>r.course_id===c.id).length} en la lista · ${stu.filter(u=>u.course_id===c.id).length} con cuenta</span></div><button onclick="delCourse('${c.id}','${E(c.name).replace(/'/g,'')}')" class="px-3 py-1.5 rounded-lg bg-slate-200 text-xs">Borrar</button></div>`).join('')}</div>`:'<p class="text-sm text-slate-500">Aún no tienes cursos.</p>'}</div>
-  <div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">📋 Cargar la lista de un curso</h2><p class="text-sm text-slate-600">Cada fila debe traer el <b>nombre</b> y el <b>número de documento</b> del estudiante (el documento sale en los exámenes impresos) y, si lo tienes, su <b>correo</b>: con el correo, el estudiante queda en su curso cuando se registre y puede presentar simulacros en la plataforma. Sin correo solo sirve para imprimir.</p>
+  <div class="bg-white rounded-2xl p-4 shadow space-y-3"><h2 class="text-xl font-bold">📋 Cargar la lista de un curso</h2><div class="rounded-xl p-3" style="background:#f0f9ff;border:1px solid #bae6fd"><b class="text-sm">¿El rector ya subió el listado del colegio?</b><div class="text-xs text-slate-600 my-1">Elige abajo el curso y pulsa el botón: trae a tus estudiantes del mismo grado y grupo.</div><button onclick="traerListaColegio()" class="px-3 py-2 rounded-lg bg-sky-600 text-white text-sm">📥 Traer el listado del colegio al curso elegido</button></div><p class="text-sm text-slate-600">Cada fila debe traer el <b>nombre</b> y el <b>número de documento</b> del estudiante (el documento sale en los exámenes impresos) y, si lo tienes, su <b>correo</b>: con el correo, el estudiante queda en su curso cuando se registre y puede presentar simulacros en la plataforma. Sin correo solo sirve para imprimir.</p>
   <div class="grid sm:grid-cols-2 gap-3"><label class="text-sm">1. Curso de esta lista<select class="w-full border rounded-lg p-2 mt-1" onchange="RF.c=this.value;render()"><option value="">Elige un curso</option>${cs.map(c=>`<option value="${c.id}" ${c.id===RF.c?'selected':''}>${c.grade}° ${E(c.name)}</option>`).join('')}</select></label>
   <label class="text-sm">2. Formato en que vas a subir la lista<select class="w-full border rounded-lg p-2 mt-1" onchange="RF.f=this.value;RF.rows=[];RF.skip=0;RF.fname='';render()"><option value="excel" ${RF.f==='excel'?'selected':''}>Excel o CSV (.xlsx, .xls, .csv)</option><option value="word" ${RF.f==='word'?'selected':''}>Word (.docx)</option><option value="pdf" ${RF.f==='pdf'?'selected':''}>PDF (con texto, no escaneado)</option><option value="text" ${RF.f==='text'?'selected':''}>Escribir o pegar la lista</option></select></label></div>
   ${RF.f==='text'?`<label class="text-sm block">3. Escribe o pega la lista, una línea por estudiante (Nombre, documento, correo)<textarea class="w-full border rounded-lg p-2 mt-1 text-sm" rows="6" oninput="RF.txt=this.value" placeholder="Ana Pérez, 1001234567, ana@correo.com&#10;Luis Gómez, 1002345678">${E(RF.txt)}</textarea></label><button onclick="reviewText()" class="px-4 py-2 rounded-lg bg-slate-200">Revisar la lista</button>`:`<label class="text-sm block">3. Elige el archivo ${FMT[RF.f]}<input type="file" accept="${ACC[RF.f]}" class="w-full border rounded-lg p-2 mt-1" onchange="pickFile(this.files[0])"></label>${RF.f==='word'?'<p class="text-xs text-slate-500">Si tu archivo es .doc (Word antiguo), ábrelo en Word y guárdalo como .docx.</p>':''}`}
@@ -927,7 +967,7 @@ function render(){
   if(isDir()&&M.teacher_status!=='aprobado'){root.innerHTML=vPendDir();return}
   const prof=M.role==='prof';
   const tabs=isDir()?dirTabs():prof?[['prof','📊 Panel'],...(M.is_admin?[['doc','👩‍🏫 Docentes'+(D.pend?' ('+D.pend+')':'')],['dadm','🏫 Rectores y coordinadores'+(D.pendDir?' ('+D.pendDir+')':'')],['banco','📦 Banco (paquetes)']]:[]),['cur','👥 Cursos y estudiantes'],['simp','🚀 Simulacros y tareas'],['imp','🖨️ Imprimir'],['cal','📷 Calificar'],['preg','📚 Preguntas'],['subirp','📥 Subir preguntas'],['clase','🎥 Clase'],['taller','📝 Talleres'],['aclase','✋ Asistencia a clase'],['asis','🕒 Mi asistencia'],['mhor','🗓 Mi horario']]:[['sim','📝 Mis simulacros y tareas'],['periodo','🧾 Exámenes virtuales'],['virtual','📎 Trabajos y entregas'],['est','📊 Mis estadísticas'],['med','🏆 Logros'],['lb','🏅 Ranking'],['clase','🎥 Clase']];
-  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',saber:()=>window.SABER?SABER.view():'',periodo:()=>window.PER?PER.view(false):'',saberimp:()=>window.SIMP?SIMP.view():'',asis:()=>window.ASIS?ASIS.view():'',aclase:()=>window.ACL?ACL.view():'',asistencias:()=>window.ACL?ACL.view():'',subirp:()=>window.SUBP?SUBP.view():'',planeador:()=>window.PLN?PLN.view():'',diario:()=>window.PLN?PLN.view():'',taller:()=>window.TAL?TAL.view():'',msgs:()=>window.MSG?MSG.view():'',permisos:()=>window.PERM?PERM.view():'',diag:()=>window.SIMP?SIMP.view():'',virtual:()=>window.VIRT?VIRT.view():'',plan:()=>window.DOCP?DOCP.view('plan'):'',diario:()=>window.DOCP?DOCP.view('diario'):'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
+  const body=({sim:vSim,simp:vSimP,cur:vCur,imp:vImp,cal:vCal,doc:vDoc,est:vEst,med:vMed,prof:vProf,perfil:()=>window.AulaDashboard?AulaDashboard.perfil(M,D.email):'',saber:()=>window.SABER?SABER.view():'',periodo:()=>window.PER?PER.view(false):'',saberimp:()=>window.SIMP?SIMP.view():'',asis:()=>window.ASIS?ASIS.view():'',aclase:()=>window.ACL?ACL.view():'',asistencias:()=>window.ACL?ACL.view():'',subirp:()=>window.SUBP?SUBP.view():'',planeador:()=>window.PLN?PLN.view():'',diario:()=>window.PLN?PLN.view():'',taller:()=>window.TAL?TAL.view():'',msgs:()=>window.MSG?MSG.view():'',listas:()=>window.LST?LST.view():'',permisos:()=>window.PERM?PERM.view():'',diag:()=>window.SIMP?SIMP.view():'',virtual:()=>window.VIRT?VIRT.view():'',plan:()=>window.DOCP?DOCP.view('plan'):'',diario:()=>window.DOCP?DOCP.view('diario'):'',preg:vPreg,clase:vClase,lb:vLb}[tab]||(()=>tab==='banco'?(window.BANCO?BANCO.view():''):['dhor','mhor'].includes(tab)?(window.HZUI?HZUI.view(tab):''):window.DIR?DIR.view(tab):''))();
   if((prof||isDir())&&window.AulaDashboard){
     root.innerHTML=AulaDashboard.shell(D,M,tab,body,vLive(),{doc:D.pend,dir:D.pendDir});
   }else root.innerHTML=`<header class="flex flex-wrap gap-3 justify-between items-center mb-4"><div><h1 class="text-2xl font-extrabold"><img src="aula360-logo-horizontal.png" alt="AULA360" style="height:46px;width:auto;object-fit:contain"></h1><p class="text-xs text-slate-500">${E(M.full_name)} · ${isDir()?(M.role==='rector'?'Rector':'Coordinador'):prof?(M.is_admin?'Administrador':'Docente'+((M.asignaturas||[]).length?' · '+E(M.asignaturas.join(', ')):'')):'Estudiante'+(M.grade?' · '+M.grade+'°':'')}</p></div><div class="flex gap-2"><button onclick="passModal()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">🔑 Contraseña</button><button onclick="logout()" class="text-sm px-3 py-1.5 bg-white rounded-lg shadow">Salir</button></div></header>
