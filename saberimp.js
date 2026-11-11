@@ -8,7 +8,7 @@ const CUADS={1:'Sección 1',2:'Sección 2',3:'Inglés'};
 const W={'Lectura Crítica':3,'Matemáticas':3,'Sociales y Ciudadanas':3,'Ciencias Naturales':3,'Inglés':1};
 const AREAS=['Lectura Crítica','Matemáticas','Sociales y Ciudadanas','Ciencias Naturales','Inglés'];
 const CORTA={'Lectura Crítica':'Lectura','Matemáticas':'Mat.','Sociales y Ciudadanas':'Soc.','Ciencias Naturales':'C. Nat.','Inglés':'Inglés'};
-let Z={mode:'saberimp',lista:[],cursos:[],f:null,fd:null,sel:null,cont:null,est:[],res:null,cal:{items:[],busy:false,cuad:1}};
+let Z={ia:false,cob:null,mode:'saberimp',lista:[],cursos:[],f:null,fd:null,sel:null,cont:null,est:[],res:null,cal:{items:[],busy:false,cuad:1}};
 const pc=(c,t)=>t?Math.round(100*c/t):null;
 const fF=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'';
 const R=()=>render();
@@ -28,6 +28,7 @@ async function load(t){
     sb.from('courses').select('id,grade,name,teacher_id').order('grade').order('name')]);
   if(a.error)throw a.error;
   Z.lista=a.data||[];Z.cursos=c.data||[];
+  if(Z.mode==='saberimp'&&isDirec()){try{const q=await sb.rpc('banco_saber_cobertura');Z.cob=q.error?null:q.data}catch(x){Z.cob=null}}
 }
 const cN=id=>{const c=Z.cursos.find(x=>x.id===id);return c?c.grade+'° '+c.name:''};
 /* ---------- contenido, cuadernillos, hojas ---------- */
@@ -76,7 +77,7 @@ async function crearSaber(){
   const f=Z.f;if(!f.t.trim())return toast('⚠️','Falta el nombre','Escribe el nombre del simulacro.');
   if(!f.c.length)return toast('⚠️','Elige los cursos','Marca al menos un curso.');
   toast('⏳','Armando el simulacro…','254 preguntas, estructura ICFES.');
-  const r=await sb.rpc('create_saber_imp',{p_title:f.t.trim(),p_date:f.d||null,p_courses:f.c,p_grado:f.g||11});
+  const r=await sb.rpc('create_saber_imp',{p_title:f.t.trim(),p_date:f.d||null,p_courses:f.c,p_grado:f.g||11,p_ia:!!Z.ia});
   if(r.error)return err(r.error);
   Z.f=nuevoF();await load('saberimp');R();await abrir(r.data);
 }
@@ -170,12 +171,22 @@ function estructura(){
   ${[['Lectura Crítica',41,'—','—',41],['Matemáticas',25,25,'—',50],['Sociales y Ciudadanas',25,25,'—',50],['Ciencias Naturales',29,29,'—',58],['Inglés','—','—',55,55]].map(r=>`<tr style="border-top:1px solid #e2e8f0"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td><b>${r[4]}</b></td></tr>`).join('')}
   <tr style="border-top:2px solid #0f172a"><td><b>Total</b></td><td><b>120</b></td><td><b>79</b></td><td><b>55</b></td><td><b>254</b></td></tr></table>`;
 }
+
+function cardIA(){
+  const c=Z.cob;if(!c)return'';
+  const filas=c.filas||[],ok=filas.every(f=>+f.disponibles>=+f.necesarias);
+  return`<div style="margin:12px 0;border:2px solid ${Z.ia?'#7c3aed':'#e2e8f0'};border-radius:14px;padding:12px;background:${Z.ia?'#faf5ff':'#fff'}">
+  <label style="display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer"><input type="checkbox" ${Z.ia?'checked':''} onchange="SIMP.setIa(this.checked)" style="margin-top:3px"><span><b>🤖 Simulacro con preguntas nuevas hechas por la IA (estilo ICFES)</b><br><span style="font-size:12px;color:#64748b">Preguntas originales de 11° con las competencias y componentes de cada prueba del Saber 11, textos continuos, discontinuos y mixtos, revisadas por la IA. Si no marcas esto, se arma con el banco normal.</span></span></label>
+  <div style="margin-top:8px;overflow-x:auto"><table style="font-size:12px;border-collapse:collapse;width:100%;max-width:560px"><tr style="color:#64748b;text-align:left"><th>Prueba</th><th>Preguntas IA listas</th><th>Se necesitan</th><th></th></tr>
+  ${filas.map(f=>{const lis=+f.disponibles,nec=+f.necesarias,pl=+f.por_llegar;return`<tr style="border-top:1px solid #e2e8f0"><td>${e(f.prueba)}</td><td><b>${lis}</b>${pl?` <span style="color:#7c3aed">(+${pl} en camino)</span>`:''}</td><td>${nec}</td><td>${lis>=nec?'<span style="color:#15803d;font-weight:700">✔ completo</span>':'<span style="color:#b45309;font-weight:700">faltan '+(nec-lis)+'</span>'}</td></tr>`}).join('')}</table></div>
+  <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button onclick="SIMP.pedirIA()" ${B('#7c3aed','✨ Pedir a la IA que prepare lo que falta')}</button><span style="font-size:12px;color:#64748b">${ok?'Ya hay suficientes para un simulacro completo.':'Tarda unos minutos; esta pantalla se actualiza al volver a entrar.'}${c.activo?'':' <b style="color:#b91c1c">La IA está apagada: pídele al administrador que la encienda.</b>'}</span></div></div>`;
+}
 function formCrear(){
   const dg=Z.mode==='diag',f=dg?Z.fd:Z.f,fn=dg?'cursoD':'cursoS',inp='style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px"';
   if(!dg&&!isDirec())return`<div class="aic-card" style="padding:18px"><p>Los simulacros Saber 11 los crean el rector o el coordinador. Aquí podrás ver los de tus cursos.</p></div>`;
   return`<div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:18px">${dg?'🩺 Nuevo diagnóstico por grupo':'🎯 Nuevo simulacro Saber 11 (impreso)'}</h2>
   <p style="font-size:13px;color:#64748b;margin:4px 0 10px">${dg?'Se crea <b>un diagnóstico para cada grupo</b> que marques, con temas y preguntas de los grados anteriores a ese grupo (Lectura Crítica, Matemáticas, Sociales, Ciencias Naturales e Inglés). Se imprime y se califica con la hoja de respuestas.':'Estructura oficial del ICFES: <b>3 cuadernillos</b> (Sección 1, Sección 2 e Inglés) y una hoja de respuestas por estudiante, con sus datos.'}</p>
-  ${dg?'':`<div style="margin-bottom:10px">${estructura()}</div>`}
+  ${dg?'':`<div style="margin-bottom:10px">${estructura()}</div>${cardIA()}`}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px"><label style="font-size:13px">Nombre<input ${inp} value="${e(f.t)}" oninput="SIMP.set('t',this.value)" placeholder="${dg?'Diagnóstico 2027':'Simulacro 1 · 2026'}"></label>
    ${dg?'':`<label style="font-size:13px">Grado del simulacro<select ${inp} onchange="SIMP.set('g',+this.value)">${[...Array(11).keys()].map(i=>i+1).map(g=>`<option value="${g}" ${f.g===g?'selected':''}>${g}°</option>`).join('')}</select></label>`}
    <label style="font-size:13px">Fecha de aplicación<input type="date" ${inp} value="${f.d}" onchange="SIMP.set('d',this.value)"></label>
@@ -245,6 +256,7 @@ return{load,view,
   cursoS(id,on){const s=new Set(Z.f.c);on?s.add(id):s.delete(id);Z.f.c=[...s]},
   cursoD(id,on){const s=new Set(Z.fd.c);on?s.add(id):s.delete(id);Z.fd.c=[...s];},
   todos(){Z.fd.c=Z.cursos.map(c=>c.id);R()},
+  setIa(v){Z.ia=!!v;R()},async pedirIA(){const r=await sb.rpc('banco_saber_pedir');if(r.error)return err(r.error);toast('✨',r.data?'La IA se puso a trabajar':'Ya está todo listo',r.data?'Se programaron '+r.data+' lotes. En unos minutos aparecerán las preguntas.':'Hay suficientes preguntas.');try{const q=await sb.rpc('banco_saber_cobertura');if(!q.error)Z.cob=q.data}catch(x){}R()},
   crearSaber,crearDiag,borrar,abrir,ver,impC:imprimirCuad,impTodos:imprimirTodos,impHojas:imprimirHojas,hojaBlanco,claves,
   calStart,asignar:calAssign,calSave,resultados,csv};
 })();
