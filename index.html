@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="AULA360">
 <link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png"><link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
 <link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="aula360-ui.css?v=2">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>body{background:#f1f5f9;color:#0f172a;font-family:system-ui,sans-serif}.on{background:#4f46e5;color:#fff}.pop{animation:pop .4s ease}@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
@@ -802,7 +803,7 @@ function exportCSV(){
 }
 
 /* ---------- Vistas ---------- */
-function authWrap(h){return`<div class="aic-login"><div class="aic-login-art"><div class="aic-logo">🎓</div><h1>Aula<span>ICFES</span></h1><b>Evalúa · Aprende · Mejora</b><p>Tu aliado en el análisis y mejoramiento de los resultados Saber 11</p><div class="aic-login-dots"><i></i><i></i><i></i></div></div><div class="aic-login-form">${h}</div></div>`}
+function authWrap(h){return`<div class="aic-login"><div class="aic-login-art"><img class="aic-login-logo" src="aula360-logo-vertical.png" alt="AULA360"><h1>AULA<span>360</span></h1><b>Aprende · Practica · Evalúa</b><p>Tu aliado en el análisis y mejoramiento de los resultados Saber 11</p><div class="aic-feats"><div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>Simulacros</div><div><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Resultados</div><div><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Gestión</div></div><div class="aic-login-dots"><i></i><i></i><i></i></div></div><div class="aic-login-form">${h}</div></div>`}
 function vAuth(){
   const m=authMode,T=[['login','Entrar'],['register','Soy estudiante'],['docente','Soy docente'],['directivo','Rector o coordinador']];
   const head=`<img src="aula360-logo-vertical.png" alt="AULA360 · Aprende, practica, evalúa" style="display:block;margin:0 auto;width:min(230px,70%);height:auto;object-fit:contain"><h1 class="sr-only" style="position:absolute;left:-9999px">AULA360</h1><p class="text-center text-sm text-slate-500">Clases virtuales y simulacros Pre-ICFES</p><div class="flex flex-wrap gap-2">${T.map(([k,l])=>`<button onclick="setMode('${k}')" class="flex-1 py-2 rounded-lg text-sm ${m===k?'on':'bg-slate-200'}" style="min-width:7rem">${l}</button>`).join('')}</div>`;
@@ -985,6 +986,6 @@ function render(){
 }
 boot();
 </script>
-<script src="dashboard.js?v=16"></script>
+<script src="dashboard.js?v=17"></script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body></html>
