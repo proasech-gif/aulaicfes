@@ -98,7 +98,7 @@ function vDocs(){
   const d=S.docs.find(x=>x.id===S.pick);
   const info=d?`<div class="text-xs text-slate-500 mt-2">${E(d.email||'')} · ${E(d.phone||'')}${d.area?'<br>Área: '+E(d.area)+' · Asignaturas: '+E((d.asignaturas||[]).join(', ')):''}${(d.grados||[]).length?'<br>Grados: '+d.grados.map(g=>g+'°').join(', '):''}</div>`:'';
   return`<div class="space-y-4">${card(`<h3 class="font-bold" style="color:#102a5c;font-size:17px">👩‍🏫 Docentes de tu colegio</h3><p class="text-sm text-slate-600">Elige un docente de la lista y entra a su entorno para ver todo lo que ha hecho. Es solo para consulta: desde aquí no se puede modificar nada. También puedes dejarle una nota.</p>
-   ${S.docs.length?`<div class="flex flex-wrap gap-2 items-end mt-3"><label class="text-sm" style="flex:1;min-width:220px">Docente<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.pick(this.value)"><option value="">Elige un docente…</option>${opts}</select></label><button onclick="DIR.entrar()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm" ${S.pick?'':'disabled style="opacity:.5"'}>Entrar a su entorno</button></div>${info}`:'<p class="text-sm text-slate-500 mt-2">Todavía no hay docentes registrados con el colegio de tu catálogo.</p>'}`)}</div>`;
+   ${S.docs.length?`<div class="flex flex-wrap gap-2 items-end mt-3"><label class="text-sm" style="flex:1;min-width:220px">Docente<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.pick(this.value)"><option value="">Elige un docente…</option>${opts}</select></label><button onclick="DIR.entrar()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm" ${S.pick?'':'disabled style="opacity:.5"'}>Entrar a su entorno</button><button onclick="DIR.resumen()" class="px-4 py-2 rounded-lg bg-slate-200 text-sm" ${S.pick?'':'disabled style="opacity:.5"'}>📝 Resumen y notas</button></div>${info}`:'<p class="text-sm text-slate-500 mt-2">Todavía no hay docentes registrados con el colegio de tu catálogo.</p>'}`)}</div>`;
 }
 function vDet(){
   const d=S.docs.find(x=>x.id===S.sel),X=S.det;
@@ -174,7 +174,7 @@ function vCoo(){
   if(S.csel)return vCooDet();
   const opts=S.coos.map(c=>`<option value="${c.id}" ${S.cpick===c.id?'selected':''}>${E(c.full_name)}${c.teacher_status==='aprobado'?'':' ('+ST(c.teacher_status)+')'}</option>`).join('');
   return`<div class="space-y-4">${card(`<h3 class="font-bold" style="color:#102a5c;font-size:17px">🧑‍💼 Coordinadores de tu colegio</h3><p class="text-sm text-slate-600">Elige un coordinador de la lista y entra a su entorno para revisar lo que ha hecho. Solo es de consulta: no se puede cambiar nada. Puedes dejarle una nota.</p>
-   ${S.coos.length?`<div class="flex flex-wrap gap-2 items-end mt-3"><label class="text-sm" style="flex:1;min-width:220px">Coordinador<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.cpick(this.value)"><option value="">Elige un coordinador…</option>${opts}</select></label><button onclick="DIR.centrar()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm" ${S.cpick?'':'disabled style="opacity:.5"'}>Entrar a su entorno</button></div>`:'<p class="text-sm text-slate-500 mt-2">Todavía no hay otros coordinadores en tu colegio.</p>'}`)}</div>`;
+   ${S.coos.length?`<div class="flex flex-wrap gap-2 items-end mt-3"><label class="text-sm" style="flex:1;min-width:220px">Coordinador<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.cpick(this.value)"><option value="">Elige un coordinador…</option>${opts}</select></label><button onclick="DIR.centrar()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm" ${S.cpick?'':'disabled style="opacity:.5"'}>Entrar a su entorno</button><button onclick="DIR.cresumen()" class="px-4 py-2 rounded-lg bg-slate-200 text-sm" ${S.cpick?'':'disabled style="opacity:.5"'}>📝 Resumen y notas</button></div>`:'<p class="text-sm text-slate-500 mt-2">Todavía no hay otros coordinadores en tu colegio.</p>'}`)}</div>`;
 }
 function vCooDet(){
   const c=S.coos.find(x=>x.id===S.csel),X=S.cdet;
@@ -190,7 +190,7 @@ function vCooDet(){
 function vHist(){
   const nmOf=id=>S.names[id]?.full_name;
   const rows=S.hist.map(h=>{const d=h.detalle||{};
-    return[ft(h.created_at),E(nmOf(h.user_id)||'Administrador'),h.accion==='cambio_estado'?`${ST(d.de)} → ${ST(d.a)}`:E(h.accion),E(nmOf(h.entidad_id)||'—')+' <span class="text-xs text-slate-500">'+E(RL[d.rol]||'')+'</span>']});
+    return[ft(h.created_at),E(nmOf(h.user_id)||'Administrador'),h.accion==='cambio_estado'?`${ST(d.de)} → ${ST(d.a)}`:h.accion==='ver_entorno'?'Consultó su entorno':E(h.accion),E(nmOf(h.entidad_id)||'—')+' <span class="text-xs text-slate-500">'+E(RL[d.rol]||'')+'</span>']});
   return card(`<h2 class="text-xl font-bold mb-2">🧾 Historial</h2><p class="text-sm text-slate-600 mb-2">Quién aprobó o rechazó cuentas en tu colegio (últimos 100 movimientos).</p>${tbl(['Cuándo','Quién','Cambio','Cuenta'],rows)}`);
 }
 function vAdm(){
@@ -241,9 +241,11 @@ window.DIR={
   async open(id){S.sel=id;S.sub='cur';S.det=null;render();try{await loadDet(id)}catch(e){S.sel='';err(e)}render()},
   back(){S.sel='';S.det=null;render()},
   pick(v){S.pick=v;render()},
-  entrar(){if(S.pick)DIR.open(S.pick)},
+  async entrar(){if(!S.pick)return;await loadScript('vercomo.js?v=1');const d=S.docs.find(x=>x.id===S.pick);VC.entrar(S.pick,d?d.full_name:'Docente','prof')},
+  resumen(){if(S.pick)DIR.open(S.pick)},
   cpick(v){S.cpick=v;render()},
-  async centrar(){if(!S.cpick)return;S.csel=S.cpick;S.cdet=null;render();try{await loadCooDet(S.csel)}catch(e){S.csel='';err(e)}render()},
+  async centrar(){if(!S.cpick)return;await loadScript('vercomo.js?v=1');const c=S.coos.find(x=>x.id===S.cpick);return VC.entrar(S.cpick,c?c.full_name:'Coordinador','coordinador')},
+  async cresumen(){if(!S.cpick)return;S.csel=S.cpick;S.cdet=null;render();try{await loadCooDet(S.csel)}catch(e){S.csel='';err(e)}render()},
   cback(){S.csel='';S.cdet=null;render()},
   async nota(id){const t=(document.getElementById('dir-nota')?.value||'').trim();if(!t)return toast('⚠️','Escribe la nota','');
     const r=await sb.rpc('mensaje_enviar',{p_para:id,p_tipo:'nota',p_asunto:'Nota de '+(RL[M.role]||''),p_texto:t});if(r.error)return err(r.error);

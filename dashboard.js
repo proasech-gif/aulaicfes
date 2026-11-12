@@ -51,6 +51,7 @@
         </div>
       </aside>
       <main class="aic-main">
+        ${window.VC&&VC.on()?VC.banner():''}
         <header class="aic-top"><div><div class="aic-eyebrow">ESPACIO DE TRABAJO</div><h1>${t[0]}</h1><p>${school?esc(school)+' · ':''}${t[1]}</p></div>
           <div class="aic-top-actions"><button class="aic-icon-btn" onclick="passModal()" title="Cambiar contraseña">⚙</button><button class="aic-user" onclick="logout()"><span class="aic-avatar">${ini}</span><span>${name}<small>Cerrar sesión</small></span>⌄</button></div>
         </header>
