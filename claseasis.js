@@ -72,12 +72,6 @@ function detDir(){return`<div style="margin-top:12px;border-top:1px solid #e2e8f
 function estView(){
   return`<div class="aic-card" style="padding:18px;max-width:520px;margin:auto;text-align:center"><h2 style="font-weight:800">✋ Asistencia a clase</h2><p style="margin-top:8px;color:#64748b">Tu asistencia se registra en el dispositivo de tu docente, escribiendo tu número de documento al llegar a clase.</p></div>`;
 }
-function estViewViejo(){
-  const hoy=Z.abiertas;
-  if(Z.ok)return`<div class="aic-card" style="padding:24px;text-align:center;max-width:460px;margin:auto"><div style="font-size:56px">✅</div><div style="font-size:22px;font-weight:800">Asistencia registrada</div><div style="font-size:24px;font-weight:800;color:#0b9865;margin-top:8px">${fH(Z.ok)}</div><button class="aic-link" style="margin-top:12px" onclick="ACL.nuevo()">Volver</button></div>`;
-  return`<div class="aic-card" style="padding:18px;max-width:520px;margin:auto"><h2 style="font-weight:800;font-size:20px;text-align:center">✋ Asistencia a clase</h2>
-  ${hoy.length?hoy.map(s=>s.ya?`<div style="margin-top:12px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:12px;text-align:center">✅ Ya registraste tu asistencia a ${e(s.asignatura||'la clase')} a las ${fH(s.ya)}</div>`:`<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:12px;padding:14px"><div style="text-align:center;font-weight:700">${e(s.asignatura||'Clase')} · ${e(s.docente)}</div><input id="acl_${s.id}" inputmode="numeric" placeholder="Escribe tu número de documento" ${inp} style="width:100%;margin-top:10px;font-size:20px;text-align:center;border:2px solid #cbd5e1;border-radius:12px;padding:14px"><button onclick="ACL.marcar('${s.id}')" style="width:100%;margin-top:10px;background:#16a34a;color:#fff;padding:16px;border-radius:12px;font-size:18px;font-weight:800">Registrar mi asistencia</button></div>`).join(''):`<p style="text-align:center;color:#64748b;margin-top:12px">Tu docente aún no ha abierto la asistencia. Cuando la abra, aparecerá aquí.</p><div style="text-align:center"><button class="aic-link" onclick="ACL.recargar()" style="font-size:14px">↻ Actualizar</button></div>`}</div>`;
-}
 const api={
   load,view:()=>isDoc()?docView():isDir()?`<div>${repHtml()}</div>`:estView(),
   async f(k,v){Z.F[k]=v;try{await repLoad()}catch(x){return err(x)}R()},

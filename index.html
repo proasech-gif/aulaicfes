@@ -74,7 +74,7 @@ async function boot(){
   M=data;
   if((M.role==='prof'||isDir())&&M.teacher_status!=='aprobado')return render();
   if(!isDir())startLive();
-  if(session.user.user_metadata&&session.user.user_metadata.pw_initial===true&&M.role==='est')toast('🔑','Cambia tu contraseña','Tu contraseña inicial es tu documento. Cámbiala con el botón 🔑 Contraseña de arriba.');
+  if(session.user.user_metadata&&session.user.user_metadata.pw_initial===true&&M.role==='est')setTimeout(()=>{try{passModal();toast('🔑','Cambia tu contraseña','Tu contraseña inicial es tu documento. Elige una nueva para proteger tu cuenta.')}catch(x){}},700);
   if(M.is_admin){const c=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('role','prof').eq('teacher_status','pendiente');D.pend=c.count||0;const c2=await sb.from('profiles').select('id',{count:'exact',head:true}).in('role',['rector','coordinador']).eq('teacher_status','pendiente');D.pendDir=c2.count||0}
   try{await loadMembrete()}catch(x){}
   try{if(M.role!=='est'){const n=await sb.rpc('mensajes_pendientes');if(n.data>0)toast('✉️','Tienes '+n.data+(n.data===1?' mensaje nuevo':' mensajes nuevos'),'Ábrelos en Mensajes.')}}catch(x){}
@@ -330,13 +330,13 @@ async function go(t){
   try{
     if(t==='saber'){await loadScript('saber.js?v=1');await SABER.load()}
     if(t==='clase'&&M.role==='prof'){await loadScript('aulavirtual.js?v=2')}
-    if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=6');await ACL.load()}
+    if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=7');await ACL.load()}
     if(t==='planeador'||t==='diario'){await loadScript('planeador.js?v=3');await PLN.load()}
     if(t==='subirp'){await loadScript('subirpreg.js?v=3');await SUBP.load()}
     if(t==='asis'){await loadScript('asistencia.js?v=4');await ASIS.load()}
     if(t==='taller'){await loadScript('talleres.js?v=1');await TAL.load()}
     if(t==='guias'||t==='guiasadm'){await loadScript('guias.js?v=1');await GUI.load(t)}
-    if(t==='bancoia'){await loadScript('bancoia.js?v=1');await BIA.load()}
+    if(t==='bancoia'){await loadScript('bancoia.js?v=2');await BIA.load()}
     if(t==='talleria'){await loadScript('taller_ia.js?v=1');await TIA.load()}
     if(t==='claseia'){await loadScript('clase_ia.js?v=1');await CIA.load()}
     if(t==='listas'){await loadScript('listados.js?v=1');await LST.load()}
@@ -984,6 +984,6 @@ function render(){
 }
 boot();
 </script>
-<script src="dashboard.js?v=10"></script>
+<script src="dashboard.js?v=11"></script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body></html>
