@@ -18,6 +18,7 @@ async function load(){
   const d=await sb.rpc('directorio_colegio');if(d.error)throw d.error;Z.dir=d.data||[];
   const p=await sb.from('permisos').select('*').order('created_at',{ascending:false}).limit(100);if(p.error)throw p.error;Z.perm=p.data||[];
   const f=await sb.from('permiso_formatos').select('*');Z.fmt=f.data||[];
+  window.PERM_FMT=Z.fmt;if(!isDir()){const cu=await sb.from('courses').select('id,grade,name').eq('teacher_id',M.id).order('grade').order('name');Z.cursos=cu.data||[];window.PERM_CURSOS=Z.cursos;if(!Z.cur&&Z.cursos.length)Z.cur=Z.cursos[0].id}
   // nombres de los solicitantes (para rector/coordinador)
   if(isDir()){const c=await sb.from('clase_formato').select('*').eq('colegio_id',M.colegio_id||0).maybeSingle();Z.cf=c.data||null;if(Z.cf&&!Z.cfSecs)Z.cfSecs=(Z.cf.secciones||[]).join('\n')}
   Z.ult=null;
@@ -63,7 +64,7 @@ function vDoc(){
   return`<div style="display:grid;gap:14px">
   <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">🗓 Formato de permisos</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Estos son los dos formatos. Se llenan solos con el membrete del colegio, los datos del rector y los tuyos.</p>
    <div style="display:flex;flex-wrap:wrap;gap:12px">${fm('solicitud','1. Formato de solicitud de permiso','Con este pides el permiso.')}${fm('recibido','2. Formato de recibido del permiso','Con este el rector o el coordinador te responden.')}</div></div>
-  <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">📋 Planillas del colegio</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Descarga las planillas que subió tu rector.</p><div style="display:flex;flex-wrap:wrap;gap:12px">${pl('planilla_asistencia','Planilla de asistencia')}${pl('planilla_notas','Planilla de notas')}</div></div>
+  <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">📋 Planillas del colegio</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Descarga las planillas que subió tu rector.</p><div style="display:flex;flex-wrap:wrap;gap:12px">${pl('planilla_asistencia','Planilla de asistencia')}${pl('planilla_notas','Planilla de notas')}</div>${(Z.cursos||[]).length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0"><b style="font-size:14px">Planilla lista con mis estudiantes</b><p style="font-size:12px;color:#64748b;margin:4px 0 8px">La plataforma toma el modelo de tu colegio y escribe los nombres de tu curso. Si tu rector no subió un modelo, te arma una con el membrete.</p><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><select style="border:1px solid #cbd5e1;border-radius:8px;padding:8px" onchange="PERM.setCur(this.value)">${Z.cursos.map(c=>`<option value="${c.id}" ${c.id===Z.cur?'selected':''}>${c.grade===0?'Transición':c.grade+'°'} ${e(c.name)}</option>`).join('')}</select><button onclick="PERM.planilla('planilla_asistencia')" style="background:#246be0;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">⬇ Asistencia de mi curso</button><button onclick="PERM.planilla('planilla_notas')" style="background:#246be0;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">⬇ Notas de mi curso</button></div></div>`:''}</div>
   <div class="aic-card" style="padding:16px">${ult}<h3 style="font-weight:800;font-size:17px">✍️ Diligenciar en línea</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Solo llenas lo que te toca. Tu nombre, tu documento y el colegio ya van puestos.</p>
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
    <label style="font-size:13px">Enviar a<select ${inp} onchange="PERM.f.dest=this.value"><option value="">Elige…</option>${dests.map(p=>`<option value="${p.id}" ${f.dest===p.id?'selected':''}>${e(p.full_name)} · ${p.role==='rector'?'Rector':'Coordinador'}</option>`).join('')}</select></label>
@@ -106,6 +107,8 @@ function vDir(){
 }
 const api={
   load,view:()=>isDir()?vDir():vDoc(),f:Z.f,
+  setCur(v){Z.cur=v},
+  async planilla(clase){if(!Z.cur)return toast('⚠️','Elige el curso','');await loadScript('planillas.js?v=1');await PLA.generar(clase,Z.cur)},
   imprimirBlanco(clase){const sol=null;doPrint(clase==='solicitud'?htmlSolicitud(solPropio(),'docente'):htmlRecibido(solPropio(),'docente'),{hoja:true})},
   imprimirBlancoAdm(){doPrint(htmlSolicitud(null,'administrativo'),{hoja:true})},
   imprimirForm(){const f=Z.f;doPrint(htmlSolicitud(solPropio({motivo:f.motivo,fecha_desde:f.desde,fecha_hasta:f.hasta,hora_desde:f.hd,hora_hasta:f.hh,detalle:f.detalle,compensacion:f.comp,destinatario_id:f.dest}),'docente'),{hoja:true})},

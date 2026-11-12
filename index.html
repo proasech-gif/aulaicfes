@@ -342,7 +342,7 @@ async function go(t){
     if(t==='listas'){await loadScript('listados.js?v=1');await LST.load()}
     if(t==='reun'){await loadScript('reuniones.js?v=1');await REU.load()}
     if(t==='msgs'){await loadScript('mensajes.js?v=1');await MSG.load()}
-    if(t==='permisos'){await loadScript('permisos.js?v=3');await PERM.load()}
+    if(t==='permisos'){await loadScript('permisos.js?v=4');await PERM.load()}
     if(['periodo','virtual','plan','saberimp','diag'].includes(t)){
       const MOD={periodo:['periodo.js','PER'],virtual:['virtual.js','VIRT'],plan:['docente.js','DOCP'],diario:['docente.js','DOCP'],saberimp:['saberimp.js','SIMP'],diag:['saberimp.js','SIMP']}[t];
       await loadScript(MOD[0]+'?v=8');await window[MOD[1]].load(t)}
