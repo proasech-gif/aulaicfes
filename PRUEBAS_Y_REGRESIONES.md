@@ -11,3 +11,7 @@ SOLO INSPECCIONADO (no se pudo probar sin cuentas reales ni red a Supabase desde
 PENDIENTE:
 - Gráficas Chart.js con datos reales y pulido fino módulo por módulo (segunda pasada tras su revisión).
 - Modo oscuro no incluido.
+
+## Auditor (probado con datos simulados, sin red)
+- Panel, Cuentas y Salud se dibujan sin errores a 1440 y 390 px (CAPTURAS/auditor_*).
+- NO probado con cuentas reales: entrar a una cuenta y borrar una cuenta (necesita su sesión de administrador).

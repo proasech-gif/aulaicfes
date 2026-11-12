@@ -4,3 +4,8 @@
 3. `index.html`: enlace al nuevo CSS (v2), `authWrap()` con logo AULA360 y 3 tarjetas (Simulacros/Resultados/Gestión), versión de dashboard.js 17.
 4. `sw.js`: caché v22 e incluye el CSS nuevo.
 Cambios funcionales inevitables: ninguno.
+
+## Entorno del administrador (auditor)
+- `auditor.js` (nuevo): Panel general, Cuentas (buscar, Entrar, Borrar) y Salud (revisar y corregir).
+- `vercomo.js`: si entra el administrador, la sesión es editable (los cambios se guardan) y el aviso morado lo dice; "Volver al panel de auditor".
+- `dashboard.js` / `index.html`: menú propio del administrador; al iniciar sesión cae en el Panel del auditor.

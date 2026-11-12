@@ -21,7 +21,8 @@ function candado(c){
     const v=t[k];return typeof v==='function'?v.bind(t):v}})}
 function banner(){
   if(!V)return'';
-  return`<div id="vc-banner" style="position:sticky;top:0;z-index:50;background:#b45309;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-radius:0 0 12px 12px;box-shadow:0 2px 8px #0003"><div style="font-weight:800;font-size:14px">👁 Estás viendo el entorno de ${e(V.nombre)} <span style="font-weight:400">· ${e(V.rol)} · solo consulta, no se puede cambiar nada</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="VC.resumen()" style="background:#fef3c7;color:#92400e;padding:8px 14px;border-radius:10px;font-weight:800">📊 Resumen de esta sección</button><button onclick="VC.salir()" style="background:#fff;color:#92400e;padding:8px 14px;border-radius:10px;font-weight:800">↩ Volver a mi entorno</button></div></div>`}
+  const ed=V.editable;
+  return`<div id="vc-banner" style="position:sticky;top:0;z-index:50;background:${ed?'#6d28d9':'#b45309'};color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-radius:0 0 12px 12px;box-shadow:0 2px 8px #0003"><div style="font-weight:800;font-size:14px">${ed?'🛡 Auditor dentro de la cuenta de ':'👁 Estás viendo el entorno de '}${e(V.nombre)} <span style="font-weight:400">· ${e(V.rol)} · ${ed?'puedes cambiar cosas y SE GUARDAN':'solo consulta, no se puede cambiar nada'}</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="VC.resumen()" style="background:#fef3c7;color:#92400e;padding:8px 14px;border-radius:10px;font-weight:800">📊 Resumen de esta sección</button><button onclick="VC.salir()" style="background:#fff;color:${ed?'#6d28d9':'#92400e'};padding:8px 14px;border-radius:10px;font-weight:800">↩ ${ed?'Volver al panel de auditor':'Volver a mi entorno'}</button></div></div>`}
 
 /* ---------- Pantalla en solo consulta: todo desactivado, menos el menú y los botones que solo sirven para MIRAR ---------- */
 const OK_MENU='.aic-sidebar,.aic-tabs,#vc-banner,.aic-hamb,.aic-back,#vc-panel';
@@ -128,7 +129,7 @@ const api={resumen,cerrarRes(){const p=document.getElementById('vc-panel');if(p)
   csvRes(){if(!RS)return;const l=[['Sección',RS.tit,'Persona',RS.nombre],[]];RS.rs.forEach(r=>{l.push([r.ti,'Total',r.n]);l.push(r.cab);r.filas.forEach(f=>l.push(f));l.push([])});
     const t='\ufeff'+l.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download='resumen_'+String(RS.tit).replace(/\W+/g,'_')+'.csv';a.click()},
   _t:{bloquear,guardia,set:v=>{V=v}},on:()=>!!V,banner,
-  async entrar(id,nombre,rol){
+  async entrar(id,nombre,rol,vuelta){
     if(V)return;
     try{
       toast('⏳','Entrando al entorno…','Un momento.');
@@ -139,12 +140,13 @@ const api={resumen,cerrarRes(){const p=document.getElementById('vc-panel');if(p)
       const o=await vsb.auth.setSession({access_token:r.data.access_token,refresh_token:r.data.refresh_token});
       if(o.error)throw o.error;
       const volver=tab;
-      V={real:sb,vsb,nombre,rol:rol==='coordinador'?'Coordinador':'Docente',volver};
+      const editable=r.data.editable===true;
+      V={real:sb,vsb,nombre,editable,rol:({coordinador:'Coordinador',rector:'Rector',est:'Estudiante'})[rol]||'Docente',volver:vuelta||volver};
       try{leaveChat();if(liveChan){sb.removeChannel(liveChan);liveChan=null}}catch(x){}
-      sb=candado(vsb);D={};tab=rol==='coordinador'?'dcol':'prof';
+      sb=editable?vsb:candado(vsb);D={};tab=(rol==='coordinador'||rol==='rector')?'dcol':rol==='est'?'sim':'prof';
       await boot();
       if(M&&M.id!==id){await api.salir();throw new Error('No se pudo abrir ese entorno')}
-      activarLock();window.scrollTo(0,0);
+      if(!editable)activarLock();window.scrollTo(0,0);
     }catch(x){err(x)}
   },
   async salir(){
@@ -154,7 +156,7 @@ const api={resumen,cerrarRes(){const p=document.getElementById('vc-panel');if(p)
     try{await V.vsb.auth.signOut({scope:'local'})}catch(x){}
     quitarLock();api.cerrarRes();sb=real;V=null;D={};M=null;
     await boot();
-    if(M)go(['ddoc','dcoo'].includes(volver)?volver:'ddoc');
+    if(M)go(['ddoc','dcoo','aud'].includes(volver)?volver:(M.is_admin?'aud':'ddoc'));
   }
 };
 return api})();
