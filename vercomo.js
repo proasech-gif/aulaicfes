@@ -29,13 +29,12 @@ const api={on:()=>!!V,banner,
       toast('⏳','Entrando al entorno…','Un momento.');
       const r=await sb.functions.invoke('ver-como',{body:{target:id}});
       if(r.error){let m=r.error.message;try{const j=await r.error.context.json();if(j&&j.error)m=j.error}catch(x){}throw new Error(m)}
-      if(!r.data||!r.data.token_hash)throw new Error((r.data&&r.data.error)||'No se pudo entrar');
+      if(!r.data||!r.data.access_token)throw new Error((r.data&&r.data.error)||'No se pudo entrar');
       const mem={};const vsb=supabase.createClient(URL_,KEY,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'aic-ver-como',storage:{getItem:k=>mem[k]??null,setItem:(k,v)=>{mem[k]=v},removeItem:k=>{delete mem[k]}}}});
-      let o=await vsb.auth.verifyOtp({token_hash:r.data.token_hash,type:'magiclink'});
-      if(o.error)o=await vsb.auth.verifyOtp({token_hash:r.data.token_hash,type:'email'});
+      const o=await vsb.auth.setSession({access_token:r.data.access_token,refresh_token:r.data.refresh_token});
       if(o.error)throw o.error;
       const volver=tab;
-      V={real:sb,nombre,rol:rol==='coordinador'?'Coordinador':'Docente',volver};
+      V={real:sb,vsb,nombre,rol:rol==='coordinador'?'Coordinador':'Docente',volver};
       try{leaveChat();if(liveChan){sb.removeChannel(liveChan);liveChan=null}}catch(x){}
       sb=candado(vsb);D={};tab=rol==='coordinador'?'dcol':'prof';
       await boot();
@@ -47,7 +46,7 @@ const api={on:()=>!!V,banner,
     if(!V)return;
     const volver=V.volver,real=V.real;
     try{leaveChat();if(liveChan){sb.removeChannel(liveChan);liveChan=null}}catch(x){}
-    try{await sb.auth.getSession()}catch(x){}
+    try{await V.vsb.auth.signOut({scope:'local'})}catch(x){}
     sb=real;V=null;D={};M=null;
     await boot();
     if(M)go(['ddoc','dcoo'].includes(volver)?volver:'ddoc');
