@@ -241,10 +241,10 @@ window.DIR={
   async open(id){S.sel=id;S.sub='cur';S.det=null;render();try{await loadDet(id)}catch(e){S.sel='';err(e)}render()},
   back(){S.sel='';S.det=null;render()},
   pick(v){S.pick=v;render()},
-  async entrar(){if(!S.pick)return;await loadScript('vercomo.js?v=2');const d=S.docs.find(x=>x.id===S.pick);VC.entrar(S.pick,d?d.full_name:'Docente','prof')},
+  async entrar(){if(!S.pick)return;await loadScript('vercomo.js?v=3');const d=S.docs.find(x=>x.id===S.pick);VC.entrar(S.pick,d?d.full_name:'Docente','prof')},
   resumen(){if(S.pick)DIR.open(S.pick)},
   cpick(v){S.cpick=v;render()},
-  async centrar(){if(!S.cpick)return;await loadScript('vercomo.js?v=2');const c=S.coos.find(x=>x.id===S.cpick);return VC.entrar(S.cpick,c?c.full_name:'Coordinador','coordinador')},
+  async centrar(){if(!S.cpick)return;await loadScript('vercomo.js?v=3');const c=S.coos.find(x=>x.id===S.cpick);return VC.entrar(S.cpick,c?c.full_name:'Coordinador','coordinador')},
   async cresumen(){if(!S.cpick)return;S.csel=S.cpick;S.cdet=null;render();try{await loadCooDet(S.csel)}catch(e){S.csel='';err(e)}render()},
   cback(){S.csel='';S.cdet=null;render()},
   async nota(id){const t=(document.getElementById('dir-nota')?.value||'').trim();if(!t)return toast('⚠️','Escribe la nota','');
