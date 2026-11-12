@@ -34,9 +34,10 @@ function resumen(){
 }
 function dur(a,b){if(!a||!b)return'—';const m=Math.round((new Date(b)-new Date(a))/60000);return m<0?'—':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min'}
 const big='style="width:100%;border:2px solid #cbd5e1;border-radius:14px;padding:16px;font-size:24px;text-align:center;letter-spacing:2px"';
-function miDoc(){
-  if(Z.mi)return`<div class="aic-card" style="padding:14px;margin-bottom:14px"><b>🪪 Tu documento:</b> ${e(Z.mi)} <span style="font-size:12px;color:#64748b">· Con este número marcas tu llegada y salida en el celular de la entrada.</span></div>`;
-  return`<div class="aic-card" style="padding:14px;margin-bottom:14px"><h3 style="font-weight:800">🪪 Registra tu número de documento</h3><p style="font-size:13px;color:#64748b;margin:4px 0 8px">Se hace una sola vez. Con este número marcarás tu llegada y salida en el celular que el rector dispone en la entrada.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="asis-mi" inputmode="numeric" placeholder="Número de documento" style="flex:1;min-width:180px;border:1px solid #cbd5e1;border-radius:8px;padding:10px"><button onclick="ASIS.guardarMi()" style="background:#246be0;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700">Guardar</button></div></div>`}
+function miDoc(){return`<div class="aic-card" style="padding:14px;margin-bottom:14px"><b>🕒 Tu asistencia</b><p style="font-size:13px;color:#64748b;margin:4px 0 0">Aquí ves tu llegada y salida de cada día, tal como las registra el rector o el coordinador. No tienes que hacer nada.</p></div>`}
+function docsCard(){
+  const L=Z.docs||[],falta=L.filter(d=>!d.documento).length;
+  return`<div class="aic-card" style="padding:14px;margin:0 auto 14px;max-width:480px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>🪪 Documentos de los docentes</b><button class="aic-link" onclick="ASIS.togDocs()">${Z.docsOpen?'▲ Ocultar':'▼ Ver'}${falta?' · '+falta+' sin documento':''}</button></div>${Z.docsOpen?`<p style="font-size:12px;color:#64748b;margin:6px 0">Escribe el documento de cada docente una sola vez. Con ese número marcas su llegada y salida.</p>${L.map(d=>`<div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap"><span style="flex:1;min-width:150px;font-size:13px">${e(d.full_name)}</span><input id="asd-${d.id}" inputmode="numeric" value="${e(d.documento||'')}" placeholder="Documento" style="width:130px;border:1px solid #cbd5e1;border-radius:8px;padding:6px"><button onclick="ASIS.setDoc('${d.id}')" style="background:#246be0;color:#fff;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px">Guardar</button></div>`).join('')||'<p style="font-size:13px">No hay docentes aprobados.</p>'}`:''}</div>`}
 function marcar(){
   let c;
   const cer=Z.est&&Z.est.cerrada;
@@ -63,7 +64,9 @@ function historial(){
 }
 const api={
   load,
-  view:()=>`<div>${isDir()?marcar():miDoc()}${!isDir()||Z.hist?historial():''}</div>`,
+  view:()=>`<div>${isDir()?marcar()+docsCard():miDoc()}${!isDir()||Z.hist?historial():''}</div>`,
+  togDocs(){Z.docsOpen=!Z.docsOpen;R()},
+  async setDoc(id){const v=document.getElementById('asd-'+id).value;const r=await sb.rpc('asistencia_set_doc',{p_docente:id,p_doc:v});if(r.error)return toast('⚠️','No se guardó',r.error.message);toast('✅','Documento guardado','');try{await load()}catch(x){}R()},
   togHist(){Z.hist=!Z.hist;R()},
   async guardarMi(){const v=document.getElementById('asis-mi').value;const r=await sb.rpc('asistencia_mi_doc',{p_doc:v});if(r.error)return toast('⚠️','No se guardó',r.error.message);Z.mi=r.data;toast('✅','Documento registrado','Ya puedes marcar tu llegada y salida en el celular de la entrada.');R()},
   set cc(v){Z.cc=v},
@@ -76,7 +79,7 @@ const api={
     Z.busy=true;
     const r=await sb.rpc('asistencia_registrar',{p_doc:v,p_tipo:tipo});
     Z.busy=false;
-    if(r.error){Z.err=r.error.message;R();setTimeout(()=>{if(Z.err){Z.err='';Z.cc='';R()}},8000);return}
+    if(r.error){Z.err=/no está registrado/.test(r.error.message)?'Ese documento no está registrado. Regístralo abajo, en "Documentos de los docentes".':r.error.message;R();setTimeout(()=>{if(Z.err){Z.err='';Z.cc='';R()}},8000);return}
     const x=(r.data||[])[0];Z.cc='';Z.ok={nombre:x.nombre,tipo:x.tipo,at:x.at};
     try{await load()}catch(y){}R();
     setTimeout(()=>{if(Z.ok&&Z.ok.at===x.at){Z.ok=null;R()}},10000);
