@@ -35,3 +35,10 @@ Cambios funcionales inevitables: ninguno.
 - Informe de un examen/simulacro/prueba (grupal e individual): promedio, mediana, desviación, % de aprobados, distribución por desempeño, análisis por pregunta y por competencia/tema (exámenes impresos), preguntas críticas, plan de mejoramiento.
 - Escala: nota 0 a 5; pruebas con puntaje 0-100 se convierten dividiendo por 20; notas de trabajos virtuales mayores a 5 se asumen sobre 100.
 - Probado con datos simulados (sin datos reales, la base aún no tiene notas de estudiantes). Impresión con código ISO.
+
+## Etapa 7: acceso y recuperación de contraseña
+- Botón "¿Olvidaste tu contraseña?" (correo con enlace; al abrirlo aparece la pantalla para crear la nueva).
+- Los correos de confirmación y recuperación ahora regresan a la misma dirección donde la persona se registró (emailRedirectTo).
+- El correo se pasa a minúsculas al entrar (el teclado del celular suele poner la primera letra en mayúscula).
+- Aviso "Correo confirmado" al abrir el enlace de confirmación; mensajes de error más claros.
+- DIRECCIONES_DE_LA_APLICACION.md con todas las URL.

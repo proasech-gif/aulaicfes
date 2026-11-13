@@ -42,9 +42,11 @@
   
   <input id="em" type="email" class="w-full border rounded-lg p-2" placeholder="Correo"><input id="pw" type="password" class="w-full border rounded-lg p-2" placeholder="Contraseña (mín. 6)" onkeydown="if(event.key==='Enter')doAuth()">
   <button onclick="doAuth()" class="w-full py-2 bg-indigo-600 text-white rounded-lg">Entrar</button>
+  <button onclick="olvide()" class="w-full text-sm text-indigo-700 font-semibold underline">¿Olvidaste tu contraseña?</button>
   <button onclick="resend()" class="w-full text-xs text-slate-500 underline">Reenviar correo de confirmación</button></div></div>
 <div id="toast" class="fixed top-4 right-4 z-50 space-y-2"></div>
 <script>
+const HASH0=location.hash,REDIR=()=>location.origin+location.pathname;
 let sb=supabase.createClient('https://pmigzkhhqxzhspqmkbvf.supabase.co','sb_publishable_GZT40D67S2ICeD1LWOxbEQ_mimJCWlu');
 const IMG='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/question-images/';
 const LOGO='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/school-logos/';
@@ -69,6 +71,8 @@ async function boot(){
     toast('⚠️',exp?'El enlace venció o ya se usó':'No se pudo verificar el enlace',exp?'Inicia sesión; si dice que falta confirmar, usa «Reenviar correo».':(p.get('error_description')||'').replace(/\+/g,' '));
   }
   const{data:{session}}=await sb.auth.getSession();
+  if(session&&/type=recovery/.test(HASH0)&&!window.__recDone){window.__recDone=true;history.replaceState(null,'',location.pathname);M=null;render();return recoveryModal()}
+  if(session&&/type=signup/.test(HASH0)&&!window.__sgDone){window.__sgDone=true;history.replaceState(null,'',location.pathname);toast('✅','Correo confirmado','Tu cuenta ya está activa.')}
   if(!session){M=null;return render()}
   const{data,error}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
   if(error)return err(error);
@@ -81,7 +85,7 @@ async function boot(){
   try{if(M.role!=='est'){const n=await sb.rpc('mensajes_pendientes');if(n.data>0)toast('✉️','Tienes '+n.data+(n.data===1?' mensaje nuevo':' mensajes nuevos'),'Ábrelos en Mensajes.')}}catch(x){}
   await go(isDir()?'dcol':M.is_admin&&!(window.VC&&VC.on())?'aud':M.role==='prof'?'prof':'sim');
 }
-sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'){M=null;leaveChat();if(liveChan){sb.removeChannel(liveChan);liveChan=null}render()}});
+sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'&&!window.__recDone){window.__recDone=true;setTimeout(()=>{history.replaceState(null,'',location.pathname);recoveryModal()},300)}if(ev==='SIGNED_OUT'){M=null;leaveChat();if(liveChan){sb.removeChannel(liveChan);liveChan=null}render()}});
 async function loadCat(){
   if(D.areas)return;
   const a=await sb.from('areas').select('nombre').order('nombre');D.areas=a.data||[];
@@ -129,7 +133,7 @@ async function doDocente(){
   for(const g of RG.gs){const l=parseCursos(RG.cur[g]);if(!l.length)return toast('⚠️','Faltan los cursos','Escribe los cursos de '+g+'°, por ejemplo: A, B, C.');cursos[g]=l}
   if(!RG.area)return toast('⚠️','Falta el área','Elige tu área.');
   if(!RG.asg.length)return toast('⚠️','Falta la asignatura','Marca la asignatura (o asignaturas) que dictas.');
-  const{data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{account:'docente',full_name:nm,phone:tel,colegio_id:RG.otro?'':String(RG.col),school_other:RG.otro?otroTxt:'',cursos,area:RG.area,asignaturas:RG.asg}}});
+  const{data,error}=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:REDIR(),data:{account:'docente',full_name:nm,phone:tel,colegio_id:RG.otro?'':String(RG.col),school_other:RG.otro?otroTxt:'',cursos,area:RG.area,asignaturas:RG.asg}}});
   if(error)return err(error);
   RG=RG0();D.muns=[];D.cols=[];
   if(!data.session){authMode='login';render();return toast('📧','Revisa tu correo','Confirma tu cuenta y luego inicia sesión.')}
@@ -138,7 +142,7 @@ async function doDocente(){
 async function doAuth(){
   if(authMode==='docente')return doDocente();
   if(authMode==='directivo'&&window.DIR)return DIR.doReg();
-  const email=v('em');let password=document.getElementById('pw')?.value||'';
+  const email=v('em').toLowerCase();let password=document.getElementById('pw')?.value||'';
   const dc=(document.getElementById('dc')?.value||'').replace(/\D/g,'');
   if(authMode==='register'){
     if(dc.length<6)return toast('⚠️','Revisa tu documento','Escribe tu número de documento, solo con números (mínimo 6).');
@@ -147,19 +151,19 @@ async function doAuth(){
   if(!email||!password)return toast('⚠️','Faltan datos',authMode==='register'?'Escribe tu documento y tu correo.':'Escribe correo y contraseña.');
   if(authMode==='login'){
     const{error}=await sb.auth.signInWithPassword({email,password});
-    if(error){const m=(error.message||'').toLowerCase();return toast('⚠️','No se pudo entrar',m.includes('not confirmed')?'Tu correo aún no está confirmado. Usa «Reenviar correo de confirmación».':m.includes('invalid login')?'Correo o contraseña incorrectos.':error.message)}
+    if(error){const m=(error.message||'').toLowerCase();return toast('⚠️','No se pudo entrar',m.includes('not confirmed')?'Tu correo aún no está confirmado. Usa «Reenviar correo de confirmación».':m.includes('invalid login')?'Correo o contraseña incorrectos. Revisa que el correo esté completo y, si no recuerdas la contraseña, pulsa «¿Olvidaste tu contraseña?».':error.message)}
     return boot();
   }
   const full_name=v('nm'),grade=v('gr');
   if(!full_name)return toast('⚠️','Falta tu nombre','Escribe tu nombre completo.');
-  const{data,error}=await sb.auth.signUp({email,password,options:{data:{full_name,grade,document:dc,pw_initial:true}}});
+  const{data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:REDIR(),data:{full_name,grade,document:dc,pw_initial:true}}});
   if(error){if((error.message||'').toLowerCase().includes('database error'))return toast('⚠️','No se pudo crear la cuenta','Ese documento o ese correo ya tienen una cuenta. Si ya te registraste, pulsa «Entrar»: tu contraseña es tu número de documento.');return err(error)}
   if(!data.session){authMode='login';render();return toast('📧','Revisa tu correo','Abre el enlace más reciente y luego inicia sesión.')}
   boot();
 }
 async function resend(){
   const email=v('em');if(!email)return toast('⚠️','Falta el correo','Escribe tu correo arriba y vuelve a pulsar.');
-  const{error}=await sb.auth.resend({type:'signup',email});
+  const{error}=await sb.auth.resend({type:'signup',email:email.toLowerCase(),options:{emailRedirectTo:REDIR()}});
   if(error)return err(error);
   toast('📧','Correo enviado','Usa solo el enlace más reciente, en el mismo navegador.');
 }
@@ -195,6 +199,32 @@ async function savePass(){
     if(r.error)throw new Error(r.error.message);
     closePass();toast('🔑','Contraseña cambiada','Úsala la próxima vez que entres.');
   }catch(e){err(e.message||'No se pudo cambiar la contraseña.');btn.disabled=false;btn.textContent='Guardar'}
+}
+async function olvide(){
+  const email=(document.getElementById('em')?.value||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast('⚠️','Escribe tu correo','Escríbelo en el cuadro de «Correo» y vuelve a pulsar «¿Olvidaste tu contraseña?».');
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:REDIR()});
+  if(error)return toast('⚠️','No se pudo enviar',/rate|seconds|many/i.test(error.message||'')?'Espera un minuto y vuelve a intentar.':(error.message||''));
+  toast('📧','Revisa tu correo','Si ese correo tiene cuenta, te enviamos un enlace para crear una contraseña nueva. Ábrelo en este mismo navegador.');
+}
+function recoveryModal(){
+  document.getElementById('recbox')?.remove();
+  const o=document.createElement('div');o.id='recbox';
+  o.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.7);z-index:80;display:flex;align-items:center;justify-content:center;padding:16px';
+  o.innerHTML=`<div style="background:#fff;border-radius:16px;padding:22px;width:100%;max-width:380px;box-shadow:0 20px 40px rgba(0,0,0,.3)"><h2 style="font-size:19px;font-weight:800;margin-bottom:4px">🔑 Crea tu contraseña nueva</h2><p style="font-size:13px;color:#64748b;margin-bottom:12px">Escribe una contraseña nueva (mínimo 6 caracteres).</p>
+  <input id="rc1" type="password" placeholder="Contraseña nueva" autocomplete="new-password" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;margin-bottom:8px">
+  <input id="rc2" type="password" placeholder="Repite la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')saveRecovery()" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;margin-bottom:8px">
+  <div id="rcerr" style="color:#dc2626;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+  <button id="rcbtn" onclick="saveRecovery()" style="width:100%;padding:11px;border-radius:10px;background:#4f46e5;color:#fff;font-weight:800">Guardar contraseña</button></div>`;
+  document.body.appendChild(o);document.getElementById('rc1').focus();
+}
+async function saveRecovery(){
+  const m=t=>{document.getElementById('rcerr').textContent=t},a=document.getElementById('rc1').value,b=document.getElementById('rc2').value;
+  if(a.length<6)return m('Debe tener mínimo 6 caracteres.');if(a!==b)return m('Las dos contraseñas no coinciden.');
+  const btn=document.getElementById('rcbtn');btn.disabled=true;btn.textContent='Guardando…';m('');
+  const r=await sb.auth.updateUser({password:a,data:{pw_initial:false}});
+  if(r.error){btn.disabled=false;btn.textContent='Guardar contraseña';return m(/same|different/i.test(r.error.message||'')?'La contraseña nueva debe ser distinta a la anterior.':(r.error.message||'No se pudo guardar'))}
+  document.getElementById('recbox')?.remove();toast('✅','Contraseña actualizada','Ya puedes usarla para entrar.');boot();
 }
 async function logout(){if(window.VC&&VC.on())return VC.salir();clearInterval(timer);S=null;await sb.auth.signOut()}
 
@@ -845,7 +875,7 @@ function vAuth(){
   ${reg?`<input id="dc" inputmode="numeric" autocomplete="off" class="w-full border rounded-lg p-2" placeholder="Número de documento (sin puntos)"><input id="nm" class="w-full border rounded-lg p-2" placeholder="Nombre completo"><select id="gr" class="w-full border rounded-lg p-2">${[6,7,8,9,10,11].map(g=>`<option value="${g}">Grado ${g}°</option>`).join('')}</select><p class="text-xs text-slate-500">Tu contraseña inicial será tu número de documento. Después de entrar puedes cambiarla con el botón 🔑 Contraseña. Tu docente te asignará a tu curso si tu documento está en su lista.</p>`:''}
   <input id="em" type="email" class="w-full border rounded-lg p-2" placeholder="Correo">${reg?'':'<input id="pw" type="password" class="w-full border rounded-lg p-2" placeholder="Contraseña (si eres estudiante, tu número de documento)" onkeydown="if(event.key===\'Enter\')doAuth()">'}
   <button onclick="doAuth()" class="w-full py-2 bg-indigo-600 text-white rounded-lg">${reg?'Crear cuenta de estudiante':'Entrar'}</button>
-  ${reg?'':'<p class="text-xs text-slate-500 text-center">Estudiantes: tu contraseña inicial es tu número de documento.</p><button onclick="resend()" class="w-full text-xs text-slate-500 underline">Reenviar correo de confirmación</button>'}</div>`}
+  ${reg?'':'<p class="text-xs text-slate-500 text-center">Estudiantes: tu contraseña inicial es tu número de documento.</p><button onclick="olvide()" class="w-full text-sm text-indigo-700 font-semibold underline">¿Olvidaste tu contraseña?</button><button onclick="resend()" class="w-full text-xs text-slate-500 underline">Reenviar correo de confirmación</button>'}</div>`}
 function vPend(){const st=M.teacher_status,rej=st==='rechazado';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de docente no fue aprobada':'Tu cuenta de docente está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AULA360 si crees que es un error.':'El administrador revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión y verás el panel de docente.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div><div><b>Área:</b> ${E(M.area||'')}</div><div><b>Asignaturas:</b> ${E((M.asignaturas||[]).join(', '))}</div><div><b>Grados:</b> ${E((M.grados||[]).join('°, '))}${(M.grados||[]).length?'°':''}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
 const dirTabs=()=>M.role==='rector'?[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia docentes'],['asistencias','✋ Asistencias a clase'],['planeador','📋 Planeadores'],['saberimp','🎯 Saber 11'],['diag','🩺 Diagnósticos'],['dhist','🧾 Historial']]:[['dcol','🏫 Mi colegio'],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia docentes'],['asistencias','✋ Asistencias a clase'],['planeador','📋 Planeadores'],['saberimp','🎯 Saber 11'],['diag','🩺 Diagnósticos']];
 function vPendDir(){const st=M.teacher_status,rej=st==='rechazado',r=M.role==='rector'?'rector':'coordinador',quien=M.role==='rector'?'El administrador':'El rector de tu colegio o el administrador';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de '+r+' no fue aprobada':'Tu cuenta de '+r+' está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AULA360 si crees que es un error.':quien+' revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
