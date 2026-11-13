@@ -22,3 +22,9 @@ Cambios funcionales inevitables: ninguno.
 - Informe grupal: promedios por área, distribución por niveles, comparación entre cursos, plan de mejoramiento grupal para docentes (estrategias, actividades, estudiantes en riesgo, cronograma y seguimiento).
 - Vista previa, imprimir/guardar PDF, con código ISO. No usa IA (sin costo).
 - Pendiente: exámenes de "Imprimir/Calificar" simples (no simulacro/diagnóstico), análisis de pruebas reales ICFES del rector, histórico de 10 años.
+
+## Etapa 5: Pruebas Saber 11 reales (rector / coordinador)
+- `icfes.js` (nuevo) + menú "Pruebas Saber reales". Lee los reportes individuales del ICFES (PDF suelto, varios PDF, un PDF con varios estudiantes o un ZIP), guarda por año (tabla `icfes_resultados`, funciones `icfes_guardar` / `icfes_borrar_anio`), y genera: análisis institucional (promedio, mediana, desviación, rangos, niveles por prueba, percentiles), comparativo entre años (hasta 10 años atrás), proyección del año siguiente (tendencia + escenarios), estudiantes destacados/en riesgo y plan de mejoramiento institucional con cronograma. Botones: Hacer análisis, Vista previa, Imprimir, Enviar a docentes (resumen por Mensajes, sin nombres de estudiantes).
+- Probado con el PDF real entregado por el usuario (lectura correcta de nombre, documento, registro, fecha, global, 5 pruebas y percentiles).
+- Niveles de desempeño: calculados con los rangos del ICFES (verificados con el PDF real: LC 58→3, Mat 62→3, Soc 54→2, CN 41→2, Inglés 58→A2).
+- Límite: solo el formato de reporte individual 2020 en adelante (el del PDF entregado). Años anteriores con otro formato no se leen todavía.

@@ -21,10 +21,10 @@ const tot=x=>Object.values(x.areas).reduce((s,v)=>({c:s.c+v.c,t:s.t+v.t}),{c:0,t
 function glob(areas){let s=0,w=0;Object.keys(W).forEach(a=>{const x=areas[a];if(x&&x.t){s+=W[a]*(x.c/x.t*100);w+=W[a]}});return w?Math.round(s/w*5):null}
 function promA(est,a){const v=est.filter(x=>x.areas[a]&&x.areas[a].t).map(x=>pc(x.areas[a].c,x.areas[a].t));return v.length?Math.round(v.reduce((s,y)=>s+y,0)/v.length):null}
 const COL='#1e63e9',COL2='#f5b82e';
-function barras(items,tit,dos){
+function barras(items,tit,dos,u){u=u==null?'%':u;
   // items:[{l,v,v2}] horizontal SVG (imprime bien)
   const H=34,W0=640,pad=170,n=items.length,h=n*H+30;
-  return`<svg viewBox="0 0 ${W0} ${h}" width="100%" style="max-width:640px;font:11px Arial,sans-serif"><text x="0" y="12" font-weight="700" fill="#0f172a">${e(tit)}</text>${items.map((it,i)=>{const y=24+i*H,w=v=>v==null?0:Math.max(2,(W0-pad-50)*v/100);return`<text x="0" y="${y+13}" fill="#334155">${e(it.l)}</text><rect x="${pad}" y="${y}" width="${W0-pad-50}" height="12" fill="#eef2f7" rx="3"/><rect x="${pad}" y="${y}" width="${w(it.v)}" height="12" fill="${COL}" rx="3"/><text x="${pad+w(it.v)+5}" y="${y+10}" fill="#0f172a" font-weight="700">${it.v==null?'—':it.v+'%'}</text>${dos&&it.v2!=null?`<rect x="${pad}" y="${y+14}" width="${w(it.v2)}" height="8" fill="${COL2}" rx="3"/><text x="${pad+w(it.v2)+5}" y="${y+22}" fill="#64748b">${it.v2}%</text>`:''}`}).join('')}</svg>${dos?`<div style="font-size:10px;color:#475569"><span style="color:${COL}">■</span> Estudiante &nbsp; <span style="color:${COL2}">■</span> Promedio del grupo</div>`:''}`;
+  return`<svg viewBox="0 0 ${W0} ${h}" width="100%" style="max-width:640px;font:11px Arial,sans-serif"><text x="0" y="12" font-weight="700" fill="#0f172a">${e(tit)}</text>${items.map((it,i)=>{const y=24+i*H,w=v=>v==null?0:Math.max(2,(W0-pad-50)*v/100);return`<text x="0" y="${y+13}" fill="#334155">${e(it.l)}</text><rect x="${pad}" y="${y}" width="${W0-pad-50}" height="12" fill="#eef2f7" rx="3"/><rect x="${pad}" y="${y}" width="${w(it.v)}" height="12" fill="${COL}" rx="3"/><text x="${pad+w(it.v)+5}" y="${y+10}" fill="#0f172a" font-weight="700">${it.v==null?'—':it.v+u}</text>${dos&&it.v2!=null?`<rect x="${pad}" y="${y+14}" width="${w(it.v2)}" height="8" fill="${COL2}" rx="3"/><text x="${pad+w(it.v2)+5}" y="${y+22}" fill="#64748b">${it.v2}%</text>`:''}`}).join('')}</svg>${dos?`<div style="font-size:10px;color:#475569"><span style="color:${COL}">■</span> Estudiante &nbsp; <span style="color:${COL2}">■</span> Promedio del grupo</div>`:''}`;
 }
 function apiladas(cols){
   // distribución por niveles por área (grupo)
@@ -98,6 +98,7 @@ const api={
   todosInd(){if(!Zr.est.length)return;vista(Zr.est.map(indHtml).join(''),'Informes individuales ('+Zr.est.length+')','INF')},
   grupal(){if(!Zr.est.length)return toast('⚠️','Sin resultados','Primero califica y guarda las hojas.');vista(gruHtml(),'Informe y plan grupal','INF')},
   imprimir(){if(!Zr.ult)return;doPrint(CSS+Zr.ult.html,{tipo:Zr.ult.tipo,titulo:Zr.ult.tit,hoja:true})},
-  cerrar(){document.getElementById('inf-prev')?.remove()}
+  cerrar(){document.getElementById('inf-prev')?.remove()},
+  _u:{barras,CSS,enc,acc,DOCE,NIV,vista:(h,t,k)=>{Zr=Zr||{};vista(h,t,k)},setUlt:u=>{Zr=Zr||{};Zr.ult=u}}
 };
 return api})();

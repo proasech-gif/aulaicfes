@@ -250,7 +250,7 @@ function lista(){
 function view(){return`<div style="display:grid;gap:16px">${formCrear()}${lista()}</div>`}
 async function informe(modo,i){
   try{if(!Z.res||!Z.res.length)return toast('⚠️','Sin resultados','Primero califica y guarda las hojas.');
-    if(!window.INF)await loadScript('informes.js?v=1');
+    if(!window.INF)await loadScript('informes.js?v=2');
     const f=agrupar();INF.abrir({imp:Z.cont.imp,dg:Z.cont.imp.kind==='diagnostico',est:f,cols:colsDe(f)});
     modo==='gru'?INF.grupal():modo==='todos'?INF.todosInd():INF.individual(i)}catch(x){err(x)}
 }
