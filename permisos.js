@@ -91,17 +91,7 @@ function vDir(){
    ${p.estado==='pendiente'?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center"><input id="pr-${p.id}" placeholder="Comentario (opcional)" style="flex:1;min-width:200px;border:1px solid #cbd5e1;border-radius:8px;padding:8px"><button onclick="PERM.responder('${p.id}','aprobado')" style="background:#16a34a;color:#fff;padding:8px 12px;border-radius:8px;font-weight:700">Aprobar</button><button onclick="PERM.responder('${p.id}','negado')" style="background:#dc2626;color:#fff;padding:8px 12px;border-radius:8px;font-weight:700">No aprobar</button></div>`
    :`<div style="margin-top:6px;font-size:13px">${p.estado==='aprobado'?'✅ Aprobado':'⛔ No aprobado'}${p.respuesta?' · '+e(p.respuesta):''}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${MSG.avisoBtns(s,'Respuesta a tu permiso',`Tu permiso (${p.motivo}) fue ${p.estado==='aprobado'?'APROBADO':'NO APROBADO'}.${p.respuesta?' '+p.respuesta:''}`)}<button class="aic-link" onclick="PERM.imprimirId('${p.id}','recibido')">🖨️ Recibido</button></div>`}</div>`};
   return`<div style="display:grid;gap:14px">
-  <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">📄 Formatos de permisos del colegio</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Sube el formato de tu colegio (PDF o Word). Los docentes lo ven en <b>Formato de permisos</b>. Si no subes ninguno, usan el de la plataforma, que ya sale con el membrete, tus datos y los del docente.</p>
-   <div style="display:flex;flex-wrap:wrap;gap:12px">${celda('docente','solicitud')}${celda('docente','recibido')}</div>
-   <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px">${celda('administrativo','solicitud')}${celda('administrativo','recibido')}</div>
-   <div style="margin-top:10px"><button class="aic-link" onclick="PERM.imprimirBlancoAdm()">🖨️ Imprimir el formato de la plataforma para administrativos</button></div></div>
-  <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">📋 Planillas del colegio</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Sube la planilla de asistencia y la planilla de notas de tu colegio (Word, PDF o Excel). Los docentes las descargan en <b>Formato de permisos y planillas</b>.</p>
-   <div style="display:flex;flex-wrap:wrap;gap:12px">${plan('planilla_asistencia','Planilla de asistencia')}${plan('planilla_notas','Planilla de notas')}</div></div>
-  <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">✨ Formato de preparación de clase</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Sube el formato de preparación de clase de tu colegio (Word o PDF). La plataforma lee sus secciones y los docentes podrán elegir este formato en <b>Preparar clase con IA</b>. Si no subes ninguno, usan el de la plataforma.</p>
-   ${Z.cf&&Z.cf.nombre?`<div style="font-size:13px;margin-bottom:8px">📄 Formato actual: <b>${e(Z.cf.nombre)}</b> · ${(Z.cf.secciones||[]).length} secciones <button class="aic-link" onclick="PERM.quitarCF()">🗑 Quitar</button></div>`:''}
-   <input type="file" accept=".pdf,.docx" onchange="PERM.leerCF(this.files[0])" style="font-size:13px">
-   <label style="font-size:13px;display:block;margin-top:10px">Secciones del formato (una por línea; corrígelas si hace falta)<textarea rows="7" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px" oninput="PERM.cfSecs=this.value">${e(Z.cfSecs)}</textarea></label>
-   <div style="margin-top:8px"><button onclick="PERM.guardarCF()" style="background:#16a34a;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">💾 Guardar formato</button></div></div>
+  <div class="aic-card" style="padding:14px;font-size:13px;color:#475569">ℹ️ Los formatos y planillas se generan automáticamente con el membrete y los datos del colegio. Los documentos los suben los docentes; rectores y coordinadores solo revisan y responden.</div>
   <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">🗓 Permisos pendientes (${pend.length})</h3>${pend.map(fila).join('')||'<p style="font-size:13px;color:#64748b">No hay permisos por responder.</p>'}</div>
   <div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:17px">Permisos respondidos</h3>${resp.map(fila).join('')||'<p style="font-size:13px;color:#64748b">Aún no hay respuestas.</p>'}</div></div>`;
 }
@@ -109,10 +99,10 @@ const api={
   load,view:()=>isDir()?vDir():vDoc(),f:Z.f,
   setCur(v){Z.cur=v},
   async planilla(clase){if(!Z.cur)return toast('⚠️','Elige el curso','');await loadScript('planillas.js?v=1');await PLA.generar(clase,Z.cur)},
-  imprimirBlanco(clase){const sol=null;doPrint(clase==='solicitud'?htmlSolicitud(solPropio(),'docente'):htmlRecibido(solPropio(),'docente'),{hoja:true})},
-  imprimirBlancoAdm(){doPrint(htmlSolicitud(null,'administrativo'),{hoja:true})},
-  imprimirForm(){const f=Z.f;doPrint(htmlSolicitud(solPropio({motivo:f.motivo,fecha_desde:f.desde,fecha_hasta:f.hasta,hora_desde:f.hd,hora_hasta:f.hh,detalle:f.detalle,compensacion:f.comp,destinatario_id:f.dest}),'docente'),{hoja:true})},
-  imprimirId(id,clase){const p=Z.perm.find(x=>x.id===id);if(!p)return;doPrint(clase==='solicitud'?htmlSolicitud(p,'docente'):htmlRecibido(p,'docente'),{hoja:true})},
+  imprimirBlanco(clase){const sol=null;doPrint(clase==='solicitud'?htmlSolicitud(solPropio(),'docente'):htmlRecibido(solPropio(),'docente'),{hoja:true,tipo:'PER'})},
+  imprimirBlancoAdm(){doPrint(htmlSolicitud(null,'administrativo'),{hoja:true,tipo:'PER'})},
+  imprimirForm(){const f=Z.f;doPrint(htmlSolicitud(solPropio({motivo:f.motivo,fecha_desde:f.desde,fecha_hasta:f.hasta,hora_desde:f.hd,hora_hasta:f.hh,detalle:f.detalle,compensacion:f.comp,destinatario_id:f.dest}),'docente'),{hoja:true,tipo:'PER'})},
+  imprimirId(id,clase){const p=Z.perm.find(x=>x.id===id);if(!p)return;doPrint(clase==='solicitud'?htmlSolicitud(p,'docente'):htmlRecibido(p,'docente'),{hoja:true,tipo:'PER'})},
   async enviar(){
     if(Z.busy)return;const f=Z.f;
     if(!f.dest)return toast('⚠️','Elige a quién se lo envías','');if(!f.motivo)return toast('⚠️','Elige el motivo','');if(!f.desde||!f.hasta)return toast('⚠️','Elige las fechas','');

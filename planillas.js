@@ -120,7 +120,7 @@ const api={_t:{docx,xlsx},
           save(out,nom+'.'+e2);return toast('✅','Planilla lista','Se descargó con los estudiantes de '+c.grade+'° '+c.name+'.');
         }catch(x){console.error(x);toast('ℹ️','No pude usar ese modelo','No encontré la columna de nombres. Te armo una planilla con el membrete del colegio.')}
       }
-      doPrint(armada(clase,(c.grade===0?'Transición':c.grade+'°')+' '+c.name,rows),{hoja:true});
+      doPrint(armada(clase,(c.grade===0?'Transición':c.grade+'°')+' '+c.name,rows),{hoja:true,tipo:clase==='planilla_notas'?'NOT':'ASI'});
     }catch(x){err(x)}
   }
 };

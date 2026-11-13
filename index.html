@@ -723,7 +723,19 @@ function keyHtml(ex){
   const J=D.job.job;
   return`<div class="pg">${lhHtml(14)}<div class="ti">CLAVES DE RESPUESTA · ${E(J.title)} · ${E(J.subject)} · ${E(D.job.cname)} (solo para el docente)</div><table class="kt"><tr><th>Estudiante</th><th>Documento</th><th>Ver.</th><th>Código</th><th>Clave (número de pregunta + respuesta correcta)</th></tr>${ex.map(e=>`<tr><td>${E(e.roster?.full_name)}</td><td>${E(e.roster?.document||'')}</td><td>${vl(e.version)}</td><td>${E(e.code)}</td><td>${e.answer_key.split('').map((c,i)=>(i+1)+c).join(' ')}</td></tr>`).join('')}</table></div>`;
 }
+/* Codificación de documentos (control documental tipo ISO 9001): A360-<colegio>-<TIPO>-<año>-<consecutivo> · Versión 01 */
+const DOC_TIPOS={imp:'EXA',cal:'CAL',listas:'LST',permisos:'PER',planeador:'PLA',diario:'PLA',saberimp:'SIM',diag:'DIA',reun:'REU',claseia:'CLA',talleria:'TAL',asis:'ASI',asistencias:'ASI',aclase:'ASI',msgs:'MEN',ddoc:'PER',dcol:'INF',prof:'INF',sim:'EST',cur:'LST'};
+async function docCodigo(tipo,titulo){
+  const t=(tipo||DOC_TIPOS[tab]||'DOC');
+  try{const r=await sb.rpc('doc_codigo',{p_tipo:t,p_titulo:titulo||null});if(!r.error&&r.data)return r.data}catch(x){}
+  const y=new Date().getFullYear();return 'A360-0000-'+t+'-'+y+'-SINREG'
+}
+function docBanda(cod){
+  const f=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
+  return`<div class="a360-cod" style="font:600 9px/1.3 Arial,sans-serif;color:#334155;border:1px solid #94a3b8;border-radius:3px;padding:3px 7px;margin:0 0 6px auto;width:fit-content;text-align:right;page-break-inside:avoid">AULA360 · Código: <b>${E(cod)}</b> · Versión 01 · Emitido: ${f}</div>`
+}
 async function doPrint(html,opts){
+  if(!(opts&&opts.sinCodigo)){try{const cod=await docCodigo(opts&&opts.tipo,opts&&opts.titulo);html=docBanda(cod)+html}catch(x){}}
   let a=document.getElementById('printarea');if(a)a.remove();
   let st=document.getElementById('hoja-style');if(st)st.remove();
   const L=opts&&opts.hoja?LH():null;
@@ -745,7 +757,7 @@ async function printKind(k){
   if(k==='sh'){try{if(typeof HOJA==='undefined')await loadScript('hoja.js?v=3')}catch(e){return err(e)}}
   const ex=D.job.exams.filter(e=>(!PJ.st||e.roster_id===PJ.st)&&(!PJ.ver||String(e.version)===PJ.ver));
   if(!ex.length)return toast('⚠️','Nada para imprimir','Revisa los filtros de estudiante y versión.');
-  doPrint(k==='ex'?ex.map(examHtml).join(''):k==='sh'?ex.map(sheetHtml).join(''):keyHtml(ex),{hoja:k!=='sh'});
+  doPrint(k==='ex'?ex.map(examHtml).join(''):k==='sh'?ex.map(sheetHtml).join(''):keyHtml(ex),{hoja:k!=='sh',sinCodigo:k==='sh',tipo:k==='ex'?'EXA':k==='ke'||k==='key'?'CLV':undefined});
 }
 
 /* ---------- Banco de preguntas ---------- */

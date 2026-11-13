@@ -51,7 +51,7 @@ function specCuad(cu){
 async function prep(){try{if(!window.CUAD)await loadScript('cuadernillo.js?v=2');if(typeof HOJA==='undefined')await loadScript('hoja.js?v=3')}catch(x){err(x);return false}return true}
 async function ver(cu){if(!await prep())return;CUAD.vistaPrevia(specCuad(cu),{onPublicar:()=>imprimirCuad(cu),textoPublicar:'🖨️ Imprimir este cuadernillo'})}
 async function imprimirCuad(cu){if(!await prep())return;CUAD.imprimir(specCuad(cu),false)}
-async function imprimirTodos(){if(!await prep())return;const h=cuadsDe().map(cu=>CUAD.html(specCuad(cu))).join('');doPrint(h)}
+async function imprimirTodos(){if(!await prep())return;const h=cuadsDe().map(cu=>CUAD.html(specCuad(cu))).join('');doPrint(h,{tipo:'CUA'})}
 function hojaHtml(cu,st){
   const imp=Z.cont.imp,li=logoInfo(),n=itemsDe(cu).length;
   return HOJA.html(HOJA.layout(n),{titulo:imp.title+' · '+etiqueta(cu),colegio:li.colegio,nombre:st.full_name,documento:st.document||'',curso:st.course,fecha:fF(imp.exam_date),version:cu-1,codigo:imp.codigo,logo:li.logo,verLabel:imp.kind==='diagnostico'?'VERSIÓN':'CUADERNILLO'});
@@ -63,9 +63,9 @@ async function imprimirHojas(){
   if(!est.length)return toast('⚠️','Sin estudiantes','Los cursos de este simulacro no tienen estudiantes cargados en la lista.');
   const lista=cu==='all'?cuadsDe():[+cu],h=[];
   est.forEach(s=>lista.forEach(c=>h.push(hojaHtml(c,s))));
-  doPrint(h.join(''));
+  doPrint(h.join(''),{sinCodigo:true});
 }
-async function hojaBlanco(){if(!await prep())return;const cu=+(document.getElementById('si_hc')?.value)||cuadsDe()[0];doPrint(hojaHtml(cu,{full_name:'',document:'',course:''}))}
+async function hojaBlanco(){if(!await prep())return;const cu=+(document.getElementById('si_hc')?.value)||cuadsDe()[0];doPrint(hojaHtml(cu,{full_name:'',document:'',course:''}),{sinCodigo:true})}
 async function claves(){
   const rows=(Z.cont.items||[]).filter(i=>true);
   const porC={};rows.forEach(i=>(porC[i.cuad]=porC[i.cuad]||[]).push(i));

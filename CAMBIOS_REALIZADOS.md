@@ -9,3 +9,9 @@ Cambios funcionales inevitables: ninguno.
 - `auditor.js` (nuevo): Panel general, Cuentas (buscar, Entrar, Borrar) y Salud (revisar y corregir).
 - `vercomo.js`: si entra el administrador, la sesión es editable (los cambios se guardan) y el aviso morado lo dice; "Volver al panel de auditor".
 - `dashboard.js` / `index.html`: menú propio del administrador; al iniciar sesión cae en el Panel del auditor.
+
+## Etapa 3: códigos de documentos y subida de documentos
+- Códigos tipo ISO 9001: todo documento que se imprime lleva arriba "Código A360-<colegio>-<TIPO>-<año>-<consecutivo> · Versión 01 · fecha". El consecutivo lo lleva la base de datos (tabla `doc_registro`, función `doc_codigo`). Tipos: EXA, CUA, CLV (claves), SIM, DIA, LST, PER, PLA, NOT, ASI, REU, CLA, TAL, INF.
+- Las hojas de respuestas (OMR) NO llevan la banda para no mover los cuadros de lectura; ya traen su propio código.
+- Rectores y coordinadores: se quitó la subida de formatos de permisos, planillas y formato de preparación de clase (permisos.js). Los documentos los suben los docentes.
+- Se mantienen (no son subida de documentos de rector): registrar el número de documento de los docentes (para la llegada), listas de estudiantes, horarios, membrete del colegio.
