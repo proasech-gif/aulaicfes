@@ -15,3 +15,10 @@ Cambios funcionales inevitables: ninguno.
 - Las hojas de respuestas (OMR) NO llevan la banda para no mover los cuadros de lectura; ya traen su propio código.
 - Rectores y coordinadores: se quitó la subida de formatos de permisos, planillas y formato de preparación de clase (permisos.js). Los documentos los suben los docentes.
 - Se mantienen (no son subida de documentos de rector): registrar el número de documento de los docentes (para la llegada), listas de estudiantes, horarios, membrete del colegio.
+
+## Etapa 4: informes y planes de mejoramiento
+- `informes.js` (nuevo) + botones en Simulacros Saber 11 y Diagnósticos (después de calificar): "📄 Informe" por estudiante, "📊 Informe y plan grupal", "🧾 Informes individuales (todos)".
+- Informe individual: resultados por área con gráfico contra el grupo, nivel estimado, fortalezas, plan de mejoramiento individual (acciones por área, meta, cronograma de 4 semanas, compromisos y firmas).
+- Informe grupal: promedios por área, distribución por niveles, comparación entre cursos, plan de mejoramiento grupal para docentes (estrategias, actividades, estudiantes en riesgo, cronograma y seguimiento).
+- Vista previa, imprimir/guardar PDF, con código ISO. No usa IA (sin costo).
+- Pendiente: exámenes de "Imprimir/Calificar" simples (no simulacro/diagnóstico), análisis de pruebas reales ICFES del rector, histórico de 10 años.

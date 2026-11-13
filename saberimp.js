@@ -217,7 +217,7 @@ function detalle(){
     <input id="si_files" type="file" accept="image/*,.pdf,application/pdf" multiple><button onclick="SIMP.calStart()" ${B('#0ea5e9','📷 Calificar')}</button></div>
    <p style="font-size:12px;color:#64748b;margin-top:4px">Hoja plana, sobre mesa oscura, con buena luz y los 4 cuadros negros de las esquinas visibles. Califica una sección a la vez.</p>
    ${calHtml()}</div>
-  <div><b>4. Resultados</b> <button class="aic-link" onclick="SIMP.resultados(true)">${Z.res?'↻ Actualizar':'Ver resultados'}</button>${Z.res&&Z.res.length?` <button class="aic-link" onclick="SIMP.csv()">⬇ Excel (CSV)</button>`:''}${resHtml()}</div></div>`;
+  <div><b>4. Resultados</b> <button class="aic-link" onclick="SIMP.resultados(true)">${Z.res?'↻ Actualizar':'Ver resultados'}</button>${Z.res&&Z.res.length?` <button class="aic-link" onclick="SIMP.csv()">⬇ Excel (CSV)</button>`:''}${Z.res&&Z.res.length?` <button onclick="SIMP.informe('gru')" style="background:#1e63e9;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:13px">📊 Informe y plan grupal</button> <button onclick="SIMP.informe('todos')" style="background:#16a34a;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:13px">🧾 Informes individuales (todos)</button>`:''}${resHtml()}</div></div>`;
 }
 function calHtml(){
   const C=Z.cal;if(!C.items.length)return'';
@@ -239,7 +239,7 @@ function resHtml(){
   if(dg){const g={};f.forEach(x=>Object.entries(x.grados).forEach(([k,v])=>{const o=g[k]=g[k]||{c:0,t:0};o.c+=v.c;o.t+=v.t}));
     gr=`<div style="margin-top:10px"><b style="font-size:13px">Dominio por grado anterior (grupo completo)</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">${Object.keys(g).sort((a,b)=>a-b).map(k=>{const p=pc(g[k].c,g[k].t);return`<div style="border:1px solid #e2e8f0;border-radius:10px;padding:6px 10px;font-size:13px;background:${p<50?'#fff1f2':p<70?'#fffbeb':'#ecfdf5'}">Grado ${k}.°<br><b>${p}%</b></div>`}).join('')}</div><p style="font-size:12px;color:#64748b">Los grados en rojo son los temas que el grupo debe reforzar.</p></div>`}
   return`<div class="aic-table-wrap" style="margin-top:8px"><table><thead><tr><th>ESTUDIANTE</th><th>CURSO</th>${colsDe(f).map(a=>`<th>${CORTA[a]||a}</th>`).join('')}<th>${dg?'TOTAL':'GLOBAL EST.'}</th></tr></thead><tbody>
-   ${f.map(x=>{const tot=Object.values(x.areas).reduce((s,v)=>({c:s.c+v.c,t:s.t+v.t}),{c:0,t:0});return`<tr><td><b>${e(x.name)}</b></td><td>${e(x.course)}</td>${colsDe(f).map(a=>`<td>${x.areas[a]&&x.areas[a].t?pc(x.areas[a].c,x.areas[a].t)+'%':'—'}</td>`).join('')}<td><b>${dg?pc(tot.c,tot.t)+'%':(global(x.areas)??'—')}</b></td></tr>`}).join('')}
+   ${f.map(x=>{const tot=Object.values(x.areas).reduce((s,v)=>({c:s.c+v.c,t:s.t+v.t}),{c:0,t:0});return`<tr><td><b>${e(x.name)}</b> <button class="aic-link" onclick="SIMP.informe('ind',${f.indexOf(x)})" title="Informe y plan individual">📄 Informe</button></td><td>${e(x.course)}</td>${colsDe(f).map(a=>`<td>${x.areas[a]&&x.areas[a].t?pc(x.areas[a].c,x.areas[a].t)+'%':'—'}</td>`).join('')}<td><b>${dg?pc(tot.c,tot.t)+'%':(global(x.areas)??'—')}</b></td></tr>`}).join('')}
    <tr style="background:#f1f5fb"><td colspan="2"><b>Promedio del grupo</b></td>${colsDe(f).map(a=>`<td><b>${prom(a)}${prom(a)==='—'?'':'%'}</b></td>`).join('')}<td></td></tr></tbody></table></div>
    ${dg?'':'<p style="font-size:12px;color:#64748b">Global estimado (0-500) con la ponderación del ICFES. Si falta una sección, el estimado se calcula con las áreas calificadas; el puntaje oficial se calcula con otro método.</p>'}${gr}`;
 }
@@ -248,7 +248,13 @@ function lista(){
   return`<div class="aic-card" style="padding:18px"><h3 style="font-weight:800;margin-bottom:10px">${Z.mode==='diag'?'Diagnósticos creados':'Simulacros creados'}</h3>${L.map(x=>`<div style="border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px"><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center"><div><b>${e(x.title)}</b> <span style="font-size:12px;color:#64748b">· código ${e(x.codigo)}${x.exam_date?' · '+fF(x.exam_date):''} · ${(x.saber_imp_courses||[]).map(c=>cN(c.course_id)).filter(Boolean).join(', ')}</span></div><div style="display:flex;gap:6px"><button class="aic-link" onclick="SIMP.abrir('${x.id}')">${Z.sel===x.id?'▲ Cerrar':'▼ Abrir'}</button>${x.creator_id===M.id?`<button class="aic-link" style="color:#b91c1c" onclick="SIMP.borrar('${x.id}')">🗑</button>`:''}</div></div>${Z.sel===x.id?detalle():''}</div>`).join('')||'<p style="color:#64748b;font-size:13px">Todavía no hay ninguno.</p>'}</div>`;
 }
 function view(){return`<div style="display:grid;gap:16px">${formCrear()}${lista()}</div>`}
-return{load,view,
+async function informe(modo,i){
+  try{if(!Z.res||!Z.res.length)return toast('⚠️','Sin resultados','Primero califica y guarda las hojas.');
+    if(!window.INF)await loadScript('informes.js?v=1');
+    const f=agrupar();INF.abrir({imp:Z.cont.imp,dg:Z.cont.imp.kind==='diagnostico',est:f,cols:colsDe(f)});
+    modo==='gru'?INF.grupal():modo==='todos'?INF.todosInd():INF.individual(i)}catch(x){err(x)}
+}
+return{load,view,informe,
   set(k,v){(Z.mode==='diag'?Z.fd:Z.f)[k]=v},
   tot:totDiag,
   area(a,on){const s=new Set(Z.fd.a);on?s.add(a):s.delete(a);Z.fd.a=[...s]},
