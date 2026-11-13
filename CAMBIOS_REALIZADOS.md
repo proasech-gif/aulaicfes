@@ -28,3 +28,10 @@ Cambios funcionales inevitables: ninguno.
 - Probado con el PDF real entregado por el usuario (lectura correcta de nombre, documento, registro, fecha, global, 5 pruebas y percentiles).
 - Niveles de desempeño: calculados con los rangos del ICFES (verificados con el PDF real: LC 58→3, Mat 62→3, Soc 54→2, CN 41→2, Inglés 58→A2).
 - Límite: solo el formato de reporte individual 2020 en adelante (el del PDF entregado). Años anteriores con otro formato no se leen todavía.
+
+## Etapa 6: Informes y periodos del docente
+- `periodos.js` (nuevo) + menú del docente "Informes y periodos".
+- Informe por periodo (por estudiante y por grupo): junta exámenes impresos, pruebas de periodo, simulacros, tareas y trabajos virtuales calificados del docente en su asignatura. Promedio simple, desempeño (Bajo/Básico/Alto/Superior), gráficos, plan de mejoramiento individual y grupal con cronograma. Las fechas de cada periodo son editables (se recuerdan en el navegador).
+- Informe de un examen/simulacro/prueba (grupal e individual): promedio, mediana, desviación, % de aprobados, distribución por desempeño, análisis por pregunta y por competencia/tema (exámenes impresos), preguntas críticas, plan de mejoramiento.
+- Escala: nota 0 a 5; pruebas con puntaje 0-100 se convierten dividiendo por 20; notas de trabajos virtuales mayores a 5 se asumen sobre 100.
+- Probado con datos simulados (sin datos reales, la base aún no tiene notas de estudiantes). Impresión con código ISO.
