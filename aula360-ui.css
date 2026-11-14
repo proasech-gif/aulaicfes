@@ -20,7 +20,7 @@ body{background:radial-gradient(1200px 500px at 85% -10%,#dbe8ff 0,transparent 6
 .aic-nav{border-radius:12px!important}
 .aic-nav.active::after{content:"";margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--a-gold);box-shadow:0 0 0 3px rgba(245,184,46,.3)}
 .aic-side-label{color:#7f9bd0!important;letter-spacing:1.8px!important}
-.aic-avatar{background:linear-gradient(145deg,#fff,#cfe1ff)!important;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.aic-avatar{overflow:hidden;background:linear-gradient(145deg,#fff,#cfe1ff)!important;box-shadow:0 4px 10px rgba(0,0,0,.2)}
 
 /* ---------- Encabezado y tarjetas ---------- */
 .aic-top h1{font-size:26px;letter-spacing:-.6px;background:linear-gradient(90deg,var(--a-navy),var(--a-blue));-webkit-background-clip:text;background-clip:text;color:transparent}
