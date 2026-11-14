@@ -8,6 +8,7 @@ const fh=d=>d?new Date(d).toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'
 async function cargar(){
   if(Z.sub==='panel'||!Z.r){const r=await sb.rpc('auditor_resumen');if(r.error)throw r.error;Z.r=r.data}
   if(Z.sub==='salud'){const r=await sb.rpc('auditor_salud');if(r.error)throw r.error;Z.salud=r.data||[]}
+  if(Z.sub==='susc'){await loadScript('suscripcion_admin.js?v=1');await SUBA.load()}
   if(Z.sub==='errores'){const r=await sb.from('errores_cliente').select('*').order('created_at',{ascending:false}).limit(200);if(r.error)throw r.error;Z.errs=r.data||[]}
   if(Z.sub==='informe'||Z.sub==='panel'){const r=await sb.from('soporte_reportes').select('*').order('created_at',{ascending:false}).limit(300);if(!r.error)Z.rep=r.data||[]}
   if(Z.sub==='cuentas'){
@@ -17,7 +18,7 @@ async function cargar(){
 async function load(){await cargar()}
 const kpi=(t,v,c,sub)=>`<div class="aic-kpi"><div><small>${t}</small><strong>${v}</strong>${sub?`<span>${sub}</span>`:''}</div></div>`;
 function tabs(){
-  const T=[['panel','📊 Panel general'],['cuentas','👥 Cuentas'],['salud','🩺 Salud de la plataforma'],['revision','🧰 Revisión de funcionamiento'],['errores','🐞 Errores detectados'],['informe','📨 Informe cliente'+((Z.rep||[]).filter(x=>x.estado==='nuevo').length?' ('+(Z.rep||[]).filter(x=>x.estado==='nuevo').length+')':'')]];
+  const T=[['panel','📊 Panel general'],['cuentas','👥 Cuentas'],['salud','🩺 Salud de la plataforma'],['revision','🧰 Revisión de funcionamiento'],['errores','🐞 Errores detectados'],['susc','💳 Suscripciones'],['informe','📨 Informe cliente'+((Z.rep||[]).filter(x=>x.estado==='nuevo').length?' ('+(Z.rep||[]).filter(x=>x.estado==='nuevo').length+')':'')]];
   return`<nav class="aic-tabs" style="margin-bottom:14px">${T.map(([k,l])=>`<button onclick="AUD.ir('${k}')" class="${Z.sub===k?'on':''}">${l}</button>`).join('')}</nav>`}
 function vPanel(){
   const d=Z.r;if(!d)return'<div class="aic-card" style="padding:16px">Cargando…</div>';
@@ -87,7 +88,7 @@ function vInforme(){
    <details style="margin-top:6px"><summary style="font-size:11px;color:#64748b;cursor:pointer">Datos técnicos</summary><div style="font-size:11px;color:#64748b">${e(x.pagina||'')}<br>${e(x.navegador||'')}</div></details>
    <textarea id="rsp_${x.id}" rows="2" placeholder="Respuesta para el usuario (opcional)" style="width:100%;padding:8px;margin-top:8px;font-size:13px">${e(x.respuesta||'')}</textarea>
    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button onclick="AUD.estado('${x.id}','en_revision')" style="background:#f59e0b;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">En revisión</button><button onclick="AUD.estado('${x.id}','resuelto')" style="background:#16a34a;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">✔ Resuelto</button><button onclick="AUD.entrarRep('${x.user_id}','${e(x.nombre||'Cuenta').replace(/'/g,'')}','${e(x.rol||'')}')" style="background:#6d28d9;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">🛡 Entrar a su cuenta</button></div></div>`}).join(''):'<p style="font-size:13px;color:#64748b">No hay reportes pendientes. 🎉</p>'}</div>`}
-function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():vSalud())}
+function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):vSalud())}
 const api={load,view,revisar,
   filtro(v){Z.filtro=v;render()},
   async estado(id,est){const rsp=(document.getElementById('rsp_'+id)||{}).value||null;const r=await sb.from('soporte_reportes').update({estado:est,respuesta:rsp,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)return err(r.error);toast('✅','Reporte actualizado','');await cargar();render()},
