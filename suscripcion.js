@@ -9,7 +9,8 @@ async function call(accion,body){
   if(r.error){let m=r.error.message;try{const j=await r.error.context.json();m=j.error||m}catch(x){}throw new Error(m)}
   if(r.data&&r.data.error)throw new Error(r.data.error);return r.data}
 const KIND={rector:{plan:'rector_anual',acc:'iniciar_institucion',tit:'Activar AULA360 en mi colegio',per:'1 año'},doc:{plan:'docente_mensual',acc:'iniciar_docente',tit:'Suscribirme como docente',per:'1 mes'}};
-async function init(){if(!Z.cat){try{Z.cat=await call('catalogo')}catch(x){Z.cat={planes:[],trm:4000,simulado:true}}}}
+async function init(){if(!Z.deps){try{Z.deps=(await sb.from('departamentos').select('id,nombre').order('nombre')).data||[]}catch(x){Z.deps=[]}}
+  if(!Z.cat){try{Z.cat=await call('catalogo')}catch(x){Z.cat={planes:[],trm:4000,simulado:true}}}}
 function precio(k){const p=(Z.cat?.planes||[]).find(x=>x.clave===KIND[k].plan);return p?p.valor_cop:0}
 function importe(k){const c=Z.cot;const tot=c?c.total_cop:precio(k);const tu=c?c.total_usd:Math.round(tot/(Z.cat?.trm||4000)*100)/100;return{tot,tu,desc:c?c.descuento_cop:0}}
 function monedaHtml(k){const i=importe(k);
@@ -24,9 +25,11 @@ function vMenu(h){return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl
   <button onclick="SUB.ir('pin')" class="w-full text-left rounded-xl p-4 border-2 border-amber-200 bg-amber-50"><b>🔑 Tengo un PIN</b><div class="text-xs text-slate-600">Si pagaste en efectivo, el auditor te dio un PIN.</div></button>
   <button onclick="SUB.ir('doc')" class="w-full text-left rounded-xl p-4 border-2 border-emerald-200 bg-emerald-50"><b>👩‍🏫 Soy docente: suscribirme yo solo</b><div class="text-xs text-slate-600">${cop(precio('doc'))} al mes.</div></button></div>`}
 function colHtml(){
-  if(Z.otro)return`<label class="text-sm block">Nombre de tu colegio<input class="w-full border rounded-lg p-2 mt-1" value="${e(Z.otroTxt)}" oninput="SUB.set('otroTxt',this.value)"></label>`;
-  return`<label class="text-sm block">Busca tu colegio<input class="w-full border rounded-lg p-2 mt-1" placeholder="Escribe parte del nombre…" value="${e(Z.q)}" oninput="SUB.buscar(this.value)"></label>
-  ${Z.col?`<div class="text-sm rounded-lg p-2 bg-emerald-50 border border-emerald-200">✅ ${e(Z.col.nombre)} <button class="text-xs underline" onclick="SUB.quitarCol()">cambiar</button></div>`:(Z.cols.length?`<div class="border rounded-lg" style="max-height:170px;overflow:auto">${Z.cols.map(c=>`<button class="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100" onclick="SUB.elegir(${c.id})">${e(c.nombre)}</button>`).join('')}</div>`:'')}`}
+  const sel=(id,ph,arr,val,fn,dis)=>`<select class="w-full border rounded-lg p-2 mt-1" ${dis?'disabled':''} onchange="${fn}(this.value)"><option value="">${ph}</option>${arr.map(x=>`<option value="${x.id}" ${String(x.id)===String(val)?'selected':''}>${e(x.nombre)}</option>`).join('')}</select>`;
+  return`<label class="text-sm block">Departamento${sel('d','Elige el departamento…',Z.deps||[],Z.dep,'SUB.onDep')}</label>
+  <label class="text-sm block">Municipio${sel('m','Elige el municipio…',Z.muns||[],Z.mun,'SUB.onMun',!Z.dep)}</label>
+  ${Z.otro?`<label class="text-sm block">Nombre de tu colegio<input class="w-full border rounded-lg p-2 mt-1" value="${e(Z.otroTxt)}" oninput="SUB.set('otroTxt',this.value)"></label>`
+  :`<label class="text-sm block">Colegio${sel('c','Elige tu colegio…',Z.cols2||[],Z.col&&Z.col.id,'SUB.onCol',!Z.mun)}</label>`}`}
 function vForm(h,k){
   const rect=k==='rector';
   return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3">${h}<button onclick="SUB.ir('menu')" class="text-sm underline">← Volver</button><h2 class="text-lg font-bold">${KIND[k].tit}</h2>
@@ -68,13 +71,18 @@ const api={vista,init,
   async ir(k){Z.msg='';Z.cot=null;await init();await setMode('sub_'+k)},
   set(k,v,r){Z[k]=v;if(r)render()},
   mon(m){Z.mon=m;render()},
+  async onDep(id){Z.dep=id;Z.mun='';Z.muns=[];Z.cols2=[];Z.col=null;if(id){Z.muns=(await sb.from('municipios').select('id,nombre').eq('departamento_id',+id).order('nombre')).data||[]}render()},
+  async onMun(id){Z.mun=id;Z.cols2=[];Z.col=null;if(id){Z.cols2=(await sb.from('colegios').select('id,nombre').eq('municipio_id',+id).order('nombre').limit(1000)).data||[]}render()},
+  onCol(id){Z.col=(Z.cols2||[]).find(c=>String(c.id)===String(id))||null;render()},
   buscar(v){Z.q=v;clearTimeout(tq);tq=setTimeout(async()=>{if(v.trim().length<3){Z.cols=[];return render()}const r=await sb.from('colegios').select('id,nombre,codinst').ilike('nombre','%'+v.trim()+'%').limit(15);Z.cols=r.data||[];render();const i=document.querySelector('input[placeholder^="Escribe parte"]');if(i){i.focus();i.setSelectionRange(v.length,v.length)}},300)},
   elegir(id){Z.col=Z.cols.find(c=>c.id===id)||null;Z.cols=[];render()},quitarCol(){Z.col=null;render()},
   async aplicar(k){try{Z.cot=await call('cotizar',{plan:KIND[k].plan,promo:Z.promo});render()}catch(x){err(x)}},
   async pagar(k){
     Z.msg='';const body={nombre:Z.nm,telefono:Z.tel,email_contacto:Z.em,promo:Z.cot&&Z.cot.promo?Z.promo:'',moneda:Z.mon};
-    if(k==='rector'){if(Z.otro)body.colegio_nombre=Z.otroTxt;else if(Z.col)body.colegio_id=Z.col.id;else return toast('⚠️','Falta el colegio','Busca y elige tu colegio, o marca que no aparece.')}
-    else if(Z.other){if(!Z.col)return toast('⚠️','Falta la institución','Busca y elige la institución.');body.colegio_id=Z.col.id}
+    const dn=(Z.deps||[]).find(x=>String(x.id)===String(Z.dep)),mn=(Z.muns||[]).find(x=>String(x.id)===String(Z.mun));
+    if(k==='rector'||Z.other){if(!Z.dep||!Z.mun)return toast('⚠️','Falta la ubicación','Elige el departamento y el municipio.')}
+    if(k==='rector'){if(Z.otro){if((Z.otroTxt||'').trim().length<4)return toast('⚠️','Falta el colegio','Escribe el nombre de tu colegio.');body.colegio_nombre=Z.otroTxt.trim()+' ('+mn.nombre+', '+dn.nombre+')'}else if(Z.col)body.colegio_id=Z.col.id;else return toast('⚠️','Falta el colegio','Elige tu colegio en la lista, o marca que no aparece.')}
+    else if(Z.other){if(!Z.col)return toast('⚠️','Falta la institución','Elige la institución en la lista.');body.colegio_id=Z.col.id}
     Z.busy=true;render();
     try{const r=await call(KIND[k].acc,body);Z.busy=false;
       if(r.permiso){Z.msg=r.mensaje;return render()}
