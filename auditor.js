@@ -122,6 +122,42 @@ async function cargarExcel(files){
     catch(x){Z.ic.log[Z.ic.log.length-1]='⚠️ '+f.name+': '+(x.message||x);render()}
   }
   Z.ic.busy=false;render()}
+
+/* --- una sola institución: se escriben los promedios que trae su reporte del ICFES --- */
+Z.ic.m={deptos:null,mcpios:[],cols:[],dep:'',mun:'',dane:'',nom:'',anio:new Date().getFullYear(),cal:'A',ev:'',lec:'',mat:'',soc:'',nat:'',ing:'',danex:''};
+const M0=()=>Z.ic.m;
+async function mInit(){const m=M0();if(m.deptos)return;try{const r=await sb.rpc('saber_deptos');m.deptos=r.data||[]}catch(x){m.deptos=[]}render()}
+async function mDep(v){const m=M0();m.dep=v;m.mun='';m.dane='';m.mcpios=[];m.cols=[];if(v){const r=await sb.rpc('saber_mcpios',{p_depto:v});m.mcpios=r.data||[]}render()}
+async function mMun(v){const m=M0();m.mun=v;m.dane='';m.cols=[];if(v){const r=await sb.rpc('saber_colegios',{p_depto:m.dep,p_mcpio:v,p_cal:null});m.cols=r.data||[]}render()}
+function mCol(v){const m=M0();m.dane=v;const c=m.cols.find(x=>x.dane===v);m.nom=c?c.nombre:'';render()}
+function mSet(k,v){M0()[k]=v}
+async function mGuardar(){
+  const m=M0(),dane=(m.danex||'').replace(/\D/g,'')||m.dane;
+  if(!dane)return toast('⚠️','Elige el colegio o escribe su código DANE','');
+  if(!m.dep||!m.mun)return toast('⚠️','Elige departamento y municipio','');
+  const n=x=>{const v=String(x).replace(',','.').trim();return v===''?null:Number(v)};
+  const ev=n(m.ev);if(!ev||ev<1)return toast('⚠️','Escribe cuántos estudiantes se evaluaron','');
+  const pr=[n(m.lec),n(m.mat),n(m.soc),n(m.nat),n(m.ing)];
+  if(pr.some(x=>x==null||x<0||x>100))return toast('⚠️','Revisa los promedios','Son 5 números entre 0 y 100.');
+  const per=String(m.anio)+(m.cal==='B'?'1':'3');
+  try{const d=await enviarPeriodo(per,[['',dane,m.nom||('Institución '+dane),m.mun,m.dep,'',ev,...pr]]);
+    toast('✅','Guardado',(m.nom||dane)+' · '+m.anio+' calendario '+m.cal);Z.ic.log=['✅ '+(m.nom||dane)+' · '+m.anio+' · calendario '+m.cal+' guardado']}catch(x){err(x)}render()}
+function vUna(){const m=M0();if(!m.deptos){mInit();return''}
+  const sel=(lab,opts,val,fn)=>`<label style="font-size:12px;font-weight:700;display:block">${lab}<select onchange="AUD.${fn}(this.value)" style="display:block;width:100%;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;font-weight:400;background:#fff"><option value="">Elige…</option>${opts.map(o=>`<option value="${e(o[0])}" ${o[0]===val?'selected':''}>${e(o[1])}</option>`).join('')}</select></label>`;
+  const num=(lab,k)=>`<label style="font-size:12px;font-weight:700">${lab}<input value="${e(m[k])}" oninput="AUD.mSet('${k}',this.value)" inputmode="decimal" style="display:block;width:100%;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;font-weight:400"></label>`;
+  const yrs=[];for(let a=new Date().getFullYear()+1;a>=2014;a--)yrs.push(a);
+  return`<div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px"><b>3) Cargar los resultados de UNA institución</b>
+   <p style="font-size:12px;color:#64748b;margin:4px 0 8px">Para cuando el ICFES ya entregó el reporte del colegio pero todavía no publica el archivo nacional (por ejemplo 2026). Escribe los promedios que trae el reporte de la institución.</p>
+   <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+    ${sel('Departamento',m.deptos.map(d=>[d,d]),m.dep,'mDep')}${sel('Municipio',m.mcpios.map(d=>[d,d]),m.mun,'mMun')}${sel('Colegio',m.cols.map(c=>[c.dane,c.nombre]),m.dane,'mCol')}
+    <label style="font-size:12px;font-weight:700">…o escribe su código DANE<input value="${e(m.danex)}" oninput="AUD.mSet('danex',this.value)" placeholder="12 dígitos" style="display:block;width:100%;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;font-weight:400"></label>
+    ${m.danex?`<label style="font-size:12px;font-weight:700">Nombre del colegio<input value="${e(m.nom)}" oninput="AUD.mSet('nom',this.value)" style="display:block;width:100%;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;font-weight:400"></label>`:''}
+    <label style="font-size:12px;font-weight:700">Año<select onchange="AUD.mSet('anio',this.value)" style="display:block;width:100%;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;background:#fff">${yrs.map(a=>`<option ${String(a)===String(m.anio)?'selected':''}>${a}</option>`).join('')}</select></label>
+    <label style="font-size:12px;font-weight:700">Calendario<select onchange="AUD.mSet('cal',this.value)" style="display:block;width:100%;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;background:#fff"><option value="A" ${m.cal==='A'?'selected':''}>A</option><option value="B" ${m.cal==='B'?'selected':''}>B</option></select></label>
+    ${num('Estudiantes evaluados','ev')}${num('Lectura Crítica (0–100)','lec')}${num('Matemáticas (0–100)','mat')}${num('Sociales y Ciudadanas (0–100)','soc')}${num('Ciencias Naturales (0–100)','nat')}${num('Inglés (0–100)','ing')}
+   </div>
+   <div style="margin-top:10px"><button onclick="AUD.mGuardar()" style="background:#16a34a;color:#fff;padding:10px 16px;border-radius:10px;font-weight:800">💾 Guardar esta institución</button></div>
+   <p style="font-size:12px;color:#64748b;margin-top:6px">El puntaje global (0–500) lo calcula la plataforma con la fórmula del ICFES. Si ya había datos de ese colegio, año y calendario, se reemplazan.</p></div>`}
 function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="font-weight:800;font-size:17px">📥 Datos Saber 11 del ICFES</h3>
   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">Estos datos alimentan «Crear análisis de mi institución» para todos los colegios. Se cargan una sola vez por año.</p>
   <div style="display:grid;gap:14px">
@@ -130,10 +166,11 @@ function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="f
    <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px"><b>2) Cargar un año nuevo (por ejemplo 2026)</b>
     <p style="font-size:12px;color:#64748b;margin:4px 0 8px">Elige el archivo Excel «Resultados agregados Saber 11» que publica el ICFES. Puedes elegir varios a la vez.</p>
     <input type="file" accept=".xlsx" multiple ${Z.ic.busy?'disabled':''} onchange="AUD.cargarExcel(this.files)" style="font-size:13px"></div>
+   ${vUna()}
   </div>
   ${Z.ic.log.length?`<div style="margin-top:12px;font-size:13px;line-height:1.7">${Z.ic.log.map(l=>'<div>'+e(l)+'</div>').join('')}</div>`:''}</div>`}
 function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):Z.sub==='icfes'?vIcfes():vSalud())}
-const api={cargarIncluidos,cargarExcel,load,view,revisar,
+const api={mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,load,view,revisar,
   filtro(v){Z.filtro=v;render()},
   async estado(id,est){const rsp=(document.getElementById('rsp_'+id)||{}).value||null;const r=await sb.from('soporte_reportes').update({estado:est,respuesta:rsp,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)return err(r.error);toast('✅','Reporte actualizado','');await cargar();render()},
   async entrarRep(id,nom,rol){const m={Docente:'prof',Rector:'rector',Coordinador:'coordinador'};await loadScript('vercomo.js?v=5');return VC.entrar(id,nom,m[rol]||'prof','aud')},
