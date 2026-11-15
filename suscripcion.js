@@ -41,7 +41,7 @@ function vForm(h,k){
   <input class="w-full border rounded-lg p-2" type="email" placeholder="Tu correo real (aquí te llega el recibo)" value="${e(Z.em)}" oninput="SUB.set('em',this.value)">
   ${promoHtml(k)}${monedaHtml(k)}
   ${Z.msg?`<div class="rounded-lg p-3 text-sm bg-amber-50 border border-amber-300">${e(Z.msg)}</div>`:''}
-  <button onclick="SUB.pagar('${k}')" ${Z.busy?'disabled':''} class="w-full py-3 rounded-xl text-white font-bold" style="background:#1456c4">${Z.busy?'Procesando…':Z.cat?.simulado?'💳 Pagar (MODO DE PRUEBA, no cobra)':'💳 Pagar con Wompi'}</button>
+  <button onclick="SUB.pagar('${k}')" ${Z.busy?'disabled':''} class="w-full py-3 rounded-xl text-white font-bold" style="background:#1456c4">${Z.busy?'Procesando…':(Z.cot&&Z.cot.total_cop===0)?'✅ Activar sin costo (colegio de prueba)':Z.cat?.simulado?'💳 Pagar (MODO DE PRUEBA, no cobra)':'💳 Pagar con Wompi'}</button>
   <p class="text-xs text-slate-500">Al pagar recibirás un recibo, un correo y una contraseña provisionales, que podrás cambiar. Después de la suscripción no se devuelve dinero.</p></div>`}
 function vPin(h){return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3">${h}<button onclick="SUB.ir('menu')" class="text-sm underline">← Volver</button><h2 class="text-lg font-bold">🔑 Activar con PIN</h2><p class="text-sm text-slate-600">Escribe el PIN que te dio el auditor al recibir tu pago.</p>
   <input class="w-full border rounded-lg p-3 text-center text-xl font-extrabold tracking-widest" placeholder="XXXX-XXXX" value="${e(Z.pin)}" oninput="SUB.set('pin',this.value.toUpperCase())">
@@ -73,10 +73,10 @@ const api={vista,init,
   mon(m){Z.mon=m;render()},
   async onDep(id){Z.dep=id;Z.mun='';Z.muns=[];Z.cols2=[];Z.col=null;if(id){Z.muns=(await sb.from('municipios').select('id,nombre').eq('departamento_id',+id).order('nombre')).data||[]}render()},
   async onMun(id){Z.mun=id;Z.cols2=[];Z.col=null;if(id){Z.cols2=(await sb.from('colegios').select('id,nombre').eq('municipio_id',+id).order('nombre').limit(1000)).data||[]}render()},
-  onCol(id){Z.col=(Z.cols2||[]).find(c=>String(c.id)===String(id))||null;render()},
+  async onCol(id){Z.col=(Z.cols2||[]).find(c=>String(c.id)===String(id))||null;Z.cot=null;if(Z.col){try{const c=await call('cotizar',{plan:'rector_anual',promo:'',colegio_id:Z.col.id});if(c&&c.total_cop===0)Z.cot=c}catch(x){}}render()},
   buscar(v){Z.q=v;clearTimeout(tq);tq=setTimeout(async()=>{if(v.trim().length<3){Z.cols=[];return render()}const r=await sb.from('colegios').select('id,nombre,codinst').ilike('nombre','%'+v.trim()+'%').limit(15);Z.cols=r.data||[];render();const i=document.querySelector('input[placeholder^="Escribe parte"]');if(i){i.focus();i.setSelectionRange(v.length,v.length)}},300)},
   elegir(id){Z.col=Z.cols.find(c=>c.id===id)||null;Z.cols=[];render()},quitarCol(){Z.col=null;render()},
-  async aplicar(k){try{Z.cot=await call('cotizar',{plan:KIND[k].plan,promo:Z.promo});render()}catch(x){err(x)}},
+  async aplicar(k){try{Z.cot=await call('cotizar',{plan:KIND[k].plan,promo:Z.promo,colegio_id:Z.col?Z.col.id:null});render()}catch(x){err(x)}},
   async pagar(k){
     Z.msg='';const body={nombre:Z.nm,telefono:Z.tel,email_contacto:Z.em,promo:Z.cot&&Z.cot.promo?Z.promo:'',moneda:Z.mon};
     const dn=(Z.deps||[]).find(x=>String(x.id)===String(Z.dep)),mn=(Z.muns||[]).find(x=>String(x.id)===String(Z.mun));
