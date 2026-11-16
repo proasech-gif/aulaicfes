@@ -100,13 +100,13 @@ function corner(){return`<svg viewBox="0 0 120 120" fill="none" stroke="${GOLD}"
 function divisor(){return`<svg class="dv" viewBox="0 0 300 20" fill="none" stroke="${GOLD}"><path stroke-width="1.2" d="M6 10H128M172 10H294"/><path stroke-width="1" d="M136 10q7-9 14 0q7 9 14 0"/><path fill="${GOLD}" d="M150 3l5 7-5 7-5-7z"/><circle cx="130" cy="10" r="2" fill="${GOLD}"/><circle cx="170" cy="10" r="2" fill="${GOLD}"/></svg>`}
 function sello(c,tri){let p='';for(let i=0;i<32;i++){const a=i*Math.PI/16,r=i%2?44:50;p+=(i?'L':'M')+(60+r*Math.cos(a)).toFixed(1)+' '+(60+r*Math.sin(a)).toFixed(1)}
   let st='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?7:17;st+=(i?'L':'M')+(60+r*Math.cos(a)).toFixed(1)+' '+(52+r*Math.sin(a)).toFixed(1)}
-  const im=Z.sello||c.logo;
+  const im=Z.selloOff?'':(Z.sello||c.logo);
   const cinta=tri?`<clipPath id="cv"><path d="M40 80H80V148L60 134 40 148Z"/></clipPath><g clip-path="url(#cv)"><rect x="40" y="80" width="20" height="70" fill="#f7d117"/><rect x="60" y="80" width="10" height="70" fill="#1c3f94"/><rect x="70" y="80" width="10" height="70" fill="#d52b1e"/></g>`:`<path d="M38 96L26 148l22-12 12 14 6-50z" fill="#12306b"/><path d="M82 96l12 52-22-12-12 14-6-50z" fill="#1d4a9c"/>`;
   return`<svg viewBox="0 0 120 150" width="100%" height="100%"><defs><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1d98c"/><stop offset=".5" stop-color="#c79a35"/><stop offset="1" stop-color="#8f6a14"/></linearGradient><path id="ar" d="M60 60m-33 0a33 33 0 1 1 66 0a33 33 0 1 1 -66 0"/><clipPath id="ci"><circle cx="60" cy="60" r="24"/></clipPath></defs>${cinta}
    <path d="${p}Z" fill="url(#gd)" stroke="#8f6a14" stroke-width=".8"/><circle cx="60" cy="60" r="40" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1"/>
    ${tri&&im?`<circle cx="60" cy="60" r="27" fill="#fff"/><image href="${e(im)}" x="36" y="36" width="48" height="48" preserveAspectRatio="xMidYMid meet" clip-path="url(#ci)"/>`:`<circle cx="60" cy="60" r="27" fill="#12306b"/><text font-family="Cinzel,Georgia,serif" font-size="6.6" font-weight="700" fill="#12306b" letter-spacing="1.3"><textPath href="#ar" startOffset="2%">ESFUERZO · EXCELENCIA · SUPERACIÓN ·</textPath></text><path d="${st}Z" fill="url(#gd)"/>`}</svg>`}
 function marco(c){return`<div class="bg">${rosette()}</div>${c.logo?`<div class="wm"><img src="${e(c.logo)}" alt=""></div>`:''}<div class="fr"></div><div class="fr2"></div><div class="fr3"></div>${['q1','q2','q3','q4'].map(k=>`<div class="co ${k}">${corner()}</div>`).join('')}`}
-function cabecera(c){return`${c.logo?`<img class="lg" src="${e(c.logo)}" alt="">`:''}<div class="ins">${e(c.l1)}</div><div class="sub">${e([c.l2,c.l3].filter(Boolean).join(' · '))}</div>${Z.res?`<div class="sub">${e(Z.res)}</div>`:''}${divisor()}`}
+function cabecera(c){const lg=Z.escudoOff?'':(Z.escudo||c.logo);return`${lg?`<img class="lg" src="${e(lg)}" alt="">`:''}<div class="ins">${e(c.l1)}</div><div class="sub">${e([c.l2,c.l3].filter(Boolean).join(' · '))}</div>${Z.res?`<div class="sub">${e(Z.res)}</div>`:''}${divisor()}`}
 function firmas(c){return`<div class="fm"><div><b>${e(Z.rector||'')}</b>Rector(a)</div><div class="se">${sello(c)}</div><div><b>${e(Z.secre||'')}</b>Secretario(a)</div></div>`}
 const ESTILOS=[['clasico','Clásico gótico','Letra gótica negra sobre papel crema, escudo arriba y sello con cinta tricolor.','s1',true],
  ['serif','Clásico con sello','Letra clásica elegante, fondo blanco, sello dorado con cinta tricolor.','s2',true],
@@ -124,7 +124,7 @@ function diplomaP(p,c,est){
    9:['Básica Secundaria','Por haber cursado y aprobado los estudios correspondientes al ciclo de Educación Básica Secundaria, según los planes y programas vigentes.'],
    11:['Bachiller'+(Z.modal?' '+Z.modal:''),'Por haber cursado y aprobado los estudios correspondientes al nivel de Educación Media'+(Z.modal?' '+Z.modal:'')+', según los planes y programas vigentes.']}[g]||['Diploma','Por haber cursado y aprobado los estudios correspondientes, según los planes y programas vigentes.'];
   const mun=(c.l2||'').replace(/,\s*/,' – '),aut=Z.aut||(Z.res?'Autorizada por la Secretaría de Educación, según '+Z.res:''),nombre=titulo(p.n);
-  const esc=Z.escudo||c.logo,tri=st[4],wmImg=c.logo||Z.escudo;
+  const esc=Z.escudoOff?'':(Z.escudo||c.logo),tri=st[4],wmImg=c.logo||Z.escudo;
   const bg=est==='textura'?`<div class="bgx">${fondoTexto(c)}</div>`:'<div class="bgx"></div>';
   const fi=(k,l)=>Z[k]?`${l} <b>${e(Z[k])}</b>`:`${l} ______`;
   const dt=new Date((Z.fecha||hoyISO())+'T12:00:00');
@@ -226,7 +226,7 @@ function vMenc(){const m=Z.mc;return`<div style="display:grid;gap:10px;grid-temp
 function estiloUi(){
   const f=(k,l,ph,w)=>`<label style="font-size:13px;font-weight:700">${l}<input ${inp} value="${e(Z[k])}" placeholder="${ph||''}" oninput="CST.set('${k}',this.value)"></label>`;
   const st=ESTILOS.find(x=>x[0]===Z.estilo)||ESTILOS[0];
-  const img=(k,l)=>`<div style="font-size:13px;font-weight:700">${l}<div style="display:flex;gap:6px;align-items:center;margin-top:4px">${Z[k]?`<img src="${Z[k]}" style="height:38px;border:1px solid #cbd5e1;border-radius:6px;background:#fff">`:''}<label style="background:#e8f1ff;color:#1e3a8a;padding:7px 10px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer">${Z[k]?'Cambiar':'Subir imagen'}<input type="file" accept="image/*" style="display:none" onchange="CST.img('${k}',this)"></label>${Z[k]?`<button onclick="CST.quitarImg('${k}')" style="font-size:12px;color:#b91c1c">Quitar</button>`:''}</div></div>`;
+  const c0=ctx();const img=(k,l)=>{const eff=Z[k+'Off']?'':(Z[k]||c0.logo),src=Z[k]?'Imagen subida desde tu computador':Z[k+'Off']?'Sin imagen':(c0.logo?'Tomada del membrete de tu colegio':'Tu membrete no tiene logo');return`<div style="font-size:13px;font-weight:700">${l}<div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap">${eff?`<img src="${eff}" style="height:44px;max-width:80px;object-fit:contain;border:1px solid #cbd5e1;border-radius:6px;background:#fff">`:`<span style="width:44px;height:44px;border:1px dashed #cbd5e1;border-radius:6px"></span>`}<div style="font-weight:400;font-size:12px;color:#64748b">${src}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><label style="background:#e8f1ff;color:#1e3a8a;padding:6px 10px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer">Subir desde el computador<input type="file" accept="image/*" style="display:none" onchange="CST.img('${k}',this)"></label>${Z[k]||Z[k+'Off']?`<button onclick="CST.membrete('${k}')" style="background:#f1f5f9;padding:6px 10px;border-radius:9px;font-weight:700;font-size:12px">Usar el del membrete</button>`:''}${!Z[k+'Off']?`<button onclick="CST.quitarImg('${k}')" style="background:#f1f5f9;color:#b91c1c;padding:6px 10px;border-radius:9px;font-weight:700;font-size:12px">Sin imagen</button>`:''}</div></div>`};
   return`<div style="border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px"><b style="font-size:14px">Estilo del diploma</b>
    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px"><select ${inp} style="max-width:320px;border:1.5px solid #cbd5e1;border-radius:10px;padding:9px" onchange="CST.setEstilo(this.value)">${ESTILOS.map(x=>`<option value="${x[0]}" ${Z.estilo===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select><button onclick="CST.estilos()" style="background:#e8f1ff;color:#1e3a8a;padding:9px 12px;border-radius:9px;font-weight:700;font-size:13px">🖼 Ver todos los estilos</button></div>
    <p style="font-size:12px;color:#64748b;margin-top:6px">${e(st[2])}</p>
@@ -234,7 +234,7 @@ function estiloUi(){
     ${f('aut','Texto de autorización (opcional)','Autorizada por la Secretaría de Educación de…, según Resolución No. … del …')}
     <label style="font-size:13px;font-weight:700">Documento del estudiante<select ${inp} onchange="CST.set('tdoc',this.value)">${['T.I.','C.C.','R.C.','C.E.'].map(x=>`<option ${Z.tdoc===x?'selected':''}>${x}</option>`).join('')}</select></label>
     ${f('expd','Documento expedido en','Condoto')}${f('acta','Acta de graduación No.','')}${f('libro','Libro de registro No.','')}${f('folio','Folio No.','')}
-    ${img('escudo','Escudo superior (si no, usa el logo)')}${img('sello','Imagen del sello (si no, usa el logo)')}</div>
+    ${img('escudo','Escudo superior')}${img('sello','Imagen del sello')}</div>
     <label style="display:block;font-size:13px;margin-top:8px"><input type="checkbox" ${Z.nr?'checked':''} onchange="CST.set('nr',this.checked)"> Incluir «No requiere registro, según Decreto 921 de 1994»</label>`:''}</div>`}
 function view(){
   if(!isDir())return'<div class="aic-card" style="padding:18px">Este módulo es para rector y coordinador.</div>';
@@ -247,8 +247,9 @@ function view(){
    <p style="font-size:12px;color:#64748b;margin-top:8px">Se toman el nombre, el logo y los datos de la institución del membrete que ya configuraste. Para guardar en PDF, en la ventana de impresión elige «Guardar como PDF».</p></div></div>`}
 return{load,view,vista,imprimir,_t:{docHtml,full,elegidos,Z:()=>Z},
   setEstilo(v){Z.estilo=v;R()},
-  quitarImg(k){Z[k]='';R()},
-  img(k,inp){const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=Math.min(1,700/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*m);c.height=Math.round(im.height*m);c.getContext('2d').drawImage(im,0,0,c.width,c.height);Z[k]=c.toDataURL('image/png');R()};im.onerror=()=>toast('⚠️','No se pudo leer la imagen','Prueba con un PNG o JPG.');im.src=r.result};r.readAsDataURL(f);inp.value=''},
+  quitarImg(k){Z[k]='';Z[k+'Off']=true;R()},
+  membrete(k){Z[k]='';Z[k+'Off']=false;R()},
+  img(k,inp){const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=Math.min(1,700/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*m);c.height=Math.round(im.height*m);c.getContext('2d').drawImage(im,0,0,c.width,c.height);Z[k]=c.toDataURL('image/png');Z[k+'Off']=false;R()};im.onerror=()=>toast('⚠️','No se pudo leer la imagen','Prueba con un PNG o JPG.');im.src=r.result};r.readAsDataURL(f);inp.value=''},
   estilos(){
     document.getElementById('cst-est')?.remove();const m=document.createElement('div');m.id='cst-est';m.style.cssText='position:fixed;inset:0;z-index:210;background:#0009;display:flex;justify-content:center;padding:10px';
     const ejemplo={n:'María Fernanda Rentería Mosquera',d:'1001234567',g:Z.grado===''||!DIPG.includes(+Z.grado)?11:+Z.grado,gr:''};const c=ctx();const old=Z.estilo;
