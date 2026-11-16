@@ -7,24 +7,28 @@ const isDoc=()=>M&&M.role==='prof',isRec=()=>M&&M.role==='rector',isDir=()=>M&&(
 const R=()=>render();
 const hoy=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'});
 const fF=d=>d?new Date(d.length<=10?d+'T12:00:00':d).toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}):'';
-let Z={dia:0,cfg:null,lista:[],cur:null,cursos:[],planes:[],rec:[],ver:null,tema:'',busy:false};
+let Z={vista:'doc',hist:[],areasTbl:[],dia:0,cfg:null,lista:[],cur:null,cursos:[],planes:[],rec:[],ver:null,tema:'',busy:false};
 const MOM=[['Exploración','Activación de saberes previos'],['Estructuración','Construcción / explicación'],['Práctica y ejecución','Aplicación guiada o autónoma'],['Transferencia','Uso en contexto / resolución'],['Valoración y cierre','Síntesis / metacognición']];
 const inp='style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:14px"';
 const colegio=()=>{try{return LH().l1||''}catch(x){return ''}};
-function vacio(){return{fecha:hoy(),asignatura:'',grado:'',grupo:'',datos:{tipo:'dia',inst:colegio(),docente:M.full_name||'',anio:String(new Date().getFullYear()),periodo:'1',fechaFirma:hoy()},id:null}}
-async function load(){
+function vacio(){return{fecha:hoy(),asignatura:'',grado:'',grupo:'',datos:{areas:[],pa:{},modoAreas:'una',tipo:'dia',inst:colegio(),docente:M.full_name||'',anio:String(new Date().getFullYear()),periodo:'1',fechaFirma:hoy()},id:null}}
+async function load(t){
+  if(t==='diario')Z.vista='diario';
   const c=await sb.from('planeador_config').select('*').eq('colegio_id',M.colegio_id||0).maybeSingle();Z.cfg=c.data||{modo:'plataforma'};
   if(isDoc()){
     const l=await sb.from('planeador_diario').select('id,fecha,asignatura,grado,grupo,estado,enviado_a,enviado_at,datos').eq('docente_id',M.id).order('fecha',{ascending:false}).order('created_at',{ascending:false}).limit(100);
     if(l.error)throw l.error;Z.lista=l.data||[];
     const cs=await sb.from('courses').select('id,name,grade').eq('teacher_id',M.id).order('grade').order('name');Z.cursos=cs.data||[];
+    try{const ar=await sb.from('areas').select('nombre').order('nombre');Z.areasTbl=(ar.data||[]).map(x=>x.nombre)}catch(x){Z.areasTbl=[]}
     const p=await sb.from('planes_area').select('asignatura,grado,anio,malla').eq('docente_id',M.id);Z.planes=p.data||[];
   }else if(isDir()){const r=await sb.rpc('planeador_recibidos');if(r.error)throw r.error;Z.rec=r.data||[]}
+  if(isDoc()&&Z.vista==='diario')await cargaDiario();
 }
+async function cargaDiario(){if(!window.DOCP)await loadScript('docente.js?v=9');await DOCP.load('diario')}
 /* ---------- plan de área ---------- */
-function filasPlan(){
-  const c=Z.cur;if(!c||!c.asignatura||c.grado==='')return[];
-  const p=Z.planes.filter(x=>x.asignatura===c.asignatura&&String(x.grado)===String(c.grado)).sort((a,b)=>b.anio-a.anio)[0];
+function filasPlan(asig){
+  const c=Z.cur;asig=asig||(c&&c.asignatura);if(!c||!asig||c.grado==='')return[];
+  const p=Z.planes.filter(x=>x.asignatura===asig&&String(x.grado)===String(c.grado)).sort((a,b)=>b.anio-a.anio)[0];
   if(!p||!p.malla||!Array.isArray(p.malla.periodos))return[];
   const per=p.malla.periodos.find(x=>String(x.n)===String(c.datos.periodo))||{};
   return (per.filas||[]).filter(f=>f.tema);
@@ -38,22 +42,36 @@ const DN=['Lunes','Martes','Miércoles','Jueves','Viernes'];
 const dayTabs=()=>Z.cur.datos.tipo!=='semana'?'':`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">${[0,1,2,3,4].map(i=>`<button onclick="PLN.dia(${i})" style="padding:8px 12px;border-radius:8px;font-weight:700;font-size:13px;${Z.dia===i?'background:#246be0;color:#fff':'background:#e2e8f0'}">${DN[i]} ${fF(addD(Z.cur.fecha,i))}</button>`).join('')}</div>`;
 const grid=(n,cols,pref,fl)=>`<div class="aic-table-wrap"><table style="min-width:640px"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${Array.from({length:n},(_,i)=>`<tr>${fl.map((f,j)=>j===0&&pref?`<td style="font-size:12px"><b>${e(pref[i][0])}</b><br>${e(pref[i][1])}</td>`:`<td><textarea rows="2" style="width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:4px;font-size:13px" oninput="PLN.g('${sk(f[0])}',${i},'${f[1]}',this.value)">${e(((Z.cur.datos[sk(f[0])]||[])[i]||{})[f[1]]||'')}</textarea></td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 const H=t=>`<h3 style="font-weight:800;color:#1e4a7c;margin:18px 0 6px;border-bottom:2px solid #1e4a7c;padding-bottom:4px">${t}</h3>`;
+const gl=g=>String(g)==='0'?'Transición':g+'°';
+const esPrim=()=>Z.cur&&Z.cur.grado!==''&&+Z.cur.grado>=0&&+Z.cur.grado<=5;
+const multi=()=>esPrim()&&Z.cur.datos.modoAreas==='varias';
+const opcAreas=()=>[...new Set([...(Z.areasTbl||[]),...(M.asignaturas||[]),...(Z.cur.datos.areas||[])])].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es'));
+const PAF=[['unidad','Unidad / tema',1],['estandares','Estándar(es) / referente(s)',2],['dba','DBA relacionado(s)',2],['competencias','Competencia(s)',1],['aprendizajes','Aprendizaje(s) esperado(s)',2],['evidencias','Evidencia(s) de aprendizaje',2],['objetivo','Objetivo de aprendizaje del área',2]];
+function bloqueAreas(){
+  const c=Z.cur,sel=c.datos.areas||[];
+  const chk=`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px;margin-top:6px"><b style="font-size:13px">Áreas que vas a trabajar juntas</b> <span style="font-size:12px;color:#64748b">(marca una o varias)</span><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">${opcAreas().map(a=>`<label style="font-size:13px"><input type="checkbox" ${sel.includes(a)?'checked':''} onchange="PLN.area('${e(a).replace(/'/g,'&#39;')}',this.checked)"> ${e(a)}</label>`).join('')}</div></div>`;
+  const blq=sel.map(a=>{const p=(c.datos.pa||{})[a]||{},filas=filasPlan(a);
+    return`<div style="border:1.5px solid #cbd5e1;border-radius:12px;padding:10px;margin-top:10px;background:#fcfdff"><b style="color:#1e4a7c">${e(a)}</b>
+    ${filas.length?`<select ${inp} style="margin:6px 0" onchange="PLN.temaA('${e(a).replace(/'/g,'&#39;')}',this.value)"><option value="">— Elige el tema desde tu plan de área —</option>${filas.map((f,i)=>`<option value="${i}">${e(f.tema)}</option>`).join('')}</select>`:''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px">${PAF.map(f=>`<label style="font-size:12.5px;font-weight:700">${f[1]}<textarea rows="${f[2]}" ${inp} oninput="PLN.pa('${e(a).replace(/'/g,'&#39;')}','${f[0]}',this.value)">${e(p[f[0]]||'')}</textarea></label>`).join('')}</div></div>`}).join('');
+  return chk+(sel.length?blq:'<p style="font-size:12.5px;color:#64748b;margin-top:6px">Marca al menos un área para empezar.</p>')}
 function form(){
   const c=Z.cur,asigs=[...new Set([...(M.asignaturas||[]),c.asignatura])].filter(Boolean);
   const grados=[...new Set(Z.cursos.map(x=>x.grade))],grupos=Z.cursos.filter(x=>String(x.grade)===String(c.grado));
   const filas=filasPlan();
   return`<div class="aic-card" style="padding:16px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="font-weight:800;font-size:20px">📓 Día a día pedagógico</h2><button class="aic-link" onclick="PLN.cerrar()" style="font-size:14px">← Volver a mis planeadores</button></div>
   ${H('1. IDENTIFICACIÓN INSTITUCIONAL')}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">${I('inst','Institución educativa')}${I('sede','Sede / jornada')}${I('anio','Año lectivo')}${I('docente','Docente')}
-   <label style="font-size:13px;font-weight:700">Área / asignatura<select ${inp} onchange="PLN.top('asignatura',this.value)"><option value="">Elige…</option>${asigs.map(a=>`<option ${a===c.asignatura?'selected':''}>${e(a)}</option>`).join('')}</select></label>
-   <label style="font-size:13px;font-weight:700">Grado<select ${inp} onchange="PLN.top('grado',this.value)"><option value="">Elige…</option>${grados.map(g=>`<option value="${g}" ${String(g)===String(c.grado)?'selected':''}>${g}°</option>`).join('')}</select></label>
+   ${multi()?`<div style="font-size:13px;font-weight:700">Áreas<div style="font-weight:400;padding:9px 0">${e(c.asignatura||'Marca las áreas abajo')}</div></div>`:`<label style="font-size:13px;font-weight:700">Área / asignatura<select ${inp} onchange="PLN.top('asignatura',this.value)"><option value="">Elige…</option>${asigs.map(a=>`<option ${a===c.asignatura?'selected':''}>${e(a)}</option>`).join('')}</select></label>`}
+   <label style="font-size:13px;font-weight:700">Grado<select ${inp} onchange="PLN.top('grado',this.value)"><option value="">Elige…</option>${grados.map(g=>`<option value="${g}" ${String(g)===String(c.grado)?'selected':''}>${gl(g)}</option>`).join('')}</select></label>
+   ${esPrim()?`<label style="font-size:13px;font-weight:700">Se planea<select ${inp} onchange="PLN.modoAreas(this.value)"><option value="una" ${!multi()?'selected':''}>Un área o asignatura</option><option value="varias" ${multi()?'selected':''}>Varias áreas juntas (primaria)</option></select></label>`:''}
    <label style="font-size:13px;font-weight:700">Grupo<select ${inp} onchange="PLN.top('grupo',this.value)"><option value="">Elige…</option>${grupos.map(g=>`<option ${g.name===c.grupo?'selected':''}>${e(g.name)}</option>`).join('')}</select></label>
    <label style="font-size:13px;font-weight:700">Se diligencia<select ${inp} onchange="PLN.tipo(this.value)"><option value="dia" ${c.datos.tipo!=='semana'?'selected':''}>Por día</option><option value="semana" ${c.datos.tipo==='semana'?'selected':''}>Por semana</option></select></label>
    <label style="font-size:13px;font-weight:700">${c.datos.tipo==='semana'?'Semana desde (lunes)':'Fecha'}<input type="date" ${inp} value="${c.fecha}" onchange="PLN.top('fecha',this.value)"></label>${c.datos.tipo==='semana'?`<div style="font-size:13px;font-weight:700;align-self:end;padding-bottom:10px">hasta ${fF(addD(c.fecha,4))}</div>`:''}
    <label style="font-size:13px;font-weight:700">Período<select ${inp} onchange="PLN.d('periodo',this.value);PLN.rr()">${[1,2,3,4].map(n=>`<option ${String(c.datos.periodo)===String(n)?'selected':''}>${n}</option>`).join('')}</select></label>
    ${I('sesion','Clase / sesión N.º')}${I('duracion','Duración')}${I('horario','Horario')}</div>
   ${H('2. ARTICULACIÓN CURRICULAR Y REFERENTES DE APRENDIZAJE')}
-  ${filas.length?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;font-size:13px"><b>Desde tu plan de área</b> (período ${e(c.datos.periodo)}): elige el tema de hoy y la plataforma llena lo que pueda.<br><select ${inp} style="margin-top:6px" onchange="PLN.tema(this.value)"><option value="">— Elige el tema —</option>${filas.map((f,i)=>`<option value="${i}" ${String(Z.tema)===String(i)?'selected':''}>${e(f.tema)}</option>`).join('')}</select></div>`:`<p style="font-size:12px;color:#64748b">Si subes y llenas tu <b>Plan de área</b> para esta asignatura y grado, aquí podrás elegir el tema y se llenarán solos los estándares, los aprendizajes y las evidencias.</p>`}
-  <label style="font-size:13px;font-weight:700;display:block;margin-top:8px">Unidad / tema <span style="font-weight:400;color:#16a34a">(escribe el tema y la plataforma llena el resto)</span><textarea rows="1" ${inp} oninput="PLN.d('unidad',this.value)" onchange="PLN.auto(this.value)">${e(c.datos.unidad||'')}</textarea></label>${T('estandares','Estándar(es) / referente(s)')}${T('dba','DBA relacionado(s)')}${T('competencias','Competencia(s)',1)}${T('componente','Componente / proceso',1)}${T('aprendizajes','Aprendizaje(s) esperado(s)')}${T('evidencias','Evidencia(s) de aprendizaje')}
+  ${multi()?bloqueAreas():`${filas.length?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;font-size:13px"><b>Desde tu plan de área</b> (período ${e(c.datos.periodo)}): elige el tema de hoy y la plataforma llena lo que pueda.<br><select ${inp} style="margin-top:6px" onchange="PLN.tema(this.value)"><option value="">— Elige el tema —</option>${filas.map((f,i)=>`<option value="${i}" ${String(Z.tema)===String(i)?'selected':''}>${e(f.tema)}</option>`).join('')}</select></div>`:`<p style="font-size:12px;color:#64748b">Si subes y llenas tu <b>Plan de área</b> para esta asignatura y grado, aquí podrás elegir el tema y se llenarán solos los estándares, los aprendizajes y las evidencias.</p>`}
+  <label style="font-size:13px;font-weight:700;display:block;margin-top:8px">Unidad / tema <span style="font-weight:400;color:#16a34a">(escribe el tema y la plataforma llena el resto)</span><textarea rows="1" ${inp} oninput="PLN.d('unidad',this.value)" onchange="PLN.auto(this.value)">${e(c.datos.unidad||'')}</textarea></label>${T('estandares','Estándar(es) / referente(s)')}${T('dba','DBA relacionado(s)')}${T('competencias','Competencia(s)',1)}${T('componente','Componente / proceso',1)}${T('aprendizajes','Aprendizaje(s) esperado(s)')}${T('evidencias','Evidencia(s) de aprendizaje')}`}
   ${H('3. PROPÓSITO Y PREPARACIÓN DE LA CLASE')}${T('objetivo','Objetivo de aprendizaje')}${T('desempenos','Desempeño(s) esperado(s)')}${T('previos','Saberes previos',1)}${T('recursos','Recursos y materiales',1)}${T('estrategia','Estrategia metodológica',1)}
   ${H('4. SECUENCIA DIDÁCTICA '+(c.datos.tipo==='semana'?'DE LA SEMANA (por día)':'DE LA JORNADA'))}${dayTabs()}${grid(5,['Momento','Actividades / consignas','Tiempo','Recursos','Evidencia o producto'],MOM,[['s4','m'],['s4','act'],['s4','t'],['s4','rec'],['s4','ev']])}
   ${H('5. REGISTRO DEL DESARROLLO REAL DE LA CLASE')}${dayTabs()}<p style="font-size:12px;color:#64748b">Se diligencia durante o al finalizar la jornada.</p>${grid(4,['Hora / bloque','Actividad desarrollada','Estrategia aplicada','Participación del grupo','Observaciones / ajustes'],null,[['s5','h'],['s5','act'],['s5','est'],['s5','part'],['s5','obs']])}
@@ -69,6 +87,7 @@ function acciones(){
   return`<div style="position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;margin-top:16px;padding:10px 0;display:flex;flex-wrap:wrap;gap:8px">
    <button onclick="PLN.guardar()" style="background:#246be0;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">💾 Guardar</button>
    <button onclick="PLN.imprimir()" style="background:#e2e8f0;padding:11px 16px;border-radius:10px;font-weight:800">🖨️ Imprimir</button>
+   <button onclick="PLN.traerDiario()" style="background:#e0f2fe;color:#075985;padding:11px 16px;border-radius:10px;font-weight:800">⬇ Traer del diario de campo</button>
    <span style="align-self:center;font-size:13px;font-weight:700;margin-left:6px">📤 Enviar a:</span>
    <button onclick="PLN.enviar(['rector'])" style="background:#16a34a;color:#fff;padding:11px 14px;border-radius:10px;font-weight:700">Rector</button>
    <button onclick="PLN.enviar(['coordinador'])" style="background:#16a34a;color:#fff;padding:11px 14px;border-radius:10px;font-weight:700">Coordinador</button>
@@ -95,7 +114,7 @@ function printHtml(p){
   const tab=rows=>`<table style="width:100%;border-collapse:collapse;font-size:10pt">${rows}</table>`;
   return`<div class="pg" style="font-family:Arial,Helvetica,sans-serif;color:#000"><div style="text-align:center;font-weight:700;color:#1e4a7c;font-size:10pt">FORMATO INSTITUCIONAL DE PLANEACIÓN Y SEGUIMIENTO DIARIO DE CLASE</div><div style="text-align:center;font-weight:800;color:#1e4a7c;font-size:18pt">DÍA A DÍA PEDAGÓGICO</div><div style="text-align:center;font-style:italic;font-size:9pt;color:#555">Instrumento para planear, registrar, valorar y mejorar los procesos de enseñanza y aprendizaje</div>
   ${sec('1. IDENTIFICACIÓN INSTITUCIONAL')}${tab(row('Institución educativa','inst')+row('Sede / jornada','sede')+`<tr><td ${h}>Año lectivo</td><td ${c}>${v('anio')}</td></tr>`+row('Docente','docente')+`<tr><td ${h}>Área / asignatura</td><td ${c}>${e(p.asignatura||'')} · Grado: ${e(p.grado||'')} · Grupo: ${e(p.grupo||'')}</td></tr><tr><td ${h}>Fecha</td><td ${c}>${fF(p.fecha)}${d.tipo==='semana'?' al '+fF(addD(p.fecha,4))+' (semana)':''} · Período: ${v('periodo')} · Clase / sesión N.º: ${v('sesion')}</td></tr>`+row('Duración','duracion')+row('Horario','horario'))}
-  ${sec('2. ARTICULACIÓN CURRICULAR Y REFERENTES DE APRENDIZAJE')}${tab(row('Unidad / tema','unidad')+row('Estándar(es) / referente(s)','estandares')+row('DBA relacionado(s)','dba')+row('Competencia(s)','competencias')+row('Componente / proceso','componente')+row('Aprendizaje(s) esperado(s)','aprendizajes')+row('Evidencia(s) de aprendizaje','evidencias'))}
+  ${sec('2. ARTICULACIÓN CURRICULAR Y REFERENTES DE APRENDIZAJE')}${(d.modoAreas==='varias'&&(d.areas||[]).length)?(d.areas||[]).map(a=>{const q=(d.pa||{})[a]||{};const r=(l,k)=>`<tr><td ${h}>${l}</td><td ${c}>${e(q[k]||'')||'&nbsp;'}</td></tr>`;return`<div style="font-weight:700;margin:6px 0 2px;font-size:10pt">Área: ${e(a)}</div>`+tab(r('Unidad / tema','unidad')+r('Estándar(es) / referente(s)','estandares')+r('DBA relacionado(s)','dba')+r('Competencia(s)','competencias')+r('Aprendizaje(s) esperado(s)','aprendizajes')+r('Evidencia(s) de aprendizaje','evidencias')+r('Objetivo del área','objetivo'))}).join(''):tab(row('Unidad / tema','unidad')+row('Estándar(es) / referente(s)','estandares')+row('DBA relacionado(s)','dba')+row('Competencia(s)','competencias')+row('Componente / proceso','componente')+row('Aprendizaje(s) esperado(s)','aprendizajes')+row('Evidencia(s) de aprendizaje','evidencias'))}
   ${sec('3. PROPÓSITO Y PREPARACIÓN DE LA CLASE')}${tab(row('Objetivo de aprendizaje','objetivo')+row('Desempeño(s) esperado(s)','desempenos')+row('Saberes previos','previos')+row('Recursos y materiales','recursos')+row('Estrategia metodológica','estrategia'))}
   ${(d.tipo==='semana'?[0,1,2,3,4]:[0]).map(i=>sec('4. SECUENCIA DIDÁCTICA '+(d.tipo==='semana'?'· '+DN[i]+' '+fF(addD(p.fecha,i)):'DE LA JORNADA'))+tb(['Momento','Actividades / consignas','Tiempo','Recursos','Evidencia o producto'],i?'s4_'+i:'s4',5,true)).join('')}</div>
   <div class="pg" style="font-family:Arial,Helvetica,sans-serif;color:#000">${(d.tipo==='semana'?[0,1,2,3,4]:[0]).map(i=>sec('5. REGISTRO DEL DESARROLLO REAL DE LA CLASE'+(d.tipo==='semana'?' · '+DN[i]:''))+tb(['Hora / bloque','Actividad desarrollada','Estrategia aplicada','Participación del grupo','Observaciones / ajustes'],i?'s5_'+i:'s5',4)).join('')}
@@ -124,6 +143,13 @@ function lista(){
   <p style="font-size:13px;color:#64748b;margin:4px 0 10px">${propio?'Tu colegio usa su <b>propio formato</b>: descárgalo, diligéncialo y súbelo.':'Formato institucional de la plataforma. Se llena con tu plan de área, lo envías al rector y/o coordinador y también lo puedes imprimir.'}</p>
   <div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>FECHA</th><th>ASIGNATURA</th><th>GRADO</th><th>ESTADO</th><th></th></tr></thead><tbody>${Z.lista.map(x=>`<tr><td>${fF(x.fecha)}</td><td>${e(x.asignatura||'')}</td><td>${e(x.grado||'')} ${e(x.grupo||'')}</td><td>${x.estado==='borrador'?'📝 Borrador':x.estado==='revisado'?'✅ Revisado':'📤 Enviado a '+e((x.enviado_a||[]).join(' y '))}</td><td><button class="aic-link" onclick="PLN.abrir('${x.id}')">Abrir</button> <button class="aic-link" onclick="PLN.imprimirId('${x.id}')">Imprimir</button> ${x.estado==='borrador'?`<button class="aic-link" onclick="PLN.borrar('${x.id}')">Borrar</button>`:''}</td></tr>`).join('')||'<tr><td colspan="5">Aún no tienes planeadores. Pulsa “Nuevo planeador”.</td></tr>'}</tbody></table></div></div>`;
 }
+function tabsU(){return`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${[['doc','📓 Mis planeadores'],['diario','🗓️ Diario de campo de la semana'],['hist','🕘 Historial de todo']].map(x=>`<button onclick="PLN.vista('${x[0]}')" style="padding:9px 14px;border-radius:10px;font-weight:800;border:1.5px solid ${Z.vista===x[0]?'#1e63e9':'#cbd5e1'};background:${Z.vista===x[0]?'#e8f1ff':'#fff'};color:${Z.vista===x[0]?'#1e3a8a':'#334155'}">${x[1]}</button>`).join('')}</div>`}
+function histU(){
+  const a=Z.lista.map(x=>({f:x.fecha,t:'Planeador',a:x.asignatura||'',g:(x.grado!=null?gl(x.grado):'')+' '+(x.grupo||''),x:(x.datos&&x.datos.unidad)||'',st:x.estado==='borrador'?'Borrador':x.estado==='revisado'?'Revisado':'Enviado',id:x.id,k:'p'}));
+  const b=Z.hist.map(x=>({f:x.fecha,t:'Diario de campo',a:x.asignatura||'',g:x.curso||'',x:x.tema||'',st:x.estado==='dada'||x.estado==='realizada'?'Dada':(x.estado||'').replace(/^./,c=>c.toUpperCase())+(x.cumplimiento!=null?' · '+x.cumplimiento+'%':''),id:x.id,k:'d'}));
+  const L=[...a,...b].sort((p,q)=>String(q.f).localeCompare(String(p.f)));
+  return`<div class="aic-card" style="padding:16px"><h3 style="font-weight:800;margin-bottom:4px">🕘 Historial: planeadores y diario de campo juntos</h3><p style="font-size:13px;color:#64748b;margin:4px 0 10px">Aquí están todos tus registros anteriores, de los dos formatos, ordenados por fecha. No se borró nada.</p>
+  <div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>FECHA</th><th>TIPO</th><th>ÁREA / ASIGNATURA</th><th>GRUPO</th><th>TEMA</th><th>ESTADO</th><th></th></tr></thead><tbody>${L.map(r=>`<tr><td>${fF(r.f)}</td><td>${r.t}</td><td>${e(r.a)}</td><td>${e(r.g)}</td><td>${e(r.x)}</td><td>${e(r.st)}</td><td>${r.k==='p'?`<button class="aic-link" onclick="PLN.abrir('${r.id}')">Abrir</button> <button class="aic-link" onclick="PLN.imprimirId('${r.id}')">Imprimir</button>`:`<button class="aic-link" onclick="PLN.verDia('${r.f}')">Ver en el diario</button>`}</td></tr>`).join('')||'<tr><td colspan="7">Todavía no tienes registros.</td></tr>'}</tbody></table></div></div>`}
 async function guardarCur(){
   const c=Z.cur,row={docente_id:M.id,colegio_id:M.colegio_id||null,fecha:c.fecha,asignatura:c.asignatura||null,grado:c.grado===''?null:+c.grado,grupo:c.grupo||null,datos:c.datos,updated_at:new Date().toISOString()};
   if(!c.asignatura)throw new Error('Elige el área / asignatura.');
@@ -135,8 +161,34 @@ const api={
   view(){
     if(isDir())return`<div>${isRec()?cfgPanel():''}${recibidos()}</div>`;
     if(Z.cur)return Z.cfg&&Z.cfg.modo==='propio'?formPropio():form();
-    return lista();
+    if(Z.vista==='diario')return`<div>${tabsU()}${window.DOCP?DOCP.view('diario'):'<div class="aic-card" style="padding:16px">Cargando…</div>'}</div>`;
+    if(Z.vista==='hist')return`<div>${tabsU()}${histU()}</div>`;
+    return`<div>${tabsU()}${lista()}</div>`;
   },
+  async vista(v){Z.vista=v;try{if(v==='diario')await cargaDiario();if(v==='hist'){await cargaDiario();const h=await sb.from('planeaciones').select('id,fecha,curso,asignatura,tema,estado,cumplimiento').eq('docente_id',M.id).order('fecha',{ascending:false}).limit(300);Z.hist=h.data||[]}}catch(x){err(x)}R()},
+  async verDia(f){Z.vista='diario';try{await cargaDiario();await DOCP.fd(f)}catch(x){err(x)}R()},
+  modoAreas(v){Z.cur.datos.modoAreas=v;if(v==='una'){Z.cur.datos.areas=[];}else{Z.cur.datos.areas=Z.cur.asignatura?[Z.cur.asignatura]:[];Z.cur.asignatura=(Z.cur.datos.areas||[]).join(' + ')}R()},
+  area(a,on){const d=Z.cur.datos,l=d.areas=d.areas||[],i=l.indexOf(a);if(on&&i<0)l.push(a);if(!on&&i>=0)l.splice(i,1);Z.cur.asignatura=l.join(' + ');R()},
+  pa(a,k,v){const d=Z.cur.datos;(d.pa=d.pa||{})[a]=d.pa[a]||{};d.pa[a][k]=v},
+  temaA(a,i){if(i==='')return;const f=filasPlan(a)[+i];if(!f)return;const d=Z.cur.datos;(d.pa=d.pa||{})[a]=d.pa[a]||{};const q=d.pa[a];
+    q.unidad=f.tema;q.estandares=f.estandar||q.estandares||'';q.aprendizajes=f.indicador||'';q.evidencias=f.evaluacion||'';q.objetivo=q.objetivo||('Desarrollar el tema: '+f.tema);toast('✅','Llené lo de '+a,'Revisa y completa lo que falta.');R()},
+  async traerDiario(){
+    const c=Z.cur,d=c.datos;try{
+      const dias=d.tipo==='semana'?[0,1,2,3,4]:[0];let n=0;
+      const nm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const nombres=(multi()?(d.areas||[]):[c.asignatura]).filter(Boolean).map(nm);
+      for(const i of dias){
+        const r=await sb.from('planeaciones').select('*').eq('docente_id',M.id).eq('fecha',addD(c.fecha,i)).order('orden');if(r.error)throw r.error;
+        const its=(r.data||[]).filter(x=>!nombres.length||nombres.some(a=>nm(x.asignatura).includes(a)||a.includes(nm(x.asignatura))));
+        its.forEach(it=>{n++;const set=(k,v)=>{if(v&&!String(d[k]||'').trim())d[k]=v};
+          const k4=i?'s4_'+i:'s4',k5=i?'s5_'+i:'s5';
+          if(!multi())set('unidad',it.tema);set('objetivo',it.objetivo);set('recursos',it.recursos);set('refuerzo',it.tarea);
+          const s4=d[k4]=d[k4]||[];[[0,it.inicio],[1,it.desarrollo],[4,it.cierre]].forEach(([j,t])=>{if(t){s4[j]=s4[j]||{};if(!String(s4[j].act||'').trim())s4[j].act=t}});
+          if(it.evaluacion){const s6=d.s6=d.s6||[];s6[0]=s6[0]||{};if(!String(s6[0].i||'').trim())s6[0].i=it.evaluacion}
+          const s5=d[k5]=d[k5]||[];const fl=s5.findIndex(x=>!x||!Object.values(x).some(v=>v));const j=fl<0?s5.length:fl;
+          s5[j]={h:it.hora||'',act:it.desarrollo||it.tema||'',est:'',part:it.cumplimiento!=null?'Cumplimiento: '+it.cumplimiento+' %':'',obs:it.observaciones||''}});
+      }
+      toast(n?'✅':'ℹ️',n?'Traje '+n+' clase(s) del diario':'No encontré clases en el diario',n?'Revisa y completa.':'Revisa la fecha y el área elegidas.');R()}catch(x){err(x)}},
   dia(i){Z.dia=i;R()},
   tipo(v){Z.cur.datos.tipo=v;Z.dia=0;R()},
   nuevo(){Z.dia=0;Z.cur=vacio();Z.tema='';R();window.scrollTo(0,0)},
