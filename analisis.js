@@ -9,7 +9,7 @@ const f0=x=>x==null?'—':Math.round(x).toLocaleString('es-CO');
 const sg=x=>x==null?'—':(x>0?'▲ +':x<0?'▼ ':'= ')+f1(x);
 const col=x=>x==null?'#64748b':x>0?'#15803d':x<0?'#b91c1c':'#64748b';
 const AC=new Date().getFullYear(),VENT=Array.from({length:8},(_,i)=>AC-7+i);
-let Z={cal:'A',deptos:[],mcpios:[],cols:[],anios:[],dep:'',mun:'',dane:'',colNombre:'',sel:[],busy:false,msg:'',rep:null,html:''};
+let Z={sec:{},obs:'',hor:[1,3],out:null,cal:'A',deptos:[],mcpios:[],cols:[],anios:[],dep:'',mun:'',dane:'',colNombre:'',sel:[],busy:false,msg:'',rep:null,html:''};
 const R=()=>render();
 const rpc=async(n,a)=>{const r=await sb.rpc(n,a);if(r.error)throw r.error;return r.data};
 async function load(){
@@ -54,7 +54,7 @@ function acciones(){return`<div class="aic-card" style="padding:18px"><h3 style=
    <button onclick="ANA.descargar()" style="background:#0f766e;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">⬇️ Descargar (Word)</button>
    <button onclick="ANA.imprimir()" style="background:#16a34a;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">🖨️ Imprimir / guardar PDF</button>
    <button onclick="ANA.enviar()" style="background:#7c3aed;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">📨 Enviar a docentes o coordinador</button></div>
-  <p style="font-size:12px;color:#64748b;margin-top:8px">Sale con el membrete de la institución.</p></div>`}
+  ${window.ANAM?secUi():''}<p style="font-size:12px;color:#64748b;margin-top:8px">Sale con el membrete de la institución. El PDF se obtiene con «Imprimir / guardar PDF» (es el formato con todos los gráficos); el archivo Word es editable pero con menos fidelidad.</p></div>`}
 /* ---------- gráficos ---------- */
 function lineas(series,labels,titulo,max,min){
   const W=640,H=230,L=44,B=34,T=26,C=['#1e63e9','#16a34a','#f59e0b','#7c3aed','#dc2626'];
@@ -90,80 +90,43 @@ async function generar(){
   }catch(x){Z.msg=x.message||String(x);toast('⚠️','No se pudo crear el análisis',Z.msg)}
   Z.busy=false;R();
 }
-async function prep(){if(!window.INF)await loadScript('informes.js?v=2')}
+async function prep(){if(!window.INF)await loadScript('informes.js?v=2');if(!window.ANAM)await loadScript('analisis_motor.js?v=1')}
 const by=(arr,a)=>arr.find(x=>x.anio===a)||{};
 function slope(vs,an){const p=an.map((a,i)=>[a,vs[i]]).filter(x=>x[1]!=null);if(p.length<2)return null;const n=p.length,sx=p.reduce((s,x)=>s+x[0],0),sy=p.reduce((s,x)=>s+x[1],0),sxy=p.reduce((s,x)=>s+x[0]*x[1],0),sxx=p.reduce((s,x)=>s+x[0]*x[0],0);const d=n*sxx-sx*sx;if(!d)return null;const m=(n*sxy-sx*sy)/d;return{m,b:(sy-m*sx)/n}}
-function informe(r){
-  const U=INF._u,Lh=(typeof LH==='function')?LH():{l1:'',l2:'',l3:''},an=r.anios,ult=r.ult,u=by(r.pri,ult),first=r.pri[0];
-  const um=by(r.mun,ult),ud=by(r.dep,ult),up=by(r.pais,ult),colego=r.nivel==='colegio';
-  const emit=new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
-  const enc=U.enc('Análisis de resultados Saber 11 · Calendario '+(r.cal||'A')+' · '+an[0]+(an.length>1?'–'+an[an.length-1]:''),'Emitido el '+emit);
-  const dif=(a,b)=>a==null||b==null?null:Math.round((a-b)*10)/10;
-  const vP=dif(u.global,up.global),vD=dif(u.global,ud.global),vM=dif(u.global,um.global);
-  const evol=first&&first.anio!==ult?dif(u.global,first.global):null;
-  // posiciones
-  let posM='',posD='';
-  if(colego&&r.rank&&r.rank.length){const iD=r.rank.findIndex(x=>x.dane===r.dane);if(iD>=0){posD=`${iD+1} de ${r.rank.length}`;const rm=r.rank.filter(x=>norm(x.mcpio)===norm(r.ficha.mcpio||Z.mun));const iM=rm.findIndex(x=>x.dane===r.dane);if(iM>=0)posM=`${iM+1} de ${rm.length}`}}
-  // áreas
-  const ar=AREAS.map(([k,nm])=>({k,nm,v:u[k],p:up[k],d:ud[k],m:um[k],bp:dif(u[k],up[k]),first:first?first[k]:null})).filter(a=>a.v!=null);
-  const ord=[...ar].sort((a,b)=>b.v-a.v),fort=ord.slice(0,2),deb=[...ar].sort((a,b)=>(a.bp==null?99:a.bp)-(b.bp==null?99:b.bp)).slice(0,2);
-  const gl=r.pri.map(x=>x.global),tg=slope(gl,r.pri.map(x=>x.anio)),sig=ult+1;
-  const proy=tg?Math.max(0,Math.min(500,tg.m*sig+tg.b)):null;
-  const posTxt=(a,b)=>a==null?'':a>0?`<b style="color:#15803d">${f1(a)} puntos por encima</b> ${b}`:a<0?`<b style="color:#b91c1c">${f1(Math.abs(a))} puntos por debajo</b> ${b}`:`igual ${b}`;
-  const resumen=`<p style="font-size:10.5pt;text-align:justify">En <b>${ult}</b>, ${colego?'la institución':'el territorio'} <b>${e(r.titulo)}</b> obtuvo un puntaje global promedio de <b>${f1(u.global)}</b> sobre 500, con <b>${f0(u.n)}</b> estudiantes evaluados. Ese resultado está ${posTxt(vP,'del promedio nacional ('+f1(up.global)+')')}${ud.global!=null?', '+posTxt(vD,'del promedio departamental ('+f1(ud.global)+')'):''}${colego&&um.global!=null?' y '+posTxt(vM,'del promedio municipal ('+f1(um.global)+')'):''}.
-   ${evol!=null?`Frente a ${first.anio}, el puntaje global ${evol>0?'<b style="color:#15803d">subió '+f1(evol)+'</b>':evol<0?'<b style="color:#b91c1c">bajó '+f1(Math.abs(evol))+'</b>':'se mantuvo'} puntos.`:''}
-   ${posD?` En el ranking departamental de ${ult} ocupó el puesto <b>${posD}</b> (instituciones con 5 o más evaluados)${posM?' y el puesto <b>'+posM+'</b> en su municipio':''}.`:''}
-   ${fort.length?` Su área más fuerte es <b>${e(fort[0].nm)}</b> (${f1(fort[0].v)}) y las que más requieren atención son <b>${deb.map(a=>e(a.nm)).join('</b> y <b>')}</b>.`:''}</p>`;
-  const k=`<div class="k"><div><b>${f1(u.global)}</b>Puntaje global ${ult}</div><div><b>${f0(u.n)}</b>Estudiantes evaluados</div><div><b>${sg(vP)}</b>Frente al país</div><div><b>${evol!=null?sg(evol):'—'}</b>Cambio desde ${first&&first.anio}</div></div>`;
-  const ficha=`<table><tr><td><b>${colego?'Institución':'Territorio'}</b></td><td colspan="3">${e(r.titulo)}</td></tr>
-   ${colego?`<tr><td><b>Código DANE</b></td><td>${e(r.dane)}</td><td><b>Sector</b></td><td>${e(r.ficha.sector||'—')}</td></tr><tr><td><b>Municipio</b></td><td>${e(r.ficha.mcpio||Z.mun)}</td><td><b>Departamento</b></td><td>${e(r.ficha.depto||Z.dep)}</td></tr>`:`<tr><td><b>Departamento</b></td><td>${e(Z.dep)}</td><td><b>Municipio</b></td><td>${e(Z.mun||'Todos')}</td></tr>`}
-   <tr><td><b>Calendario</b></td><td>${r.cal||'A'}</td><td><b>Años analizados</b></td><td>${an.join(', ')}</td></tr><tr><td><b>Fuente</b></td><td colspan="3">ICFES · resultados agregados de Saber 11 (datos abiertos y publicaciones oficiales)</td></tr></table>`;
-  // tabla global por año
-  const lbl=colego?'Institución':'Territorio';
-  const tg1=`<table><tr><th>Año</th><th>Evaluados</th><th>${lbl}</th>${r.mun.length?'<th>Municipio</th>':''}<th>Departamento</th><th>País</th><th>Variación anual</th><th>Brecha con el país</th></tr>
-   ${r.pri.map((x,i)=>{const pv=i?dif(x.global,r.pri[i-1].global):null,bp=dif(x.global,by(r.pais,x.anio).global);return`<tr><td><b>${x.anio}</b></td><td>${f0(x.n)}</td><td><b>${f1(x.global)}</b></td>${r.mun.length?`<td>${f1(by(r.mun,x.anio).global)}</td>`:''}<td>${f1(by(r.dep,x.anio).global)}</td><td>${f1(by(r.pais,x.anio).global)}</td><td style="color:${col(pv)}">${i?sg(pv):'—'}</td><td style="color:${col(bp)}">${sg(bp)}</td></tr>`}).join('')}</table>`;
-  const serG=[{l:colego?'Institución':'Territorio',v:r.pri.map(x=>x.global)}];
-  if(r.mun.length&&colego)serG.push({l:'Municipio',v:an.map(a=>by(r.mun,a).global??null)});
-  serG.push({l:'Departamento',v:an.map(a=>by(r.dep,a).global??null)},{l:'País',v:an.map(a=>by(r.pais,a).global??null)});
-  const g1=lineas(serG,an,'Puntaje global promedio por año (escala 0–500)');
-  // áreas último año
-  const tA=`<table><tr><th>Prueba</th><th>${lbl}</th>${r.mun.length?'<th>Municipio</th>':''}<th>Departamento</th><th>País</th><th>Brecha con el país</th><th>Valoración</th></tr>${ar.map(a=>{const v=a.bp==null?'—':a.bp>=2?'Fortaleza':a.bp>=-2?'En el promedio':a.bp>=-6?'Por mejorar':'Prioridad';const cc=a.bp==null?'#64748b':a.bp>=2?'#15803d':a.bp>=-2?'#475569':a.bp>=-6?'#b45309':'#b91c1c';return`<tr><td><b>${a.nm}</b></td><td><b>${f1(a.v)}</b></td>${r.mun.length?`<td>${f1(a.m)}</td>`:''}<td>${f1(a.d)}</td><td>${f1(a.p)}</td><td style="color:${col(a.bp)}">${sg(a.bp)}</td><td style="color:${cc};font-weight:700">${v}</td></tr>`}).join('')}</table>`;
-  const bA=barras(ar.flatMap(a=>[{l:a.nm+' · '+(colego?'Institución':'Territorio'),v:a.v,c:'#1e63e9'},{l:a.nm+' · País',v:a.p,c:'#94a3b8'}]),'Promedio por prueba en '+ult+' (escala 0–100)',100);
-  // evolución por área
-  const tE=`<table><tr><th>Prueba</th>${an.map(a=>`<th>${a}</th>`).join('')}<th>Cambio total</th></tr>${AREAS.map(([k,nm])=>{const vs=r.pri.map(x=>x[k]);const ok=vs.filter(v=>v!=null);const ch=ok.length>1?Math.round((ok[ok.length-1]-ok[0])*10)/10:null;return`<tr><td><b>${nm}</b></td>${vs.map(v=>`<td>${f1(v)}</td>`).join('')}<td style="color:${col(ch)};font-weight:700">${sg(ch)}</td></tr>`}).join('')}</table>`;
-  const gE=an.length>1?lineas(AREAS.map(([k,nm])=>({l:nm.split(' ')[0]+(k==='soc'?' y C.':''),v:r.pri.map(x=>x[k]??null)})),an,'Evolución por prueba (escala 0–100)'):'';
-  // ranking top 10
-  let top='';
-  if(r.rank&&r.rank.length){const rm=r.rank.filter(x=>Z.mun&&norm(x.mcpio)===norm(Z.mun)).slice(0,10);const lista=rm.length?rm:r.rank.slice(0,10);
-    top=`<h3>5. Posición en el ranking ${rm.length?'del municipio':'del departamento'} · ${ult}</h3><table><tr><th>Puesto</th><th>Institución</th><th>Municipio</th><th>Sector</th><th>Evaluados</th><th>Global</th></tr>${lista.map((x,i)=>{const mine=x.dane===r.dane;return`<tr style="${mine?'background:#e8f1ff;font-weight:700':''}"><td>${i+1}</td><td>${e(x.nombre)}${mine?' ◀':''}</td><td>${e(x.mcpio)}</td><td>${e(x.sector||'')}</td><td>${f0(x.n)}</td><td><b>${f1(x.g)}</b></td></tr>`}).join('')}</table><p style="font-size:9pt;color:#64748b">Ranking de ${rm.length?'los establecimientos del municipio':'los establecimientos del departamento'} con 5 o más estudiantes evaluados; el puntaje es el promedio de todas las sedes y jornadas del establecimiento.${colego&&posD?` Posición departamental de la institución: ${posD}${posM?'; en el municipio: '+posM:''}.`:''}</p>`}
-  const analisisAreas=`<ul style="font-size:10pt">${ar.map(a=>`<li><b>${a.nm}:</b> promedio ${f1(a.v)}${a.bp!=null?`, ${a.bp>=0?'por encima':'por debajo'} del país por ${f1(Math.abs(a.bp))} puntos`:''}${a.first!=null&&first.anio!==ult?`; frente a ${first.anio} ${a.v>a.first?'avanzó':'retrocedió'} ${f1(Math.abs(a.v-a.first))} puntos`:''}.</li>`).join('')}</ul>`;
-  const recom=deb.length?deb.map(a=>`<tr><td><b>${a.nm}</b></td><td>${f1(a.v)}${a.bp!=null?' ('+sg(a.bp)+' vs. país)':''}</td><td><ul>${U.acc(a.nm).slice(0,3).map(t=>`<li>${e(t)}</li>`).join('')}</ul></td></tr>`).join(''):'';
-  const concl=`<ul style="font-size:10pt">
-   <li>${vP==null?'':vP>=0?`El resultado global supera al promedio nacional en ${f1(vP)} puntos: se recomienda consolidar las prácticas que funcionan y documentarlas.`:`El resultado global está ${f1(Math.abs(vP))} puntos por debajo del promedio nacional: se recomienda un plan de mejoramiento priorizado por áreas.`}</li>
-   ${tg&&an.length>=3?`<li>La tendencia de los ${an.length} años analizados es de <b>${tg.m>=0?'+':''}${f1(tg.m)} puntos por año</b>; si se mantiene, el puntaje global de ${sig} sería cercano a <b>${f0(proy)}</b> (estimación estadística, no un resultado oficial).</li>`:''}
-   ${fort.length?`<li>Fortalezas: ${fort.map(a=>a.nm+' ('+f1(a.v)+')').join(' y ')}.</li>`:''}
-   ${deb.length?`<li>Áreas prioritarias: ${deb.map(a=>a.nm+' ('+f1(a.v)+')').join(' y ')}.</li>`:''}
-   <li>Se sugiere socializar este informe con el consejo académico y los docentes de área, fijar metas por prueba y hacer seguimiento con simulacros periódicos en AULA360.</li></ul>`;
-  const pie=`<p style="font-size:9pt;color:#64748b">Fuente de los datos: ICFES, «Resultados únicos Saber 11», publicados en datos.gov.co (datos abiertos). Los promedios son ponderados por número de estudiantes evaluados. El puntaje global va de 0 a 500 y el de cada prueba de 0 a 100. ${an.some(a=>a>=2023)?'':'Los años más recientes aún no están en los datos abiertos del ICFES. '}Informe generado por AULA360 el ${emit}.</p>`;
-  const pg1=`<div class="inf pg">${enc}${k}<h3>1. Ficha técnica</h3>${ficha}<h3>2. Resumen ejecutivo</h3>${resumen}<h3>3. Evolución del puntaje global</h3>${g1}${tG(tg1)}</div>`;
-  const pg2=`<div class="inf pg">${enc}<h3>4. Resultados por prueba en ${ult}</h3>${tA}${bA}<h3>Evolución por prueba</h3>${tE}${gE}</div>`;
-  const pg3=`<div class="inf pg">${enc}${top}<h3>6. Análisis por prueba</h3>${analisisAreas}${recom?`<h3>7. Recomendaciones para el plan de mejoramiento</h3><table><tr><th>Prueba prioritaria</th><th>Situación ${ult}</th><th>Estrategias sugeridas</th></tr>${recom}</table>`:''}<h3>8. Conclusiones</h3>${concl}${pie}</div>`;
-  return pg1+pg2+pg3;
-  function tG(t){return t}
-}
+function ctxDoc(){const L=(typeof LH==='function')?LH():{l1:'',l2:'',l3:'',logo:''};
+  return{emit:new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}),membrete:{l1:L.l1||M.school_name||'',l2:L.l2||'',l3:L.l3||'',logo:L.logo&&typeof LOGO!=='undefined'?LOGO+encodeURI(L.logo):''},acc:n=>{try{return INF._u.acc(n)}catch(x){return[]}},sec:Z.sec,obs:Z.obs,horizontes:Z.hor}}
+function informe(r){Z.out=ANAM.build(r,ctxDoc());return Z.out.doc}
+function rehacer(){if(!Z.rep)return;Z.html=informe(Z.rep);const f=document.getElementById('ana-if');if(f)f.srcdoc=Z.html;R()}
+function setSec(k,on){Z.sec[k]=on;Z.html=informe(Z.rep)}
+function setObs(v){Z.obs=v;Z.html=informe(Z.rep)}
+function secUi(){return`<details style="margin-top:12px" open><summary style="font-weight:700;font-size:13px;cursor:pointer">Elegir qué secciones incluir</summary><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${ANAM.SECC.map(([k,n])=>`<label style="border:1.5px solid #cbd5e1;border-radius:9px;padding:6px 10px;font-size:13px"><input type="checkbox" ${Z.sec[k]===false?'':'checked'} onchange="ANA.setSec('${k}',this.checked)"> ${n}</label>`).join('')}</div>
+  <label style="display:block;font-size:13px;font-weight:700;margin-top:10px">Observaciones de la institución (opcional, salen en las conclusiones)<textarea oninput="ANA.setObs(this.value)" rows="3" style="width:100%;margin-top:4px;border:1.5px solid #cbd5e1;border-radius:10px;padding:8px;font-weight:400">${e(Z.obs)}</textarea></label></details>`}
 /* ---------- acciones ---------- */
 function membreteHtml(){const L=(typeof LH==='function')?LH():{l1:'',l2:'',l3:'',logo:''};
   const logo=L.logo&&typeof LOGO!=='undefined'?`<img src="${LOGO}${encodeURI(L.logo)}" style="height:60px;float:left;margin-right:12px">`:'';
   return`<div style="text-align:center;border-bottom:2px solid #1e63e9;padding-bottom:6px;margin-bottom:10px;overflow:hidden">${logo}<div style="font-weight:bold;font-size:13pt">${e(L.l1||M.school_name||'')}</div>${L.l2?`<div>${e(L.l2)}</div>`:''}${L.l3?`<div>${e(L.l3)}</div>`:''}</div>`}
 function cerrar(){document.getElementById('ana-prev')?.remove()}
-async function vista(){if(!Z.rep)return;await prep();
-  cerrar();const d=document.createElement('div');d.id='ana-prev';d.style.cssText='position:fixed;inset:0;z-index:200;background:#0008;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px';
-  d.innerHTML=`<div style="background:#fff;border-radius:14px;max-width:860px;width:100%;padding:16px"><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:10px;position:sticky;top:0;background:#fff;padding:6px 0;z-index:2"><b>Vista preliminar · ${e(Z.rep.titulo)}</b><div style="display:flex;gap:6px;flex-wrap:wrap"><button onclick="ANA.descargar()" style="background:#0f766e;color:#fff;padding:8px 12px;border-radius:10px;font-weight:800">⬇️ Descargar</button><button onclick="ANA.imprimir()" style="background:#16a34a;color:#fff;padding:8px 12px;border-radius:10px;font-weight:800">🖨️ Imprimir</button><button onclick="ANA.enviar()" style="background:#7c3aed;color:#fff;padding:8px 12px;border-radius:10px;font-weight:800">📨 Enviar</button><button onclick="ANA.cerrar()" style="background:#e2e8f0;padding:8px 12px;border-radius:10px;font-weight:700">Cerrar</button></div></div><div>${membreteHtml()}${INF._u.CSS}${Z.html}</div></div>`;
-  document.body.appendChild(d)}
-async function imprimir(){if(!Z.rep)return;await prep();doPrint(INF._u.CSS+Z.html,{tipo:'ANA',titulo:'Análisis Saber 11 · '+Z.rep.titulo,hoja:true})}
-function docBlob(){const h=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Análisis Saber 11</title></head><body>${membreteHtml()}${INF._u.CSS}${Z.html}</body></html>`;return new Blob(['﻿',h],{type:'application/msword'})}
+async function vista(){if(!Z.rep)return;await prep();Z.html=informe(Z.rep);
+  cerrar();const d=document.createElement('div');d.id='ana-prev';d.style.cssText='position:fixed;inset:0;z-index:200;background:#0008;display:flex;align-items:flex-start;justify-content:center;padding:10px';
+  d.innerHTML=`<div style="background:#fff;border-radius:14px;max-width:900px;width:100%;height:calc(100vh - 20px);display:flex;flex-direction:column;padding:10px"><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Vista preliminar · ${e(Z.rep.titulo)} · ${Z.out.pages} páginas</b><div style="display:flex;gap:6px;flex-wrap:wrap"><button onclick="ANA.descargar()" style="background:#0f766e;color:#fff;padding:8px 12px;border-radius:10px;font-weight:800">⬇️ Descargar</button><button onclick="ANA.imprimir()" style="background:#16a34a;color:#fff;padding:8px 12px;border-radius:10px;font-weight:800">🖨️ Imprimir / PDF</button><button onclick="ANA.enviar()" style="background:#7c3aed;color:#fff;padding:8px 12px;border-radius:10px;font-weight:800">📨 Enviar</button><button onclick="ANA.cerrar()" style="background:#e2e8f0;padding:8px 12px;border-radius:10px;font-weight:700">Cerrar</button></div></div><iframe id="ana-if" style="flex:1;border:1px solid #e2e8f0;border-radius:8px;width:100%"></iframe></div>`;
+  document.body.appendChild(d);document.getElementById('ana-if').srcdoc=Z.html}
+async function imprimir(){if(!Z.rep)return;await prep();Z.html=informe(Z.rep);
+  document.getElementById('ana-pr')?.remove();const f=document.createElement('iframe');f.id='ana-pr';f.style.cssText='position:fixed;left:-9999px;top:0;width:210mm;height:297mm;border:0';f.srcdoc=Z.html;
+  f.onload=()=>setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(x){err(x)}},400);document.body.appendChild(f)}
+async function svgPng(html){ // Word no dibuja SVG: se convierten a imagen
+  const box=document.createElement('div');box.innerHTML=html;
+  for(const s of [...box.querySelectorAll('svg')]){try{
+    const vb=(s.getAttribute('viewBox')||'0 0 640 250').split(' ').map(Number),w=vb[2],h=vb[3];
+    s.setAttribute('xmlns','http://www.w3.org/2000/svg');s.setAttribute('width',w);s.setAttribute('height',h);
+    const img=new Image();await new Promise((ok,ko)=>{img.onload=ok;img.onerror=ko;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s.outerHTML)});
+    const c=document.createElement('canvas');c.width=w*2;c.height=h*2;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    const im=document.createElement('img');im.src=c.toDataURL('image/png');im.width=Math.min(640,w);im.height=Math.round(Math.min(640,w)*h/w);s.replaceWith(im)}catch(x){}}
+  return box.innerHTML}
+async function docBlob(){Z.html=informe(Z.rep);const o=Z.out;let body=await svgPng(o.body);
+  const css=o.css.replace('.sheet{width:210mm;height:296mm;','.sheet{width:auto;height:auto;').replace(/overflow:hidden;page-break-after:always/,'page-break-after:always');
+  const h=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Informe Saber 11</title><style>${css}.hd,.ft{position:static!important}.cover{background:#fff!important;color:#000!important}.cover *{color:#000!important}</style></head><body>${body}</body></html>`;return new Blob(['\ufeff',h],{type:'application/msword'})}
 const nombreArchivo=()=>('Analisis_Saber11_'+Z.rep.titulo.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').slice(0,50)+'_'+Z.rep.anios[0]+'-'+Z.rep.anios[Z.rep.anios.length-1]+'.doc');
-async function descargar(){if(!Z.rep)return;await prep();const a=document.createElement('a');a.href=URL.createObjectURL(docBlob());a.download=nombreArchivo();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast('⬇️','Descargado','El archivo se abre con Word. Para PDF usa «Imprimir / guardar PDF».')}
+async function descargar(){if(!Z.rep)return;await prep();const bl=await docBlob();const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=nombreArchivo();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast('⬇️','Descargado','El archivo se abre con Word. Para PDF usa «Imprimir / guardar PDF».')}
 async function enviar(){
   if(!Z.rep)return;await prep();
   let dir=[];try{dir=await rpc('directorio_colegio')}catch(x){return err(x)}
@@ -180,7 +143,7 @@ async function enviarYa(){
   const b=document.getElementById('ana-go');if(b){b.disabled=true;b.textContent='Enviando…'}
   try{
     const nombre=nombreArchivo(),path=(M.colegio_id||'sin')+'/'+M.id+'/'+Date.now()+'-'+nombre;
-    const up=await sb.storage.from('mensajes').upload(path,docBlob(),{contentType:'application/msword'});if(up.error)throw up.error;
+    const up=await sb.storage.from('mensajes').upload(path,await docBlob(),{contentType:'application/msword'});if(up.error)throw up.error;
     let ok=0;const u=Z.rep.pri[Z.rep.pri.length-1];
     const txt=`Te comparto el análisis de resultados Saber 11 de ${Z.rep.titulo}, años ${Z.rep.anios.join(', ')}.\nPuntaje global ${Z.rep.ult}: ${f1(u.global)} / 500.\nEl informe completo va adjunto.`;
     for(const id of ids){const r=await sb.rpc('mensaje_enviar',{p_para:id,p_tipo:'documento',p_asunto:'Análisis Saber 11 · '+Z.rep.titulo,p_texto:txt,p_path:path,p_nombre:nombre});if(!r.error)ok++}
@@ -189,10 +152,10 @@ async function enviarYa(){
 async function setCal(c){Z.cal=c;Z.rep=null;Z.msg='';
   try{Z.anios=(await rpc('saber_anios',{p_cal:c}))||[];Z.sel=Z.anios.filter(a=>VENT.includes(a));
     if(Z.dep&&Z.mun){Z.cols=await rpc('saber_colegios',{p_depto:Z.dep,p_mcpio:Z.mun,p_cal:c});if(Z.dane&&!Z.cols.some(x=>x.dane===Z.dane)){Z.dane='';Z.colNombre=''}}}catch(x){err(x)}R()}
-return{setCal,load,view,generar,vista,imprimir,descargar,enviar,enviarYa,cerrar,
+return{setSec,setObs,rehacer,setCal,load,view,generar,vista,imprimir,descargar,enviar,enviarYa,cerrar,
   async dep(v){Z.dep=v;Z.mun='';Z.dane='';Z.cols=[];Z.mcpios=[];Z.rep=null;Z.msg='';if(v){try{Z.mcpios=await rpc('saber_mcpios',{p_depto:v})}catch(x){err(x)}}R()},
   async mun(v){Z.mun=v;Z.dane='';Z.cols=[];Z.rep=null;if(v){try{Z.cols=await rpc('saber_colegios',{p_depto:Z.dep,p_mcpio:v,p_cal:Z.cal})}catch(x){err(x)}}R()},
   col(v){Z.dane=v;const c=Z.cols.find(x=>x.dane===v);Z.colNombre=c?c.nombre:'';Z.rep=null;R()},
   anio(a,on){const s=new Set(Z.sel);on?s.add(a):s.delete(a);Z.sel=[...s].sort();Z.rep=null;R()},
   ult(n){Z.sel=VENT.slice(-n).filter(a=>Z.anios.includes(a));Z.rep=null;if(!Z.sel.length)Z.msg='Para esos años el ICFES aún no ha publicado resultados en datos abiertos.';else Z.msg='';R()},quitar(){Z.sel=[];Z.rep=null;R()},
-  _t:{informe,set:x=>{Z.rep=x;Z.html=informe(x)},html:()=>Z.html}}})();
+  _t:{informe,set:async x=>{await prep();Z.rep=x;Z.html=informe(x)},html:()=>Z.html,out:()=>Z.out}}})();
