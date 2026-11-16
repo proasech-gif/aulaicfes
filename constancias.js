@@ -45,17 +45,21 @@ const CSS_CE=`.ce{font-family:Arial,Helvetica,sans-serif;font-size:11.5pt;line-h
 .ce h2{text-align:center;font-size:14pt;margin:22px 0 4px;letter-spacing:.05em}.ce .rc{text-align:center;font-weight:700;margin-bottom:22px}.ce p{text-align:justify;margin:0 0 14px}.ce .sg{margin-top:70px;display:flex;gap:50px;text-align:center}.ce .sg div{flex:1;border-top:1px solid #000;padding-top:4px;font-size:10.5pt}
 .ce.pg{page-break-after:always;break-after:page;min-height:24cm}.ce.pg:last-child{page-break-after:auto}`;
 const CSS=`*{box-sizing:border-box}html{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;font-family:Georgia,'Times New Roman',serif;color:#1f2937;background:#cbd5e1}
-.dp{width:27.94cm;height:21.59cm;position:relative;overflow:hidden;background:#fff;margin:0 auto 8px;page-break-after:always;break-after:page}
+.dp{width:27.94cm;height:21.59cm;position:relative;overflow:hidden;background:#fffdf8;margin:0 auto 8px;page-break-after:always;break-after:page;font-family:'EB Garamond','Palatino Linotype','Book Antiqua',Georgia,serif;color:#27324a}
 .dp:last-child{page-break-after:auto;break-after:auto}
+.dp .bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}.dp .bg svg{width:20cm;height:20cm}
 .dp .wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-.dp .wm img{width:13cm;opacity:.09}.dp .wm div{font:700 40pt Georgia;opacity:.07;transform:rotate(-25deg);text-align:center;width:22cm;color:#1e3a8a}
-.dp .b1{position:absolute;inset:.7cm;border:3px solid #1e3a8a}.dp .b2{position:absolute;inset:.18cm;border:1px solid #b8892b}
-.dp .c{position:absolute;inset:1.3cm 2cm;text-align:center;display:flex;flex-direction:column;align-items:center}
-.dp .lg{height:2.6cm;margin-bottom:.2cm}.dp .ins{font:700 20pt Georgia;color:#1e3a8a;letter-spacing:.04em;text-transform:uppercase}.dp .sub{font-size:10pt;color:#475569;margin-top:.05cm}
-.dp .tt{font:700 36pt Georgia;color:#b8892b;letter-spacing:.06em;margin:1.1cm 0 .15cm;text-transform:uppercase}.dp .t2{font-size:14pt;color:#334155;letter-spacing:.12em;text-transform:uppercase}
-.dp .tx{font-size:15pt;line-height:1.55;margin:.45cm 1cm;color:#334155}.dp .nm{font:italic 700 36pt Georgia;color:#1e3a8a;margin:.5cm 0 0;border-bottom:1.5px solid #b8892b;padding:0 1cm .1cm}
-.dp .id{font-size:12pt;color:#475569;margin:.15cm 0 .3cm}
-.dp .fm{position:absolute;left:0;right:0;bottom:.3cm;display:flex;justify-content:space-around;font-size:12pt}.dp .fm div{width:7.5cm;border-top:1.2px solid #334155;padding-top:.12cm}.dp .fm b{display:block}
+.dp .wm img{width:12cm;opacity:.10}.dp .wm div{font:700 36pt 'Cinzel',Georgia,serif;opacity:.06;transform:rotate(-25deg);text-align:center;width:22cm;color:#12306b}
+.dp .fr{position:absolute;inset:.55cm;border:.28cm solid #12306b}.dp .fr2{position:absolute;inset:.95cm;border:1.5px solid #b8892b}.dp .fr3{position:absolute;inset:1.15cm;border:.5px solid #b8892b}
+.dp .co{position:absolute;width:3cm;height:3cm}.dp .co svg{width:100%;height:100%;display:block}.dp .co.q1{left:.75cm;top:.75cm}.dp .co.q2{right:.75cm;top:.75cm;transform:scaleX(-1)}.dp .co.q3{left:.75cm;bottom:.75cm;transform:scaleY(-1)}.dp .co.q4{right:.75cm;bottom:.75cm;transform:scale(-1,-1)}
+.dp .c{position:absolute;inset:1.5cm 2.6cm 1.3cm;text-align:center;display:flex;flex-direction:column;align-items:center}
+.dp .lg{height:2.6cm;margin-bottom:.15cm}.dp .ins{font:700 17pt 'Cinzel',Georgia,serif;color:#12306b;letter-spacing:.07em;text-transform:uppercase;line-height:1.2}.dp .sub{font-size:10.5pt;color:#55607a;margin-top:.08cm;letter-spacing:.03em}
+.dp .dv{width:9cm;height:.5cm;margin:.28cm 0 .05cm}
+.dp .tt{font:700 33pt 'Cinzel',Georgia,serif;color:#12306b;letter-spacing:.09em;margin:.3cm 0 0;text-transform:uppercase;line-height:1.15}.dp .t2{font:600 12.5pt 'Cinzel',Georgia,serif;color:#a67c1f;letter-spacing:.2em;text-transform:uppercase;margin-top:.12cm}
+.dp .tx{font-size:15.5pt;line-height:1.55;margin:.45cm 1.2cm;color:#33405c}.dp .tx.s{font-size:12.5pt;color:#55607a;margin-top:.15cm}
+.dp .nm{font:400 46pt 'Great Vibes','Monotype Corsiva','Apple Chancery','Lucida Calligraphy','Brush Script MT',cursive;color:#12306b;margin:.5cm 0 0;padding:0 1.5cm;line-height:1.15;border-bottom:1.2px solid #b8892b;min-width:14cm}
+.dp .id{font-size:12pt;color:#55607a;margin:.12cm 0 .1cm}
+.dp .fm{position:absolute;left:1.2cm;right:1.2cm;bottom:.2cm;display:flex;justify-content:space-between;align-items:flex-end;font-size:12pt}.dp .fm>div{width:7.6cm;border-top:1.2px solid #12306b;padding-top:.12cm;text-align:center}.dp .fm b{display:block;font-weight:600}.dp .fm .se{border:0;width:3.6cm;padding:0;height:3.6cm;position:relative;top:.15cm}
 .cd{width:8.56cm;height:5.4cm;border:.6pt solid #94a3b8;border-radius:.3cm;overflow:hidden;position:relative;background:#fff;font-family:Arial,Helvetica,sans-serif}
 .cd .bn{background:#1e3a8a;color:#fff;padding:.18cm .3cm;display:flex;gap:.2cm;align-items:center;height:1.35cm}.cd .bn img{height:1cm;background:#fff;border-radius:.1cm;padding:.04cm}.cd .bn b{font-size:7.4pt;line-height:1.15;text-transform:uppercase}.cd .bn i{display:block;font-size:6pt;font-style:normal;opacity:.85}
 .cd .ph{position:absolute;left:.3cm;top:1.65cm;width:2.1cm;height:2.7cm;border:.6pt dashed #94a3b8;font-size:6pt;color:#94a3b8;display:flex;align-items:center;justify-content:center;text-align:center}
@@ -65,28 +69,42 @@ const CSS=`*{box-sizing:border-box}html{-webkit-print-color-adjust:exact;print-c
 .cdp{display:grid;grid-template-columns:8.56cm 8.56cm;gap:.35cm .5cm;justify-content:center;padding:1.2cm 0;page-break-after:always;background:#fff;align-content:start}
 .cdp:last-child{page-break-after:auto}
 `+CSS_CE+``;
-function wm(c){return`<div class="wm">${c.logo?`<img src="${e(c.logo)}" alt="">`:`<div>${e(c.l1)}</div>`}</div>`}
-function cabecera(c){return`${c.logo?`<img class="lg" src="${e(c.logo)}" alt="">`:''}<div class="ins">${e(c.l1)}</div><div class="sub">${e([c.l2,c.l3].filter(Boolean).join(' · '))}</div>`}
-function firmas(){return`<div class="fm"><div><b>${e(Z.rector||'')}</b>Rector(a)</div><div><b>${e(Z.secre||'')}</b>Secretario(a)</div></div>`}
+const GOLD='#b8892b';
+function rosette(){let g='';for(let i=0;i<48;i++)g+=`<ellipse cx="200" cy="200" rx="188" ry="70" transform="rotate(${i*3.75} 200 200)"/>`;
+  for(let r=40;r<=190;r+=30)g+=`<circle cx="200" cy="200" r="${r}" stroke-width=".6"/>`;
+  return`<svg viewBox="0 0 400 400" fill="none" stroke="#12306b" stroke-width=".45" opacity=".075">${g}</svg>`}
+function corner(){return`<svg viewBox="0 0 120 120" fill="none" stroke="${GOLD}" stroke-linecap="round"><path stroke-width="2.4" d="M6 114V34Q6 6 34 6H114"/><path stroke-width="1" d="M16 114V40Q16 16 40 16H114"/><path stroke-width="1.6" d="M30 62Q30 30 62 30"/><circle cx="34" cy="34" r="9" stroke-width="1.6"/><circle cx="34" cy="34" r="3.2" fill="${GOLD}"/><path stroke-width="1.2" d="M46 22Q58 22 62 34M22 46Q22 58 34 62"/><path stroke-width="1" d="M70 16q8 6 16 0M16 70q6 8 0 16"/></svg>`}
+function divisor(){return`<svg class="dv" viewBox="0 0 300 20" fill="none" stroke="${GOLD}"><path stroke-width="1.2" d="M6 10H128M172 10H294"/><path stroke-width="1" d="M136 10q7-9 14 0q7 9 14 0"/><path fill="${GOLD}" d="M150 3l5 7-5 7-5-7z"/><circle cx="130" cy="10" r="2" fill="${GOLD}"/><circle cx="170" cy="10" r="2" fill="${GOLD}"/></svg>`}
+function sello(c){let p='';for(let i=0;i<32;i++){const a=i*Math.PI/16,r=i%2?44:50;p+=(i?'L':'M')+(60+r*Math.cos(a)).toFixed(1)+' '+(60+r*Math.sin(a)).toFixed(1)}
+  let st='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?7:17;st+=(i?'L':'M')+(60+r*Math.cos(a)).toFixed(1)+' '+(52+r*Math.sin(a)).toFixed(1)}
+  return`<svg viewBox="0 0 120 150" width="100%" height="100%"><defs><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1d98c"/><stop offset=".5" stop-color="#c79a35"/><stop offset="1" stop-color="#8f6a14"/></linearGradient><path id="ar" d="M60 60m-33 0a33 33 0 1 1 66 0a33 33 0 1 1 -66 0"/></defs>
+   <path d="M38 96L26 148l22-12 12 14 6-50z" fill="#12306b"/><path d="M82 96l12 52-22-12-12 14-6-50z" fill="#1d4a9c"/>
+   <path d="${p}Z" fill="url(#gd)" stroke="#8f6a14" stroke-width=".8"/><circle cx="60" cy="60" r="40" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1"/><circle cx="60" cy="60" r="27" fill="#12306b"/>
+   <text font-family="Cinzel,Georgia,serif" font-size="6.6" font-weight="700" fill="#12306b" letter-spacing="1.3"><textPath href="#ar" startOffset="2%">ESFUERZO · EXCELENCIA · SUPERACIÓN ·</textPath></text>
+   <path d="${st}Z" fill="url(#gd)"/></svg>`}
+function marco(c){return`<div class="bg">${rosette()}</div>${c.logo?`<div class="wm"><img src="${e(c.logo)}" alt=""></div>`:''}<div class="fr"></div><div class="fr2"></div><div class="fr3"></div>${['q1','q2','q3','q4'].map(k=>`<div class="co ${k}">${corner()}</div>`).join('')}`}
+function cabecera(c){return`${c.logo?`<img class="lg" src="${e(c.logo)}" alt="">`:''}<div class="ins">${e(c.l1)}</div><div class="sub">${e([c.l2,c.l3].filter(Boolean).join(' · '))}</div>${Z.res?`<div class="sub">${e(Z.res)}</div>`:''}${divisor()}`}
+function firmas(c){return`<div class="fm"><div><b>${e(Z.rector||'')}</b>Rector(a)</div><div class="se">${sello(c)}</div><div><b>${e(Z.secre||'')}</b>Secretario(a)</div></div>`}
 function diploma(p,c){
   const g=p.g!=null?p.g:(Z.grado===''?null:+Z.grado);
   const T={0:['Diploma de Preescolar','Educación Preescolar','ha culminado satisfactoriamente el grado de <b>Transición</b> del nivel de Educación Preescolar, habiendo alcanzado los propósitos de formación previstos para el nivel.'],
-   5:['Diploma de Básica Primaria','Educación Básica Primaria','ha cursado y aprobado satisfactoriamente el <b>quinto grado</b> y, con él, el ciclo de <b>Educación Básica Primaria</b>.'],
-   9:['Diploma de Básica Secundaria','Educación Básica Secundaria','ha cursado y aprobado satisfactoriamente el <b>noveno grado</b> y, con él, el ciclo de <b>Educación Básica Secundaria</b>.'],
+   5:['Diploma','Educación Básica Primaria','ha cursado y aprobado satisfactoriamente el <b>quinto grado</b> y, con él, el ciclo de <b>Educación Básica Primaria</b>.'],
+   9:['Diploma','Educación Básica Secundaria','ha cursado y aprobado satisfactoriamente el <b>noveno grado</b> y, con él, el ciclo de <b>Educación Básica Secundaria</b>.'],
    11:['Título de Bachiller','Educación Media'+(Z.modal?' · '+Z.modal:''),'ha cursado y aprobado todos los grados de la Educación Básica y Media y cumplido los requisitos de ley, por lo cual se le confiere el título de <b>BACHILLER'+(Z.modal?' '+e(Z.modal).toUpperCase():'')+'</b>.']}[g]||['Diploma','',''];
-  return`<div class="dp">${wm(c)}<div class="b1"><div class="b2"></div></div><div class="c">${cabecera(c)}${Z.res?`<div class="sub">${e(Z.res)}</div>`:''}
+  return`<div class="dp">${marco(c)}<div class="c">${cabecera(c)}
    <div class="tt">${T[0]}</div><div class="t2">${T[1]}</div>
-   <div class="tx" style="margin-top:.35cm">El rector y el consejo directivo de la institución, en uso de sus atribuciones legales y conforme a la Ley 115 de 1994, hacen constar que</div>
-   <div class="nm">${e((p.n||'').toUpperCase())}</div><div class="id">${p.d?'Documento de identidad N.º '+e(p.d):''}</div>
-   <div class="tx">${T[2]}</div><div class="tx" style="font-size:12.5pt;color:#475569">Se expide en ${e(Z.ciudad||'__________')}, ${fechaLarga(Z.fecha)}.</div>${firmas()}</div></div>`}
+   <div class="tx s" style="margin-top:.5cm">El rector y el consejo directivo, en uso de sus atribuciones legales y conforme a la Ley 115 de 1994, hacen constar que</div>
+   <div class="nm">${e(titulo(p.n))}</div><div class="id">${p.d?'Documento de identidad N.º '+e(p.d):''}</div>
+   <div class="tx" style="margin-top:.4cm">${T[2]}</div><div class="tx s">Se expide en ${e(Z.ciudad||'__________')}, ${fechaLarga(Z.fecha)}.</div>${firmas(c)}</div></div>`}
 function mencion(n,c){
-  const mot=Z.mc.otro.trim()||Z.mc.motivo,pl={estudiantes:'a la estudiante o al estudiante',docentes:'al docente',administrativos:'al miembro del personal administrativo',padres:'al padre o madre de familia'}[Z.mc.persona];
-  return`<div class="dp">${wm(c)}<div class="b1"><div class="b2"></div></div><div class="c">${cabecera(c)}
-   <div class="tt" style="font-size:34pt">Mención de Honor</div>
-   <div class="tx" style="margin-top:.5cm">La institución educativa otorga la presente mención de honor ${Z.mc.persona==='estudiantes'?'a':'a'}</div>
-   <div class="nm">${e(n.toUpperCase())}</div>
-   <div class="tx" style="margin-top:.6cm">en reconocimiento a su <b>${e(mot.charAt(0).toLowerCase()+mot.slice(1))}</b>, con la gratitud y el orgullo de toda la comunidad educativa.</div>
-   <div class="tx" style="font-size:12.5pt;color:#475569">${e(Z.ciudad||'__________')}, ${fechaCorta(Z.fecha)}.</div>${firmas()}</div></div>`}
+  const mot=Z.mc.otro.trim()||Z.mc.motivo;
+  return`<div class="dp">${marco(c)}<div class="c">${cabecera(c)}
+   <div class="tt" style="font-size:36pt;margin-top:.2cm">Mención de Honor</div>
+   <div class="tx s" style="margin-top:.45cm">La institución educativa otorga la presente mención a</div>
+   <div class="nm">${e(titulo(n))}</div>
+   <div class="tx" style="margin-top:.55cm">en reconocimiento a su <b>${e(mot.charAt(0).toLowerCase()+mot.slice(1))}</b>, con la gratitud y el orgullo de toda la comunidad educativa.</div>
+   <div class="tx s">${e(Z.ciudad||'__________')}, ${fechaCorta(Z.fecha)}.</div>${firmas(c)}</div></div>`}
+const titulo=n=>String(n||'').toLowerCase().replace(/(^|[\s\-'])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase());
 function carnes(l,c){
   const anio=new Date(Z.fecha+'T12:00:00').getFullYear();let out='';
   for(let i=0;i<l.length;i+=4){
@@ -113,7 +131,7 @@ function docHtml(){
   else{const ns=Z.mc.nombres.split('\n').map(s=>s.trim()).filter(Boolean).concat(Z.mc.staff.filter(s=>s.on).map(s=>s.n));body=ns.map(n=>mencion(n,c)).join('')}
   return{body,orient,n:body?(Z.t==='menc'?Z.mc.nombres.split('\n').filter(s=>s.trim()).length+Z.mc.staff.filter(s=>s.on).length:l.length):0}
 }
-const full=(d)=>`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${Z.t==='dipl'?'Diplomas':Z.t==='cert'?'Certificados de estudio':Z.t==='carn'?'Carnés estudiantiles':'Menciones de honor'}</title><style>@page{size:${d.orient==='landscape'?'27.94cm 21.59cm':'21.59cm 27.94cm'};margin:0}${CSS}${d.orient==='portrait'&&Z.t==='cert'?'@page{margin:2cm}.ce.pg{min-height:auto}':''}${d.orient==='landscape'?'':'body{background:#e2e8f0}'}</style></head><body>${d.body}<script>(function(){function z(){var w=innerWidth,k=Math.min(1,(w-8)/${d.orient==='landscape'?1056:820});document.body.style.zoom=k}z();addEventListener('resize',z);addEventListener('beforeprint',function(){document.body.style.zoom=1});addEventListener('afterprint',z)})()<\/script></body></html>`;
+const full=(d)=>`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${Z.t==='dipl'?'Diplomas':Z.t==='cert'?'Certificados de estudio':Z.t==='carn'?'Carnés estudiantiles':'Menciones de honor'}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Great+Vibes&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap"><style>@page{size:${d.orient==='landscape'?'27.94cm 21.59cm':'21.59cm 27.94cm'};margin:0}${CSS}${d.orient==='portrait'&&Z.t==='cert'?'@page{margin:2cm}.ce.pg{min-height:auto}':''}${d.orient==='landscape'?'':'body{background:#e2e8f0}'}</style></head><body>${d.body}<script>(function(){function z(){var w=innerWidth,k=Math.min(1,(w-8)/${d.orient==='landscape'?1056:820});document.body.style.zoom=k}z();addEventListener('resize',z);addEventListener('beforeprint',function(){document.body.style.zoom=1});addEventListener('afterprint',z)})()<\/script></body></html>`;
 function validar(){const d=docHtml();if(!d.n){toast('⚠️',Z.t==='menc'?'Escribe al menos un nombre':'Elige al menos un estudiante',Z.t==='menc'?'Un nombre por línea.':'Marca estudiantes en la lista o escribe nombres abajo.');return null}return d}
 function vista(){const d=validar();if(!d)return;
   document.getElementById('cst-prev')?.remove();const m=document.createElement('div');m.id='cst-prev';m.style.cssText='position:fixed;inset:0;z-index:200;background:#0008;display:flex;justify-content:center;padding:10px';
@@ -125,7 +143,7 @@ async function imprimir(){
     const c=ctx();document.getElementById('cst-prev')?.remove();
     return doPrint(`<style>${CSS_CE.replace(/\.ce/g,'#printarea .ce')}</style>`+d.body,{tipo:'CER',titulo:'Certificados de estudio',hoja:true})}
   document.getElementById('cst-pr')?.remove();const f=document.createElement('iframe');f.id='cst-pr';f.style.cssText='position:fixed;left:-9999px;top:0;width:'+(d.orient==='landscape'?'27.94cm':'21.59cm')+';height:21cm;border:0';f.srcdoc=full(d);
-  f.onload=async()=>{try{const im=[...f.contentDocument.images];await Promise.all(im.map(x=>x.complete?1:new Promise(r=>{x.onload=x.onerror=r;setTimeout(r,6000)})));f.contentWindow.focus();f.contentWindow.print()}catch(x){err(x)}};
+  f.onload=async()=>{try{const im=[...f.contentDocument.images];await Promise.all(im.map(x=>x.complete?1:new Promise(r=>{x.onload=x.onerror=r;setTimeout(r,6000)})));try{await Promise.race([f.contentDocument.fonts.ready,new Promise(r=>setTimeout(r,3000))])}catch(x){}f.contentWindow.focus();f.contentWindow.print()}catch(x){err(x)}};
   document.body.appendChild(f)}
 /* ---------- pantalla ---------- */
 const TABS=[['dipl','🎓 Diplomas'],['cert','📄 Certificados de estudio'],['carn','🪪 Carnés'],['menc','🏅 Menciones de honor']];
