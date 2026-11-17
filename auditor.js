@@ -12,13 +12,15 @@ async function cargar(){
   if(Z.sub==='errores'){const r=await sb.from('errores_cliente').select('*').order('created_at',{ascending:false}).limit(200);if(r.error)throw r.error;Z.errs=r.data||[]}
   if(Z.sub==='informe'||Z.sub==='panel'){const r=await sb.from('soporte_reportes').select('*').order('created_at',{ascending:false}).limit(300);if(!r.error)Z.rep=r.data||[]}
   if(Z.sub==='cuentas'){
-    const r=await sb.from('profiles').select('id,full_name,role,email,school_other,teacher_status,is_admin,document').order('full_name').limit(3000);
+    const r=await sb.from('profiles').select('id,full_name,role,email,school_other,teacher_status,is_admin,document,activo,colegio_id').order('full_name').limit(3000);
     if(r.error)throw r.error;Z.cuentas=r.data||[]}
+  if(Z.sub==='cuentas'||Z.sub==='colegios'){const c=await sb.rpc('auditor_colegios');if(c.error)throw c.error;Z.cols=c.data||[];Z.colMap={};Z.cols.forEach(x=>Z.colMap[x.id]=x)}
+  if(Z.sub==='colegios'&&!Z.cuentas){const r=await sb.from('profiles').select('id,full_name,role,email,school_other,teacher_status,is_admin,document,activo,colegio_id').order('full_name').limit(3000);if(r.error)throw r.error;Z.cuentas=r.data||[]}
 }
 async function load(){await cargar()}
 const kpi=(t,v,c,sub)=>`<div class="aic-kpi"><div><small>${t}</small><strong>${v}</strong>${sub?`<span>${sub}</span>`:''}</div></div>`;
 function tabs(){
-  const T=[['panel','📊 Panel general'],['cuentas','👥 Cuentas'],['salud','🩺 Salud de la plataforma'],['revision','🧰 Revisión de funcionamiento'],['errores','🐞 Errores detectados'],['susc','💳 Suscripciones'],['icfes','📥 Datos Saber 11'],['informe','📨 Informe cliente'+((Z.rep||[]).filter(x=>x.estado==='nuevo').length?' ('+(Z.rep||[]).filter(x=>x.estado==='nuevo').length+')':'')]];
+  const T=[['panel','📊 Panel general'],['colegios','🏫 Colegios y accesos'],['cuentas','👥 Cuentas'],['salud','🩺 Salud de la plataforma'],['revision','🧰 Revisión de funcionamiento'],['errores','🐞 Errores detectados'],['susc','💳 Suscripciones'],['icfes','📥 Datos Saber 11'],['informe','📨 Informe cliente'+((Z.rep||[]).filter(x=>x.estado==='nuevo').length?' ('+(Z.rep||[]).filter(x=>x.estado==='nuevo').length+')':'')]];
   return`<nav class="aic-tabs" style="margin-bottom:14px">${T.map(([k,l])=>`<button onclick="AUD.ir('${k}')" class="${Z.sub===k?'on':''}">${l}</button>`).join('')}</nav>`}
 function vPanel(){
   const d=Z.r;if(!d)return'<div class="aic-card" style="padding:16px">Cargando…</div>';
@@ -44,9 +46,21 @@ function vCuentas(){
    <select onchange="AUD.rol(this.value)" style="padding:10px">${roles.map(r=>`<option value="${r}" ${Z.rol===r?'selected':''}>${r==='todos'?'Todos los roles':RN[r]+'s'}</option>`).join('')}</select></div>
    <p style="font-size:12px;color:#64748b;margin-bottom:8px">${L.length} cuenta(s). <b>Entrar</b> te lleva a su entorno como auditor y lo que cambies SÍ se guarda.</p>
    <div class="aic-table-wrap"><table style="min-width:640px"><thead><tr><th>NOMBRE</th><th>ROL</th><th>COLEGIO / CORREO</th><th>ESTADO</th><th></th></tr></thead><tbody>
-   ${L.slice(0,Z.max).map(x=>`<tr><td><b>${e(x.full_name||'—')}</b></td><td>${x.is_admin?'Administrador':RN[x.role]||e(x.role)}</td><td style="font-size:12px">${e(x.school_other||'')}<br><span style="color:#64748b">${e(x.email||'')}</span></td><td>${x.teacher_status&&x.teacher_status!=='aprobado'?'<span class="aic-score score-mid">'+e(x.teacher_status)+'</span>':'<span class="aic-score score-high">activa</span>'}</td>
-   <td style="white-space:nowrap">${x.is_admin||x.id===yo?'—':`<button onclick="AUD.entrar('${x.id}')" style="background:#6d28d9;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">🛡 Entrar</button> <button onclick="AUD.borrar('${x.id}')" style="background:#dc2626;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">🗑 Borrar</button>`}</td></tr>`).join('')||'<tr><td colspan="5" style="color:#64748b">No hay cuentas con ese filtro.</td></tr>'}
+   ${L.slice(0,Z.max).map(x=>`<tr><td><b>${e(x.full_name||'—')}</b></td><td>${x.is_admin?'Administrador':RN[x.role]||e(x.role)}</td><td style="font-size:12px">${e((Z.colMap&&Z.colMap[x.colegio_id]&&Z.colMap[x.colegio_id].nombre)||x.school_other||'')}<br><span style="color:#64748b">${e(x.email||'')}</span></td><td>${x.activo===false?'<span class="aic-score" style="background:#fee2e2;color:#991b1b">desactivada</span>':x.teacher_status&&x.teacher_status!=='aprobado'?'<span class="aic-score score-mid">'+e(x.teacher_status)+'</span>':'<span class="aic-score score-high">activa</span>'}</td>
+   <td style="white-space:nowrap">${x.is_admin||x.id===yo?'—':`<button onclick="AUD.entrar('${x.id}')" style="background:#6d28d9;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">🛡 Entrar</button> <button onclick="AUD.act('cuenta','${x.id}',${x.activo===false})" style="background:${x.activo===false?'#16a34a':'#f59e0b'};color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">${x.activo===false?'✅ Activar':'⏸ Desactivar'}</button> <button onclick="AUD.borrar('${x.id}')" style="background:#dc2626;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">🗑 Borrar</button>`}</td></tr>`).join('')||'<tr><td colspan="5" style="color:#64748b">No hay cuentas con ese filtro.</td></tr>'}
    </tbody></table></div>${L.length>Z.max?`<button onclick="AUD.mas()" class="aic-link" style="margin-top:10px">Ver más (${L.length-Z.max} restantes)</button>`:''}</div>`}
+function vColegios(){
+  if(!Z.cols||!Z.cuentas)return'<div class="aic-card" style="padding:16px">Cargando…</div>';
+  const q=(Z.qc||'').toLowerCase(),L=Z.cols.filter(c=>!q||String(c.nombre).toLowerCase().includes(q));
+  const sus=c=>c.sus_vence?(new Date(c.sus_vence)>=new Date()?'<span class="aic-score score-high">pagada · vence '+e(String(c.sus_vence).slice(0,10))+'</span>':'<span class="aic-score" style="background:#fee2e2;color:#991b1b">vencida '+e(String(c.sus_vence).slice(0,10))+'</span>'):'<span class="aic-score score-mid">'+e(c.sus_estado||'sin pago')+'</span>';
+  return`<div class="aic-card" style="padding:16px"><h3 style="font-weight:800;font-size:16px">🏫 Colegios y accesos</h3>
+   <p style="font-size:12px;color:#64748b;margin:4px 0 10px">Activa o desactiva un colegio completo (nadie de ese colegio podrá entrar) o entra a cualquiera de sus cuentas como auditor. Para activar o desactivar rectores, coordinadores, docentes o estudiantes uno por uno, usa la pestaña «Cuentas».</p>
+   <input value="${e(Z.qc||'')}" placeholder="Buscar colegio" oninput="AUD.bcol(this.value)" id="aud_qc" style="width:100%;max-width:360px;padding:10px 12px;margin-bottom:10px">
+   <div class="aic-table-wrap"><table style="min-width:720px"><thead><tr><th>COLEGIO</th><th>SUSCRIPCIÓN</th><th>RECT.</th><th>COORD.</th><th>DOC.</th><th>EST.</th><th>ESTADO</th><th></th></tr></thead><tbody>
+   ${L.map(c=>{const cu=(Z.cuentas||[]).filter(x=>x.colegio_id===c.id&&!x.is_admin);const abierto=Z.abre===c.id;return`<tr><td><b>${e(c.nombre)}</b>${c.es_prueba?' <small style="color:#7c3aed">(prueba)</small>':''}</td><td>${sus(c)}</td><td>${c.rectores}</td><td>${c.coordinadores}</td><td>${c.docentes}</td><td>${c.estudiantes}</td><td>${c.activo?'<span class="aic-score score-high">activo</span>':'<span class="aic-score" style="background:#fee2e2;color:#991b1b">desactivado</span>'}</td>
+   <td style="white-space:nowrap"><button onclick="AUD.abrirCol(${c.id})" style="background:#6d28d9;color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">🛡 Entrar${abierto?' ▲':' ▼'}</button> <button onclick="AUD.act('colegio','${c.id}',${!c.activo})" style="background:${c.activo?'#f59e0b':'#16a34a'};color:#fff;padding:7px 12px;border-radius:10px;font-weight:800;font-size:12px">${c.activo?'⏸ Desactivar':'✅ Activar'}</button></td></tr>
+   ${abierto?`<tr><td colspan="8" style="background:#f8fafc">${cu.length?cu.sort((a,b)=>['rector','coordinador','prof','est'].indexOf(a.role)-['rector','coordinador','prof','est'].indexOf(b.role)).slice(0,40).map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:13px"><span><b>${e(x.full_name||'—')}</b> · ${RN[x.role]||e(x.role)} · <span style="color:#64748b">${e(x.email||'')}</span>${x.activo===false?' · <b style="color:#b91c1c">desactivada</b>':''}</span><button onclick="AUD.entrar('${x.id}')" style="background:#6d28d9;color:#fff;padding:5px 10px;border-radius:8px;font-weight:800;font-size:12px">Entrar a esta cuenta</button></div>`).join('')+(cu.length>40?'<div style="font-size:12px;color:#64748b;padding-top:6px">Se muestran 40. Usa «Cuentas» para ver todas.</div>':''):'<span style="color:#64748b;font-size:13px">Este colegio no tiene cuentas todavía.</span>'}</td></tr>`:''}`}).join('')||'<tr><td colspan="8" style="color:#64748b">No hay colegios con ese nombre.</td></tr>'}
+   </tbody></table></div></div>`}
 function vSalud(){
   const L=Z.salud;if(!L)return'<div class="aic-card" style="padding:16px">Cargando…</div>';
   const mal=L.filter(x=>x.estado!=='ok').length;
@@ -169,7 +183,7 @@ function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="f
    ${vUna()}
   </div>
   ${Z.ic.log.length?`<div style="margin-top:12px;font-size:13px;line-height:1.7">${Z.ic.log.map(l=>'<div>'+e(l)+'</div>').join('')}</div>`:''}</div>`}
-function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):Z.sub==='icfes'?vIcfes():vSalud())}
+function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='colegios'?vColegios():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):Z.sub==='icfes'?vIcfes():vSalud())}
 const api={mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,load,view,revisar,
   filtro(v){Z.filtro=v;render()},
   async estado(id,est){const rsp=(document.getElementById('rsp_'+id)||{}).value||null;const r=await sb.from('soporte_reportes').update({estado:est,respuesta:rsp,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)return err(r.error);toast('✅','Reporte actualizado','');await cargar();render()},
@@ -183,6 +197,13 @@ const api={mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,load,view,re
     if(!confirm('¿Borrar la cuenta de '+(x.full_name||'esta persona')+' ('+(RN[x.role]||x.role)+')?\n\nSe borra con toda su información. No se puede deshacer.'))return;
     const r=await sb.rpc('admin_borrar_cuenta',{p_id:id});if(r.error)return err(r.error);
     toast('🗑','Cuenta borrada',x.full_name||'');Z.r=null;await cargar();render()},
+  bcol(v){Z.qc=v;render();const i=document.getElementById('aud_qc');if(i){i.focus();i.setSelectionRange(v.length,v.length)}},
+  abrirCol(id){Z.abre=Z.abre===id?null:id;render()},
+  async act(tipo,id,activar){
+    const x=tipo==='colegio'?(Z.colMap||{})[id]:(Z.cuentas||[]).find(c=>c.id===id);const nm=x?(x.nombre||x.full_name):'';
+    if(!activar&&!confirm('¿Desactivar '+(tipo==='colegio'?'el colegio ':'la cuenta de ')+nm+'?\n\n'+(tipo==='colegio'?'Nadie de ese colegio podrá entrar hasta que lo actives.':'Esa persona no podrá entrar hasta que la actives.')))return;
+    const r=await sb.rpc('admin_set_activo',{p_tipo:tipo,p_id:String(id),p_activo:!!activar});if(r.error)return err(r.error);
+    toast(activar?'✅':'⏸',activar?'Activado':'Desactivado',nm||'');Z.cuentas=null;await cargar();render()},
   async salud(){try{await cargar();render();toast('🩺','Revisión lista','')}catch(x){err(x)}},
   async corregir(k){if(!confirm('¿Aplicar la corrección automática?'))return;const r=await sb.rpc('auditor_corregir',{p_clave:k});if(r.error)return err(r.error);toast('🔧','Corregido',r.data+' fila(s) arregladas');await cargar();render()}
 };

@@ -59,6 +59,7 @@ const v=id=>document.getElementById(id)?.value?.trim()||'';
 const RG0=()=>({nm:'',tel:'',em:'',pw:'',dep:'',mun:'',col:'',otro:false,otroTxt:'',q:'',gs:[],cur:{},area:'',asg:[]});
 let M=null,tab='sim',S=null,RES=null,D={},timer=null,charts=[],chan=null,liveChan=null,authMode='login',QF={g:11,s:'',f:'all',p:0},SF={k:'simulacro',t:'',g:11,s:'',n:10,m:2,a:1,due:'',desc:'',cs:[]},CF={g:6,name:''},RF={c:'',f:'excel',txt:'',rows:[],skip:0,fname:''},RG=RG0(),ED={id:'',nm:'',tel:'',area:'',asg:[],gs:[]},PJ={c:'',t:'',s:'',n:10,v:3,d:'',st:'',ver:'',refs:[]},LT={l1:'',l2:'',l3:'',logo:''};
 
+let AUTHOK='',AUTHEM='',AUTHMSG='',AUTHBUSY=false;
 function toast(ic,t,d){const e=document.createElement('div');e.className='pop bg-white border-l-4 border-amber-400 shadow-xl rounded-xl p-3 w-72 flex gap-3';e.innerHTML=`<div class="text-3xl">${ic}</div><div><div class="font-bold text-sm">${E(t)}</div><div class="text-xs text-slate-600">${E(d)}</div></div>`;document.getElementById('toast').appendChild(e);setTimeout(()=>e.remove(),6500)}
 const err=(e)=>toast('⚠️','Error',e?.message||String(e));
 
@@ -78,6 +79,10 @@ async function boot(){
   const{data,error}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
   if(error)return err(error);
   M=data;
+  if(!M.is_admin&&!(window.VC&&VC.on())){
+    let ac=null;try{ac=(await sb.rpc('acceso_pago')).data}catch(x){}
+    if(ac&&ac.ok===false){await sb.auth.signOut();M=null;AUTHOK='';AUTHMSG=ac.motivo==='desactivado'?'Tu cuenta está desactivada. Comunícate con el soporte de AULA360.':'Correo no pago: este correo no tiene una suscripción activa. Pulsa «Suscripción» para pagar.';authMode='login';render();return toast('⛔',ac.motivo==='desactivado'?'Cuenta desactivada':'Correo no pago',AUTHMSG)}
+  }
   if((M.role==='prof'||isDir())&&M.teacher_status!=='aprobado')return render();
   if(!M.is_admin&&M.role!=='est'){try{await loadScript('suscripcion.js?v=4');if((await SUB.alIngresar())===false)return}catch(x){}}
   if(!isDir())startLive();
@@ -95,7 +100,9 @@ async function loadCat(){
   const s=await sb.from('asignaturas').select('nombre,areas(nombre)').order('nombre');D.asigs=(s.data||[]).map(x=>({nombre:x.nombre,area:x.areas?.nombre}));
 }
 async function setMode(m){
+  if(m!=='login'&&!m.startsWith('sub_')&&!AUTHOK)return toast('🔒','Primero verifica tu correo','Escribe tu correo en «Entrar». Si ya pagaste, las demás opciones se activan solas.');
   authMode=m;
+  if(m==='docente'||m==='directivo')RG.em=AUTHOK;
   if(m.startsWith('sub_')){await loadScript('suscripcion.js?v=4');await SUB.init();return render()}
   if(m==='docente'||m==='directivo'){
     if(!D.deps){const r=await sb.from('departamentos').select('id,nombre').order('nombre');D.deps=r.data||[]}
@@ -144,6 +151,8 @@ async function doDocente(){
   boot();
 }
 async function doAuth(){
+  if(authMode==='docente'||authMode==='directivo'){if((RG.em||'').trim().toLowerCase()!==AUTHOK)return toast('⛔','Correo no habilitado','Usa el mismo correo que verificaste en «Entrar».')}
+  if(authMode==='login'&&!AUTHOK)return verCorreo();
   if(authMode==='docente')return doDocente();
   if(authMode==='directivo'&&window.DIR)return DIR.doReg();
   const email=v('em').toLowerCase();let password=document.getElementById('pw')?.value||'';
@@ -152,6 +161,7 @@ async function doAuth(){
     if(dc.length<6)return toast('⚠️','Revisa tu documento','Escribe tu número de documento, solo con números (mínimo 6).');
     password=dc;
   }
+  if((authMode==='login'||authMode==='register')&&email!==AUTHOK)return verCorreo();
   if(!email||!password)return toast('⚠️','Faltan datos',authMode==='register'?'Escribe tu documento y tu correo.':'Escribe correo y contraseña.');
   if(authMode==='login'){
     const{error}=await sb.auth.signInWithPassword({email,password});
@@ -165,6 +175,23 @@ async function doAuth(){
   if(!data.session){authMode='login';render();return toast('📧','Revisa tu correo','Abre el enlace más reciente y luego inicia sesión.')}
   boot();
 }
+async function verCorreo(){
+  const em=(AUTHEM||v('em')).trim().toLowerCase();AUTHEM=em;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){AUTHOK='';AUTHMSG='';render();return toast('⚠️','Escribe tu correo','Revisa que esté completo.')}
+  AUTHBUSY=true;render();
+  let d=null;try{const r=await sb.rpc('correo_habilitado',{p_email:em});d=r.data}catch(x){}
+  AUTHBUSY=false;
+  if(d&&d.ok){AUTHOK=em;AUTHMSG=''}
+  else{AUTHOK='';AUTHMSG=d&&d.motivo==='desactivado'?'Esta cuenta está desactivada. Comunícate con el soporte de AULA360.':'Correo no pago: este correo no tiene una suscripción activa. Pulsa «Suscripción» para pagar.'}
+  render();setTimeout(()=>{const i=document.getElementById(AUTHOK?'pw':'em');if(i)i.focus()},50)}
+function onEm(val){AUTHEM=val;if(AUTHOK&&val.trim().toLowerCase()!==AUTHOK){AUTHOK='';AUTHMSG='';authMode='login';render();setTimeout(()=>{const i=document.getElementById('em');if(i){i.focus();i.setSelectionRange(val.length,val.length)}},30)}}
+function cambiarCorreo(){AUTHOK='';AUTHMSG='';authMode='login';render()}
+async function olvide2(){
+  const em=(AUTHEM||v('em')).trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))return toast('⚠️','Escribe tu correo','Escríbelo en el cuadro de «Correo» y vuelve a pulsar «Recuperar contraseña».');
+  let d=null;try{d=(await sb.rpc('correo_habilitado',{p_email:em})).data}catch(x){}
+  if(!d||!d.ok){AUTHOK='';AUTHMSG=d&&d.motivo==='desactivado'?'Esta cuenta está desactivada. Comunícate con el soporte de AULA360.':'Correo no pago: este correo no tiene una suscripción activa. Pulsa «Suscripción» para pagar.';render();return toast('⛔',d&&d.motivo==='desactivado'?'Cuenta desactivada':'Correo no pago','')}
+  return olvide()}
 async function resend(){
   const email=v('em');if(!email)return toast('⚠️','Falta el correo','Escribe tu correo arriba y vuelve a pulsar.');
   const{error}=await sb.auth.resend({type:'signup',email:email.toLowerCase(),options:{emailRedirectTo:REDIR()}});
@@ -205,8 +232,8 @@ async function savePass(){
   }catch(e){err(e.message||'No se pudo cambiar la contraseña.');btn.disabled=false;btn.textContent='Guardar'}
 }
 async function olvide(){
-  const email=(document.getElementById('em')?.value||'').trim().toLowerCase();
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast('⚠️','Escribe tu correo','Escríbelo en el cuadro de «Correo» y vuelve a pulsar «¿Olvidaste tu contraseña?».');
+  const email=(document.getElementById('em')?.value||AUTHEM||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast('⚠️','Escribe tu correo','Escríbelo en el cuadro de «Correo» y vuelve a pulsar «Recuperar contraseña».');
   const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:REDIR()});
   if(error)return toast('⚠️','No se pudo enviar',/rate|seconds|many/i.test(error.message||'')?'Espera un minuto y vuelve a intentar.':(error.message||''));
   toast('📧','Revisa tu correo','Si ese correo tiene cuenta, te enviamos un enlace para crear una contraseña nueva. Ábrelo en este mismo navegador.');
@@ -379,7 +406,7 @@ async function go(t){
     if(t==='infs'){await loadScript('periodos.js?v=1');await PRD.load()}
     if(t==='icfes'){await loadScript('icfes.js?v=1');await ICF.load()}
     if(t==='anal'){await loadScript('analisis.js?v=3');await ANA.load()}
-    if(t==='aud'){await loadScript('auditor.js?v=5');await AUD.load()}
+    if(t==='aud'){await loadScript('auditor.js?v=6');await AUD.load()}
     if(t==='msus'||t==='pcu'){await loadScript('suscripcion.js?v=4');if(t==='msus')await SUB.recargar()}
     if(t==='sop'){await loadScript('soporte.js?v=1');await SUP.load()}
     if(t==='bancoia'){await loadScript('bancoia.js?v=2');await BIA.load()}
@@ -874,8 +901,8 @@ function exportCSV(){
 /* ---------- Vistas ---------- */
 function authWrap(h){return`<div class="aic-login"><div class="aic-login-art"><img class="aic-login-logo" src="aula360-logo-vertical.png" alt="AULA360"><h1>AULA<span>360</span></h1><b>Aprende · Practica · Evalúa</b><p>Tu aliado en el análisis y mejoramiento de los resultados Saber 11</p><div class="aic-feats"><div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>Simulacros</div><div><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Resultados</div><div><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Gestión</div></div><div class="aic-login-dots"><i></i><i></i><i></i></div></div><div class="aic-login-form">${h}</div></div>`}
 function vAuth(){
-  const m=authMode,T=[['login','Entrar'],['register','Soy estudiante'],['docente','Soy docente'],['directivo','Rector o coordinador'],['sub_menu','💳 Suscribirme']];
-  const head=`<img src="aula360-logo-vertical.png" alt="AULA360 · Aprende, practica, evalúa" style="display:block;margin:0 auto;width:min(230px,70%);height:auto;object-fit:contain"><h1 class="sr-only" style="position:absolute;left:-9999px">AULA360</h1><p class="text-center text-sm text-slate-500">Clases virtuales y simulacros Pre-ICFES</p><div class="flex flex-wrap gap-2">${T.map(([k,l])=>`<button onclick="setMode('${k}')" class="flex-1 py-2 rounded-lg text-sm ${m===k?'on':'bg-slate-200'}" style="min-width:7rem">${l}</button>`).join('')}</div>`;
+  const m=authMode,T=[['login','Entrar'],['register','Soy estudiante'],['docente','Soy docente'],['directivo','Rector o coordinador'],['sub_menu','💳 Suscripción']];
+  const head=`<img src="aula360-logo-vertical.png" alt="AULA360 · Aprende, practica, evalúa" style="display:block;margin:0 auto;width:min(230px,70%);height:auto;object-fit:contain"><h1 class="sr-only" style="position:absolute;left:-9999px">AULA360</h1><p class="text-center text-sm text-slate-500">Clases virtuales y simulacros Pre-ICFES</p><div class="flex flex-wrap gap-2">${T.map(([k,l])=>{const off=k!=='login'&&!k.startsWith('sub_')&&!AUTHOK;return`<button onclick="setMode('${k}')" ${off?'aria-disabled="true" title="Se activa cuando escribas un correo con suscripción pagada"':''} class="flex-1 py-2 rounded-lg text-sm ${m===k?'on':'bg-slate-200'}" style="min-width:7rem;${off?'opacity:.4;cursor:not-allowed':''}">${l}</button>`}).join('')}</div>`;
   if(m.startsWith('sub_')&&window.SUB)return SUB.vista(head);
   if(m==='directivo'&&window.DIR)return DIR.vReg(head);
   if(m==='docente'){
@@ -898,9 +925,15 @@ function vAuth(){
   const reg=m==='register';
   return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3">${head}
   ${reg?`<input id="dc" inputmode="numeric" autocomplete="off" class="w-full border rounded-lg p-2" placeholder="Número de documento (sin puntos)"><input id="nm" class="w-full border rounded-lg p-2" placeholder="Nombre completo"><select id="gr" class="w-full border rounded-lg p-2">${[6,7,8,9,10,11].map(g=>`<option value="${g}">Grado ${g}°</option>`).join('')}</select><p class="text-xs text-slate-500">Tu contraseña inicial será tu número de documento. Después de entrar puedes cambiarla con el botón 🔑 Contraseña. Tu docente te asignará a tu curso si tu documento está en su lista.</p>`:''}
-  <input id="em" type="email" class="w-full border rounded-lg p-2" placeholder="Correo">${reg?'':'<input id="pw" type="password" class="w-full border rounded-lg p-2" placeholder="Contraseña (si eres estudiante, tu número de documento)" onkeydown="if(event.key===\'Enter\')doAuth()">'}
+  ${m==='login'&&!AUTHOK?`<p class="text-sm text-slate-600 text-center">Escribe tu correo. Si tiene una suscripción pagada, podrás entrar.</p>
+  <input id="em" type="email" value="${E(AUTHEM)}" class="w-full border rounded-lg p-2" placeholder="Correo" oninput="AUTHEM=this.value" onkeydown="if(event.key==='Enter')verCorreo()">
+  ${AUTHMSG?`<div class="rounded-lg p-3 text-sm font-semibold" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b">⛔ ${E(AUTHMSG)}</div>`:''}
+  <button onclick="verCorreo()" ${AUTHBUSY?'disabled':''} class="w-full py-2 bg-indigo-600 text-white rounded-lg">${AUTHBUSY?'Verificando…':'Continuar'}</button>
+  <button onclick="olvide2()" class="w-full py-2 rounded-lg font-semibold" style="border:2px solid #4f46e5;color:#4338ca;background:#eef2ff">🔑 Recuperar contraseña</button>`
+  :`<div class="rounded-lg p-2 text-sm flex items-center justify-between gap-2" style="background:#f0fdf4;border:1px solid #bbf7d0"><span>✅ <b>${E(AUTHOK)}</b></span><button onclick="cambiarCorreo()" class="underline text-xs">Cambiar</button></div>
+  <input id="em" type="hidden" value="${E(AUTHOK)}">${reg?'':'<input id="pw" type="password" class="w-full border rounded-lg p-2" placeholder="Contraseña (si eres estudiante, tu número de documento)" onkeydown="if(event.key===\'Enter\')doAuth()">'}
   <button onclick="doAuth()" class="w-full py-2 bg-indigo-600 text-white rounded-lg">${reg?'Crear cuenta de estudiante':'Entrar'}</button>
-  ${reg?'':'<p class="text-xs text-slate-500 text-center">Estudiantes: tu contraseña inicial es tu número de documento.</p><button onclick="olvide()" class="w-full text-sm text-indigo-700 font-semibold underline">¿Olvidaste tu contraseña?</button><button onclick="resend()" class="w-full text-xs text-slate-500 underline">Reenviar correo de confirmación</button>'}</div>`}
+  ${reg?'':'<p class="text-xs text-slate-500 text-center">Estudiantes: tu contraseña inicial es tu número de documento.</p><button onclick="olvide()" class="w-full py-2 rounded-lg font-semibold" style="border:2px solid #4f46e5;color:#4338ca;background:#eef2ff">🔑 Recuperar contraseña</button><button onclick="resend()" class="w-full text-xs text-slate-500 underline">Reenviar correo de confirmación</button>'}`}</div>`}
 function vPend(){const st=M.teacher_status,rej=st==='rechazado';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de docente no fue aprobada':'Tu cuenta de docente está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AULA360 si crees que es un error.':'El administrador revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión y verás el panel de docente.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div><div><b>Área:</b> ${E(M.area||'')}</div><div><b>Asignaturas:</b> ${E((M.asignaturas||[]).join(', '))}</div><div><b>Grados:</b> ${E((M.grados||[]).join('°, '))}${(M.grados||[]).length?'°':''}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
 const dirTabs=()=>M.role==='rector'?[['dcol','🏫 '+(M.school_name||'Mi colegio')],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia docentes'],['asistencias','✋ Asistencias a clase'],['planeador','📋 Planeadores'],['saberimp','🎯 Saber 11'],['anal','📊 Análisis de mi institución'],['diag','🩺 Diagnósticos'],['dhist','🧾 Historial']]:[['dcol','🏫 '+(M.school_name||'Mi colegio')],['ddoc','👩‍🏫 Docentes'],['dhor','🗓 Horarios'],['asis','🕒 Asistencia docentes'],['asistencias','✋ Asistencias a clase'],['planeador','📋 Planeadores'],['saberimp','🎯 Saber 11'],['anal','📊 Análisis de mi institución'],['diag','🩺 Diagnósticos']];
 function vPendDir(){const st=M.teacher_status,rej=st==='rechazado',r=M.role==='rector'?'rector':'coordinador',quien=M.role==='rector'?'El administrador':'El rector de tu colegio o el administrador';return`<div class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow p-6 space-y-3 text-center"><div class="text-4xl">${rej?'⛔':'🕒'}</div><h2 class="text-xl font-bold">${rej?'Tu solicitud de '+r+' no fue aprobada':'Tu cuenta de '+r+' está pendiente de aprobación'}</h2><p class="text-sm text-slate-600">${rej?'Comunícate con el administrador de AULA360 si crees que es un error.':quien+' revisará tus datos. Cuando te apruebe, vuelve a iniciar sesión.'}</p><div class="text-left text-sm border rounded-xl p-3 space-y-1"><div><b>Nombre:</b> ${E(M.full_name)}</div><div><b>Correo:</b> ${E(M.email||'')}</div><div><b>Teléfono:</b> ${E(M.phone||'')}</div></div><button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200">Salir</button></div>`}
