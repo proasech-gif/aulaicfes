@@ -203,12 +203,12 @@ function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='colegios'?vCole
 const api={mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,cargarZonas,load,view,revisar,
   filtro(v){Z.filtro=v;render()},
   async estado(id,est){const rsp=(document.getElementById('rsp_'+id)||{}).value||null;const r=await sb.from('soporte_reportes').update({estado:est,respuesta:rsp,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)return err(r.error);toast('✅','Reporte actualizado','');await cargar();render()},
-  async entrarRep(id,nom,rol){const m={Docente:'prof',Rector:'rector',Coordinador:'coordinador'};await loadScript('vercomo.js?v=5');return VC.entrar(id,nom,m[rol]||'prof','aud')},
+  async entrarRep(id,nom,rol){const m={Docente:'prof',Rector:'rector',Coordinador:'coordinador'};await loadScript('vercomo.js?v=6');return VC.entrar(id,nom,m[rol]||'prof','aud')},
   async limpiarErrores(){if(!confirm('¿Borrar la lista de errores?'))return;const r=await sb.from('errores_cliente').delete().gte('id',0);if(r.error)return err(r.error);await cargar();render()},
   async ir(k){Z.sub=k;try{await cargar();render()}catch(x){err(x)}},
   buscar(v){Z.q=v;Z.max=60;render();const i=document.getElementById('aud_q');if(i){i.focus();i.setSelectionRange(v.length,v.length)}},
   rol(v){Z.rol=v;Z.max=60;render()},mas(){Z.max+=200;render()},
-  async entrar(id){const x=(Z.cuentas||[]).find(c=>c.id===id);if(!x)return;await loadScript('vercomo.js?v=5');return VC.entrar(id,x.full_name||'Cuenta',x.role,'aud')},
+  async entrar(id){const x=(Z.cuentas||[]).find(c=>c.id===id);if(!x)return;await loadScript('vercomo.js?v=6');return VC.entrar(id,x.full_name||'Cuenta',x.role,'aud')},
   async borrar(id){const x=(Z.cuentas||[]).find(c=>c.id===id);if(!x)return;
     if(!confirm('¿Borrar la cuenta de '+(x.full_name||'esta persona')+' ('+(RN[x.role]||x.role)+')?\n\nSe borra con toda su información. No se puede deshacer.'))return;
     const r=await sb.rpc('admin_borrar_cuenta',{p_id:id});if(r.error)return err(r.error);

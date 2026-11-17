@@ -3,7 +3,7 @@
 window.VC=(function(){
 const URL_='https://pmigzkhhqxzhspqmkbvf.supabase.co',KEY='sb_publishable_GZT40D67S2ICeD1LWOxbEQ_mimJCWlu';
 const MSG='Estás en modo consulta: desde aquí no se puede cambiar nada.';
-const READ_RPC=new Set(['asistencia_docentes','asistencia_estado','asistencia_listar','asistencia_mi_doc','avail_counts','banco_saber_cobertura','clase_abiertas','clase_lista','clase_reporte','directorio_colegio','get_leaderboard','lista_colegio_curso','mensajes_pendientes','periodo_banco','periodo_preguntas','planeador_recibidos','saber_disponibilidad','saber_imp_contenido','saber_imp_estudiantes','saber_imp_resultados']);
+const READ_RPC=new Set(['asistencia_docentes','asistencia_estado','asistencia_listar','asistencia_mi_doc','avail_counts','banco_saber_cobertura','mis_asistencias','mis_notas','estudiantes_colegio','clase_abiertas','clase_lista','clase_reporte','directorio_colegio','get_leaderboard','lista_colegio_curso','mensajes_pendientes','periodo_banco','periodo_preguntas','planeador_recibidos','saber_disponibilidad','saber_imp_contenido','saber_imp_estudiantes','saber_imp_resultados']);
 let V=null; // {real, nombre, rol, volver}
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function negado(){
@@ -75,6 +75,9 @@ const SEC={
  mhor:[B('hz_asignaciones','docente_id','Asignación académica','','horas',r=>['Asignación',(r.horas||0)+' horas'])],
  reun:[B('reuniones','creado_por','Reuniones virtuales','created_at','titulo,en_vivo,created_at',r=>[r.titulo,r.en_vivo?'EN VIVO':''])]
 };
+SEC.docped=[...SEC.planeador,...SEC.plan,B('obs_registros','creado_por','Observador y fichas de seguimiento','created_at','clase,est_nombre,estado,created_at',r=>[(r.clase==='ficha'?'Ficha: ':'Observador: ')+r.est_nombre,r.estado||''])];
+SEC.examc=SEC.periodo;SEC.recup=SEC.periodo;
+SEC.miasis=[B('clase_asistencia','estudiante_id','Asistencias a clase','at','at',r=>[fh(r.at),'Asistió']),B('periodo_intentos','user_id','Exámenes presentados','created_at','score,correct,total,created_at',r=>['Examen',r.correct+' de '+r.total+' · '+r.score+'%']),B('virtual_entregas','user_id','Talleres y trabajos entregados','created_at','nombre,nota,created_at',r=>[cut(r.nombre),r.nota!=null?'Nota '+r.nota:'Sin calificar'])];
 SEC.prof=['cur','simp','periodo','imp','cal','virtual','aclase','planeador','plan','claseia','talleria','guias','permisos','msgs'].flatMap(k=>SEC[k].filter(b=>!b.custom));
 SEC.dcol=['saberimp','permisos','msgs','reun','asis','planeador'].flatMap(k=>k==='asis'?SEC.asis_dir:k==='planeador'?[B('planeador_diario','revisado_por','Planeadores que revisó','revisado_at','fecha,asignatura,estado,revisado_at',r=>[fd(r.fecha)+' · '+(r.asignatura||''),r.estado||''])]:SEC[k]);
 SEC.plan_dir=[B('planeador_diario','revisado_por','Planeadores que revisó','revisado_at','fecha,asignatura,estado,revisado_at',r=>[fd(r.fecha)+' · '+(r.asignatura||''),r.estado||''])];
@@ -156,7 +159,7 @@ const api={resumen,cerrarRes(){const p=document.getElementById('vc-panel');if(p)
     try{await V.vsb.auth.signOut({scope:'local'})}catch(x){}
     quitarLock();api.cerrarRes();sb=real;V=null;D={};M=null;
     await boot();
-    if(M)go(['ddoc','dcoo','aud'].includes(volver)?volver:(M.is_admin?'aud':'ddoc'));
+    if(M)go(['ddoc','dest','dcoo','aud'].includes(volver)?volver:(M.is_admin?'aud':'ddoc'));
   }
 };
 return api})();

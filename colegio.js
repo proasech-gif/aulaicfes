@@ -3,7 +3,7 @@
    Todo es de SOLO LECTURA, salvo aprobar o rechazar cuentas (rector y administrador). */
 (function(){
 'use strict';
-const S={coos:[],pick:'',cpick:'',csel:'',cdet:null,school:null,sum:{},pend:[],staff:[],docs:[],sel:'',sub:'cur',det:null,hist:[],names:{},adm:[]};
+const S={coos:[],pick:'',cpick:'',csel:'',cdet:null,school:null,sum:{},pend:[],staff:[],docs:[],ests:[],epick:'',egrp:'',sel:'',sub:'cur',det:null,hist:[],names:{},adm:[]};
 const ok=r=>{if(r&&r.error)throw r.error;return(r&&r.data)||[]};
 const av=a=>a.length?Math.round(a.reduce((x,y)=>x+(+y||0),0)/a.length):0;
 const fd=x=>{if(!x)return'—';const d=new Date(String(x).length===10?x+'T00:00:00':x);return d.toLocaleDateString('es-CO')};
@@ -159,6 +159,15 @@ function dAsi(X){
   ${card(`<h3 class="font-semibold mb-2">Por fecha</h3>${tbl(['Fecha','Presentes'],dates.slice(0,15).map(f=>[fd(f),X.ad.filter(a=>a.session_date===f&&a.present).length]))}`)}</div>`;
 }
 
+async function loadEst(){S.ests=ok(await sb.rpc('estudiantes_colegio'))||[]}
+const grpDe=x=>x.course_id?(x.grado===0?'Transición':x.grado+'°')+' '+x.curso:'Sin curso';
+function vEstud(){
+  const grupos=[...new Set(S.ests.map(grpDe))];
+  const lista=S.ests.filter(x=>!S.egrp||grpDe(x)===S.egrp);
+  const x=S.ests.find(y=>y.id===S.epick);
+  return`<div class="space-y-4">${card(`<h3 class="font-bold" style="color:#102a5c;font-size:17px">🎓 Estudiantes de tu colegio</h3><p class="text-sm text-slate-600">Elige el grupo y el estudiante y entra a su entorno para auditar todo lo suyo. Es solo para consulta: no se puede cambiar nada.</p>
+   ${S.ests.length?`<div class="flex flex-wrap gap-2 items-end mt-3"><label class="text-sm" style="min-width:180px">Grupo<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.egrp(this.value)"><option value="">Todos los grupos</option>${grupos.map(g=>`<option ${S.egrp===g?'selected':''}>${E(g)}</option>`).join('')}</select></label><label class="text-sm" style="flex:1;min-width:220px">Estudiante<br><select class="w-full border rounded-lg p-2 mt-1" onchange="DIR.epick(this.value)"><option value="">Elige un estudiante…</option>${lista.map(y=>`<option value="${y.id}" ${S.epick===y.id?'selected':''}>${E(y.full_name)}</option>`).join('')}</select></label><button onclick="DIR.eentrar()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm" ${S.epick?'':'disabled style="opacity:.5"'}>Entrar a su entorno</button></div>${x?`<div class="text-xs text-slate-500 mt-2">${E(grpDe(x))}${x.docente?' · Docente: '+E(x.docente):''}</div>`:''}`:'<p class="text-sm text-slate-500 mt-2">Todavía no hay estudiantes registrados en tu colegio.</p>'}`)}</div>`;
+}
 async function loadCoo(){
   S.coos=ok(await sb.from('profiles').select('id,full_name,email,phone,role,teacher_status,created_at').eq('role','coordinador').eq('colegio_id',M.colegio_id).neq('id',M.id).order('full_name'));
 }
@@ -234,17 +243,20 @@ window.DIR={
     if(t==='dcol')await loadCol();
     else if(t==='ddoc'){S.sel='';S.det=null;await loadDocs()}
     else if(t==='dhist')await loadHist();
+    else if(t==='dest'){S.epick='';await loadEst()}
     else if(t==='dcoo'){S.csel='';S.cdet=null;await loadCoo()}
     else if(t==='dadm')await loadAdm();
   },
-  view(t){return({dcol:vCol,ddoc:vDocs,dcoo:vCoo,dhist:vHist,dadm:vAdm}[t]||(()=>''))()},
+  view(t){return({dcol:vCol,ddoc:vDocs,dest:vEstud,dcoo:vCoo,dhist:vHist,dadm:vAdm}[t]||(()=>''))()},
   async open(id){S.sel=id;S.sub='cur';S.det=null;render();try{await loadDet(id)}catch(e){S.sel='';err(e)}render()},
   back(){S.sel='';S.det=null;render()},
   pick(v){S.pick=v;render()},
-  async entrar(){if(!S.pick)return;await loadScript('vercomo.js?v=5');const d=S.docs.find(x=>x.id===S.pick);VC.entrar(S.pick,d?d.full_name:'Docente','prof')},
+  async entrar(){if(!S.pick)return;await loadScript('vercomo.js?v=6');const d=S.docs.find(x=>x.id===S.pick);VC.entrar(S.pick,d?d.full_name:'Docente','prof')},
   resumen(){if(S.pick)DIR.open(S.pick)},
+  epick(v){S.epick=v;render()},egrp(v){S.egrp=v;S.epick='';render()},
+  async eentrar(){if(!S.epick)return;await loadScript('vercomo.js?v=6');const x=S.ests.find(y=>y.id===S.epick);return VC.entrar(S.epick,x?x.full_name:'Estudiante','est','dest')},
   cpick(v){S.cpick=v;render()},
-  async centrar(){if(!S.cpick)return;await loadScript('vercomo.js?v=5');const c=S.coos.find(x=>x.id===S.cpick);return VC.entrar(S.cpick,c?c.full_name:'Coordinador','coordinador')},
+  async centrar(){if(!S.cpick)return;await loadScript('vercomo.js?v=6');const c=S.coos.find(x=>x.id===S.cpick);return VC.entrar(S.cpick,c?c.full_name:'Coordinador','coordinador')},
   async cresumen(){if(!S.cpick)return;S.csel=S.cpick;S.cdet=null;render();try{await loadCooDet(S.csel)}catch(e){S.csel='';err(e)}render()},
   cback(){S.csel='';S.cdet=null;render()},
   async nota(id){const t=(document.getElementById('dir-nota')?.value||'').trim();if(!t)return toast('⚠️','Escribe la nota','');
