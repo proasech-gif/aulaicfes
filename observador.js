@@ -200,5 +200,5 @@ async function enviar(){
     if(!ok)throw new Error('No se pudo enviar el mensaje.');
     const u=await sb.from('obs_registros').update({estado:'enviado',enviado_a:ids[0],enviado_at:new Date().toISOString()}).eq('id',r.id).select().single();if(!u.error){Z.cur=u.data;const i=Z.lista.findIndex(y=>y.id===r.id);if(i>=0)Z.lista[i]=u.data}
     document.getElementById('obs-m')?.remove();toast('📨','Enviado','Lo recibieron '+ok+' persona(s) en su bandeja de Mensajes.');R()}catch(x){b.disabled=false;b.textContent='Enviar';err(x)}}
-return{load,view,nuevo,buscar,pick,guardar,abrir,volver,borrar,vista,imprimir,imprimirId,f,ck,c,fila,quitarFila,top,ed,clic,bx,quitarBx,tab,subirFmt,quitarFmt,enviarUi,enviar,_t:{docHtml,Z:()=>Z,FORM}};
+return{docDe:r=>docHtml(r),load,view,nuevo,buscar,pick,guardar,abrir,volver,borrar,vista,imprimir,imprimirId,f,ck,c,fila,quitarFila,top,ed,clic,bx,quitarBx,tab,subirFmt,quitarFmt,enviarUi,enviar,_t:{docHtml,Z:()=>Z,FORM}};
 })();

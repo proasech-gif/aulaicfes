@@ -3,6 +3,7 @@
    Todo queda acumulado: lo ve el rector, el coordinador y cada docente (solo lo suyo). */
 window.ASIS=(function(){
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const REVF=async(m,...a)=>{if(!window.REV)await loadScript('revision.js?v=1');return REV[m](...a)};
 const isDir=()=>M&&(M.role==='rector'||M.role==='coordinador');
 const hoy=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'});
 const hora=d=>new Date(d).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'America/Bogota'});
@@ -59,12 +60,13 @@ function historial(){
   const sel=isDir()?`<label style="font-size:12px;font-weight:700">Docente<br><select onchange="ASIS.f('doc',this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px"><option value="">Todos</option>${Z.docs.map(d=>`<option value="${d.id}" ${d.id===Z.doc?'selected':''}>${e(d.full_name)}</option>`).join('')}</select></label>`:'';
   const inp=(k,v,l)=>`<label style="font-size:12px;font-weight:700">${l}<br><input type="date" value="${v}" onchange="ASIS.f('${k}',this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px"></label>`;
   return`<div class="aic-card" style="padding:14px"><h2 style="font-weight:800;font-size:18px">📋 Historial acumulado</h2>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin:10px 0">${inp('desde',Z.desde,'Desde')}${inp('hasta',Z.hasta,'Hasta')}${sel}<button onclick="ASIS.csv()" style="align-self:end;background:#246be0;color:#fff;padding:9px 12px;border-radius:8px;font-weight:700;font-size:13px">⬇ Descargar Excel</button></div>
-    <div class="aic-table-wrap"><table style="min-width:520px"><thead><tr>${isDir()?'<th>DOCENTE</th>':''}<th>DÍA</th><th>LLEGADA</th><th>SALIDA</th><th>TIEMPO</th></tr></thead><tbody>${rs.map(o=>`<tr>${isDir()?`<td>${e(o.n)}</td>`:''}<td>${dia(o.d)}</td><td>${o.ent?hora(o.ent):'—'}</td><td>${o.sal?hora(o.sal):'—'}</td><td>${dur(o.ent,o.sal)}</td></tr>`).join('')||`<tr><td colspan="5">No hay marcas en estas fechas.</td></tr>`}</tbody></table></div></div>`;
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin:10px 0">${inp('desde',Z.desde,'Desde')}${inp('hasta',Z.hasta,'Hasta')}${sel}<button onclick="ASIS.csv()" style="align-self:end;background:#246be0;color:#fff;padding:9px 12px;border-radius:8px;font-weight:700;font-size:13px">⬇ Descargar Excel</button>${isDir()?`<button onclick="ASIS.pdf()" style="align-self:end;background:#16a34a;color:#fff;padding:9px 12px;border-radius:8px;font-weight:700;font-size:13px">🖨️ PDF</button><button onclick="ASIS.guardar()" style="align-self:end;background:#0f766e;color:#fff;padding:9px 12px;border-radius:8px;font-weight:700;font-size:13px">💾 Guardar en mi entorno</button>`:''}</div>
+    <div id="asis-tab" class="aic-table-wrap"><table style="min-width:520px"><thead><tr>${isDir()?'<th>DOCENTE</th>':''}<th>DÍA</th><th>LLEGADA</th><th>SALIDA</th><th>TIEMPO</th></tr></thead><tbody>${rs.map(o=>`<tr>${isDir()?`<td>${e(o.n)}</td>`:''}<td>${dia(o.d)}</td><td>${o.ent?hora(o.ent):'—'}</td><td>${o.sal?hora(o.sal):'—'}</td><td>${dur(o.ent,o.sal)}</td></tr>`).join('')||`<tr><td colspan="5">No hay marcas en estas fechas.</td></tr>`}</tbody></table></div></div>`;
 }
 const api={
   load,
   view:()=>`<div>${isDir()?marcar()+docsCard():miDoc()}${!isDir()||Z.hist?historial():''}</div>`,
+  pdf(){REVF('tPdf','asis-tab','Llegada y salida de docentes '+Z.desde+' a '+Z.hasta)},guardar(){REVF('tGuardar','asis-tab','Llegada y salida de docentes '+Z.desde+' a '+Z.hasta)},
   togDocs(){Z.docsOpen=!Z.docsOpen;R()},
   async setDoc(id){const v=document.getElementById('asd-'+id).value;const r=await sb.rpc('asistencia_set_doc',{p_docente:id,p_doc:v});if(r.error)return toast('⚠️','No se guardó',r.error.message);toast('✅','Documento guardado','');try{await load()}catch(x){}R()},
   togHist(){Z.hist=!Z.hist;R()},
@@ -79,7 +81,7 @@ const api={
     Z.busy=true;
     const r=await sb.rpc('asistencia_registrar',{p_doc:v,p_tipo:tipo});
     Z.busy=false;
-    if(r.error){Z.err=/no está registrado/.test(r.error.message)?'Ese documento no está registrado. Regístralo abajo, en "Documentos de los docentes".':r.error.message;R();setTimeout(()=>{if(Z.err){Z.err='';Z.cc='';R()}},8000);return}
+    if(r.error){Z.err=r.error.message;R();setTimeout(()=>{if(Z.err){Z.err='';Z.cc='';R()}},8000);return}
     const x=(r.data||[])[0];Z.cc='';Z.ok={nombre:x.nombre,tipo:x.tipo,at:x.at};
     try{await load()}catch(y){}R();
     setTimeout(()=>{if(Z.ok&&Z.ok.at===x.at){Z.ok=null;R()}},10000);

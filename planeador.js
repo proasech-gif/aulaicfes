@@ -147,7 +147,7 @@ function recibidos(){
 }
 function lista(){
   const propio=Z.cfg&&Z.cfg.modo==='propio';
-  return`<div class="aic-card" style="padding:16px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="font-weight:800;font-size:20px">📓 Planeador · Día a día pedagógico</h2><button onclick="PLN.nuevo()" style="background:#16a34a;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">➕ Nuevo planeador</button></div>
+  return`<div class="aic-card" style="padding:16px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="font-weight:800;font-size:20px">📓 Planeador</h2><button onclick="PLN.nuevo()" style="background:#16a34a;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">➕ Nuevo planeador</button></div>
   <p style="font-size:13px;color:#64748b;margin:4px 0 10px">${propio?'Tu colegio usa su <b>propio formato</b>: descárgalo, diligéncialo y súbelo.':'Formato institucional de la plataforma. Se llena con tu plan de área, lo envías al rector y/o coordinador y también lo puedes imprimir.'}</p>
   <div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>FECHA</th><th>ASIGNATURA</th><th>GRADO</th><th>ESTADO</th><th></th></tr></thead><tbody>${Z.lista.map(x=>`<tr><td>${fF(x.fecha)}</td><td>${e(x.asignatura||'')}</td><td>${e(x.grado||'')} ${e(x.grupo||'')}</td><td>${x.estado==='borrador'?'📝 Borrador':x.estado==='revisado'?'✅ Revisado':'📤 Enviado a '+e((x.enviado_a||[]).join(' y '))}</td><td><button class="aic-link" onclick="PLN.abrir('${x.id}')">Abrir</button> <button class="aic-link" onclick="PLN.imprimirId('${x.id}')">Imprimir</button> ${x.estado==='borrador'?`<button class="aic-link" onclick="PLN.borrar('${x.id}')">Borrar</button>`:''}</td></tr>`).join('')||'<tr><td colspan="5">Aún no tienes planeadores. Pulsa “Nuevo planeador”.</td></tr>'}</tbody></table></div></div>`;
 }
@@ -262,6 +262,7 @@ const api={
     }catch(x){toast('⚠️','No se envió',x.message||'')}
   },
   async borrar(id){if(!confirm('¿Borrar este borrador?'))return;const r=await sb.from('planeador_diario').delete().eq('id',id);if(r.error)return err(r.error);await load();R()},
+  htmlDe(p){return printHtml(p)},
   imprimir(){doPrint(printHtml(Z.cur),{hoja:true})},
   verFmt(){Z.verFmt=!Z.verFmt;render()},imprimirFmt(){doPrint(printHtml({datos:{}}),{hoja:true})},
   async imprimirId(id){const r=await sb.from('planeador_diario').select('*').eq('id',id).single();if(r.error)return err(r.error);doPrint(printHtml(r.data),{hoja:true})},

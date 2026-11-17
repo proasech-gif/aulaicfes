@@ -92,11 +92,15 @@ async function xlsx(buf,rows){
 
 /* ---------- Planilla armada por la plataforma (respaldo) ---------- */
 function armada(clase,curso,rows){
-  const as=clase==='planilla_asistencia',n=as?22:6;
-  const th=as?Array.from({length:n},()=>'<th style="width:22px"></th>').join(''):['Nota 1','Nota 2','Nota 3','Nota 4','Def.','Obs.'].map(x=>`<th>${x}</th>`).join('');
-  const body=rows.map((s,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${e(s.full_name)}</td><td>${e(s.document||'')}</td>${Array.from({length:n},()=>'<td></td>').join('')}</tr>`).join('');
-  return`<h2 style="text-align:center;margin:0 0 4px">${as?'PLANILLA DE ASISTENCIA':'PLANILLA DE NOTAS'}</h2><p style="text-align:center;margin:0 0 10px;font-size:13px">Curso: <b>${e(curso)}</b> &nbsp;·&nbsp; Asignatura: ______________________ &nbsp;·&nbsp; Periodo: ____</p>
-  <table style="width:100%;border-collapse:collapse;font-size:11px" border="1"><thead><tr><th style="width:26px">N.°</th><th>Nombre del estudiante</th><th style="width:90px">Documento</th>${th}</tr></thead><tbody>${body}</tbody></table>`;
+  const as=clase==='planilla_asistencia',n=as?20:6,L=(typeof LH==='function')?LH():{l1:''},doc=(typeof M!=='undefined'&&M.full_name)||'';
+  const th=as?Array.from({length:n},()=>'<th style="width:20px"></th>').join(''):['Ser','Saber','Hacer','Definitiva','Nivel','Obs.'].map(x=>`<th>${x}</th>`).join('');
+  const body=rows.map((s,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${e(s.full_name)}</td><td>${e(s.document||'')}</td>${Array.from({length:n},()=>'<td>&nbsp;</td>').join('')}</tr>`).join('');
+  const conv=as?'<b>Convenciones:</b> A = asistió · F = falta sin excusa · E = falta con excusa · R = retardo · P = permiso institucional.':'<b>Escala de valoración nacional</b> (Decreto 1075 de 2015, que compiló el Decreto 1290 de 2009): Desempeño Superior, Alto, Básico y Bajo, con el rango numérico que fije el SIEE de la institución. Los criterios de cada dimensión (Ser, Saber, Hacer) y su porcentaje los define el SIEE.';
+  return`<div style="font-family:Arial,sans-serif"><div style="text-align:center;font-weight:700">${e(L.l1||'')}</div><h2 style="text-align:center;margin:4px 0">${as?'PLANILLA DE CONTROL DE ASISTENCIA DE ESTUDIANTES':'PLANILLA DE VALORACIÓN DE DESEMPEÑOS'}</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px" border="1"><tr><td><b>Docente:</b> ${e(doc)}</td><td><b>Grado y grupo:</b> ${e(curso)}</td><td><b>Año lectivo:</b> ${new Date().getFullYear()}</td></tr><tr><td><b>Área / asignatura:</b> ______________</td><td><b>Periodo:</b> ____</td><td><b>Sede y jornada:</b> ______________</td></tr></table>
+  ${as?'<p style="font-size:11px;margin:0 0 4px"><b>Fechas de clase:</b> escribe el día en la parte superior de cada columna.</p>':''}
+  <table style="width:100%;border-collapse:collapse;font-size:11px" border="1"><thead><tr><th style="width:26px">N.°</th><th>Apellidos y nombres</th><th style="width:90px">Documento</th>${th}</tr></thead><tbody>${body}</tbody></table>
+  <p style="font-size:10.5px;margin:8px 0 0">${conv}</p><div style="display:flex;justify-content:space-between;margin-top:36px;font-size:11px"><div style="width:40%;border-top:1px solid #000;text-align:center;padding-top:3px">Firma del docente</div><div style="width:40%;border-top:1px solid #000;text-align:center;padding-top:3px">Visto bueno coordinación</div></div></div>`;
 }
 
 const api={_t:{docx,xlsx},
@@ -108,7 +112,8 @@ const api={_t:{docx,xlsx},
       if(r.error)return err(r.error);
       const rows=r.data||[];if(!rows.length)return toast('⚠️','Ese curso no tiene estudiantes','Súbelos primero en Cursos y estudiantes.');
       const nom=(clase==='planilla_asistencia'?'Planilla_asistencia_':'Planilla_notas_')+(c.grade===0?'T':c.grade+'')+'_'+String(c.name||'').replace(/[^\w]+/g,'');
-      const fm=(window.PERM_FMT||[]).find(x=>x.persona==='docente'&&x.clase===clase);
+      const fuente=(window.PERM_FUENTE||{})[clase],propio=(window.PERM_DF||[]).find(x=>x.clase===clase),cole=(window.PERM_FMT||[]).find(x=>x.persona==='docente'&&x.clase===clase);
+      const fm=fuente==='plataforma'?null:(propio||cole);
       const ext=fm&&(fm.nombre.match(/\.(docx|xlsx)$/i)||[])[1];
       if(fm&&ext){
         toast('⏳','Armando tu planilla…','Con el modelo de tu colegio.');
