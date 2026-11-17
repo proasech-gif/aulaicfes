@@ -126,11 +126,19 @@ function printHtml(p){
   <div style="text-align:center;font-size:8pt;font-style:italic;color:#555;margin-top:14px">Documento de uso pedagógico institucional | Ajustar a los acuerdos del PEI, SIEE, plan de estudios y orientaciones vigentes</div></div>`;
 }
 /* ---------- vistas ---------- */
+function fmtPrev(){
+  return`<div style="margin-top:12px;border:1.5px solid #bfdbfe;background:#f0f7ff;border-radius:12px;padding:12px">
+  <b style="font-size:14px">📄 Así se ve el formato de la plataforma</b>
+  <p style="font-size:12.5px;color:#334155;margin:4px 0 8px">Está elaborado con la normativa del Ministerio de Educación Nacional (MEN): Decreto 1075 de 2015 (Decreto Único Reglamentario del sector educación), Decreto 1290 de 2009 y el SIEE de cada institución (evaluación), Estándares Básicos de Competencias y Derechos Básicos de Aprendizaje (DBA), Decreto 1421 de 2017 (DUA y PIAR para la inclusión) y Ley 1620 de 2013 (convivencia). Los docentes lo diligencian en pantalla, lo envían al rector o coordinador y también pueden imprimirlo.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="PLN.verFmt()" style="background:#1e63e9;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">👁 ${Z.verFmt?'Ocultar formato':'Ver el formato'}</button><button onclick="PLN.imprimirFmt()" style="background:#16a34a;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">🖨️ Imprimir formato en blanco</button></div>
+  ${Z.verFmt?`<div style="margin-top:10px;max-height:65vh;overflow:auto;border:1px solid #cbd5e1;background:#fff;padding:10px">${printHtml({datos:{}})}</div>`:''}</div>`;
+}
 function cfgPanel(){
   const c=Z.cfg||{modo:'plataforma'};
   return`<div class="aic-card" style="padding:16px;margin-bottom:14px"><h3 style="font-weight:800">⚙ Formato del planeador de tu colegio</h3>
   <label style="display:flex;gap:8px;margin-top:8px;font-size:14px"><input type="radio" name="pl_m" ${c.modo!=='propio'?'checked':''} onchange="PLN.modo('plataforma')"> <span><b>Usar el formato de la plataforma</b> (Día a día pedagógico, ya diseñado y diligenciable en pantalla)</span></label>
   <label style="display:flex;gap:8px;margin-top:8px;font-size:14px"><input type="radio" name="pl_m" ${c.modo==='propio'?'checked':''} onchange="PLN.modo('propio')"> <span><b>Usar el formato de mi colegio</b> (subo mi archivo; los docentes lo descargan, lo diligencian y lo suben aquí)</span></label>
+  ${c.modo!=='propio'?fmtPrev():''}
   ${c.modo==='propio'?`<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="pl_fmt" type="file" accept=".pdf,.doc,.docx" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px"><button onclick="PLN.subirFmt()" style="background:#246be0;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700">⬆ Subir formato</button>${c.archivo_nombre?`<span style="font-size:13px">Actual: <b>${e(c.archivo_nombre)}</b></span>`:'<span style="font-size:13px;color:#b45309">Aún no has subido el formato.</span>'}</div>`:''}</div>`;
 }
 function recibidos(){
@@ -255,6 +263,7 @@ const api={
   },
   async borrar(id){if(!confirm('¿Borrar este borrador?'))return;const r=await sb.from('planeador_diario').delete().eq('id',id);if(r.error)return err(r.error);await load();R()},
   imprimir(){doPrint(printHtml(Z.cur),{hoja:true})},
+  verFmt(){Z.verFmt=!Z.verFmt;render()},imprimirFmt(){doPrint(printHtml({datos:{}}),{hoja:true})},
   async imprimirId(id){const r=await sb.from('planeador_diario').select('*').eq('id',id).single();if(r.error)return err(r.error);doPrint(printHtml(r.data),{hoja:true})},
   /* directivos */
   async modo(m){const r=await sb.from('planeador_config').upsert({colegio_id:M.colegio_id,modo:m,updated_by:M.id,updated_at:new Date().toISOString()});if(r.error)return err(r.error);Z.cfg={...Z.cfg,modo:m,colegio_id:M.colegio_id};toast('✅','Guardado',m==='propio'?'Tus docentes usarán el formato del colegio.':'Tus docentes usarán el formato de la plataforma.');R()},

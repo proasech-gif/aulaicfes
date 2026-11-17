@@ -9,6 +9,7 @@ const SECC=[['resumen','Resumen ejecutivo'],['ficha','Ficha técnica y metodolog
 const C={navy:'#0b2a5b',blue:'#2563eb',teal:'#0d9488',amber:'#d97706',red:'#b91c1c',ink:'#1e293b',mut:'#64748b',line:'#e2e8f0',soft:'#f1f5f9',gray:'#475569'};
 const T95={1:12.71,2:4.30,3:3.18,4:2.78,5:2.57,6:2.45,7:2.36,8:2.31,9:2.26,10:2.23};
 const e=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const critTxt=r=>{const c=r&&r.crit||{},t=[];if(c.sector)t.push(c.sector==='OFICIAL'?'sector oficial':'sector privado');if(c.zona)t.push('zona '+c.zona.toLowerCase());return t.length?' ('+t.join(', ')+')':''};
 const num=(x,d)=>{if(x==null||isNaN(x))return'—';const s=(Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);const [i,f]=s.split('.');return i.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+(f?','+f:'')};
 const f1=x=>num(x,1),f0=x=>num(x,0),f2=x=>num(x,2);
 const sg=(x,d)=>x==null||isNaN(x)?'—':(Math.abs(x)<0.05&&(d==null||d===1)?'0,0':(x>0?'+':'−')+num(Math.abs(x),d==null?1:d));
@@ -63,6 +64,7 @@ function analizar(r,o){
   if(A.muestra==='insuficiente')A.adv.push('En '+ult+' solo hubo '+u.n+' estudiantes evaluados: con menos de 10 evaluados las cifras son apenas indicativas y no deben usarse para decisiones.');
   else if(A.muestra==='pequeña')A.adv.push('En '+ult+' hubo '+u.n+' estudiantes evaluados (menos de 30): los promedios varían mucho de un año a otro por azar; interprete las tendencias con cautela.');
   const chicos=pri.filter(x=>x.n!=null&&x.n<10).map(x=>x.anio);if(chicos.length&&A.muestra!=='insuficiente')A.adv.push('Los años '+chicos.join(', ')+' tienen menos de 10 evaluados y su resultado es solo indicativo.');
+  if(r.propios&&r.propios.length)A.adv.push('Los años '+r.propios.join(', ')+' salen de los resultados individuales cargados por la propia institución: el ICFES aún no publica los agregados oficiales, por eso no tienen comparativo con municipio, departamento ni país ni puesto en el ranking.');
   if(A.faltan.length)A.adv.push('No hay resultados publicados para '+A.faltan.join(', ')+'; el cálculo de variaciones usa los años reales entre observaciones, no años consecutivos.');
   // global
   const gp=pri.map(x=>[x.anio,x.global]).filter(x=>x[1]!=null);
@@ -103,6 +105,7 @@ function analizar(r,o){
     return{h,y,sin:base,tend,mej};
   })};
   // ranking limpio
+  
   const rk=(r.rank||[]).filter(x=>x.g!=null&&x.n>=5).slice().sort((a,b)=>b.g-a.g);
   A.rank=rk;
   if(colego){const i=rk.findIndex(x=>x.dane===r.dane);A.posD=i>=0?{i:i+1,n:rk.length}:null;
@@ -294,7 +297,7 @@ function build(r,ctx){
     <h3>Hallazgos principales</h3><ul>${hz.map(x=>`<li>${x}</li>`).join('')}</ul>
     ${A.orden.length?`<h3>Prioridades de mejoramiento</h3><ul style="list-style:none;padding-left:0">${prios||'<li>Ninguna prueba requiere prioridad alta con la regla aplicada.</li>'}</ul><p class="note">Regla: brecha relativa contra el país combinada con la tendencia propia de cada prueba (ver sección «Diagnóstico y prioridades»).</p>`:''}
     ${A.adv.length?`<div class="box w"><b>Advertencias de lectura</b><ul style="margin:1mm 0 0">${A.adv.map(x=>`<li>${e(x)}</li>`).join('')}</ul></div>`:''}
-    ${A.posD?`<div class="box b">Posición en el ranking departamental ${A.ult}: <b>${A.posD.i} de ${A.posD.n}</b> establecimientos con resultado${A.posM?` · en su municipio: <b>${A.posM.i} de ${A.posM.n}</b>`:''}.</div>`:''}
+    ${A.posD?`<div class="box b">Posición en el ranking departamental ${r.rankAnio||A.ult}${critTxt(r)}: <b>${A.posD.i} de ${A.posD.n}</b> establecimientos con resultado${A.posM?` · en su municipio: <b>${A.posM.i} de ${A.posM.n}</b>`:''}.</div>`:''}
     <div class="box"><b>Lectura general.</b> ${A.gap.p!=null&&A.gap.p<0?`El resultado global se mantiene por debajo del promedio nacional y ${t.ok&&t.dir==='descenso'?'la tendencia propia es descendente, lo que justifica un plan de mejoramiento inmediato y con seguimiento trimestral.':'requiere un plan de mejoramiento sostenido con metas por prueba.'}`:'El resultado global está en o por encima del promedio nacional; la prioridad es consolidar y documentar las prácticas que funcionan.'}</div>`);
   }
   /* --- Ficha técnica y metodología --- */
@@ -303,7 +306,7 @@ function build(r,ctx){
     P('ficha',`<h2>Ficha técnica y metodología</h2><p class="sub">Qué datos se usaron y cómo se calcularon las cifras</p>
     <table><tr><td style="width:32mm"><b>${A.colego?'Institución':'Territorio'}</b></td><td colspan="3">${e(nm)}</td></tr>
     ${A.colego?`<tr><td><b>Código DANE</b></td><td>${e(r.dane||'—')}</td><td><b>Sector</b></td><td>${e(f.sector||'—')}</td></tr><tr><td><b>Municipio</b></td><td>${e(f.mcpio||'—')}</td><td><b>Departamento</b></td><td>${e(f.depto||'—')}</td></tr>`:''}
-    <tr><td><b>Calendario</b></td><td>${r.cal||'A'}</td><td><b>Años analizados</b></td><td>${A.an.join(', ')}</td></tr>
+    ${A.colego?`<tr><td><b>Zona</b></td><td colspan="3">${e(r.zona||'Sin dato (el colegio no la ha registrado)')}</td></tr>`:''}<tr><td><b>Calendario</b></td><td>${r.cal||'A'}</td><td><b>Años analizados</b></td><td>${A.an.join(', ')}</td></tr>
     <tr><td><b>Años sin datos</b></td><td colspan="3">${A.faltan.length?A.faltan.join(', ')+' (no publicados por el ICFES o no disponibles)':'Ninguno dentro del periodo'}</td></tr>
     <tr><td><b>Evaluados</b></td><td colspan="3">${f0(A.u.n)} en ${A.ult} · muestra ${A.muestra}</td></tr></table>
     <h3>Fuentes</h3><ul><li>ICFES, «Resultados únicos Saber 11» (datos abiertos, datos.gov.co): años 2019–2022, agregados por establecimiento, municipio, departamento y país; promedios con un decimal.</li><li>ICFES, archivos oficiales de resultados agregados por establecimiento (publicados en el sitio del ICFES): años 2023 en adelante; los promedios por área llegan como números enteros.</li></ul>
@@ -332,7 +335,7 @@ function build(r,ctx){
     const gp=(x,y)=>x==null||y==null?null:r1(x-y);
     const filas=[['Global (0–500)',A.u.global,A.m.global,A.d.global,A.p.global]].concat(A.areas.map(a=>[a.nm,a.v,a.m,a.d,a.p])).map(x=>`<tr><td><b>${x[0]}</b></td><td class="n"><b>${f1(x[1])}</b></td>${A.colego&&A.r.mun&&A.r.mun.length?`<td class="n">${f1(x[2])}</td>`:''}<td class="n">${f1(x[3])}</td><td class="n">${f1(x[4])}</td>${A.colego&&A.r.mun&&A.r.mun.length?`<td class="n">${sg(gp(x[1],x[2]))}</td>`:''}<td class="n">${sg(gp(x[1],x[3]))}</td><td class="n">${sg(gp(x[1],x[4]))}</td></tr>`).join('');
     const rm=A.rankMun&&A.rankMun.length?A.rankMun:null,lista=rm||A.rank.slice(0,10);
-    const rk=A.rank.length?`<h3>Ranking ${rm?'del municipio':'del departamento'} · ${A.ult}</h3><table><tr><th>Puesto</th><th>Establecimiento</th><th>Sector</th><th class="n">Evaluados</th><th class="n">Global</th></tr>${lista.slice(0,9).map((x,i)=>{const mine=x.dane===r.dane;return`<tr ${mine?`style="font-weight:700"`:''}><td ${mine?`style="background:#dbeafe"`:''}>${i+1}</td><td ${mine?`style="background:#dbeafe"`:''}>${e(clean(x.nombre))}${mine?' ◀':''}</td><td ${mine?`style="background:#dbeafe"`:''}>${e(x.sector||'')}</td><td class="n" ${mine?`style="background:#dbeafe"`:''}>${f0(x.n)}</td><td class="n" ${mine?`style="background:#dbeafe"`:''}><b>${f1(x.g)}</b></td></tr>`}).join('')}</table><p class="note">Solo establecimientos con 5 o más evaluados y puntaje global publicado${A.rankExcl?` (se excluyeron ${A.rankExcl} sin resultado o con muestra menor)`:''}. ${A.posD?`Posición departamental: ${A.posD.i} de ${A.posD.n}${A.posM?'; municipal: '+A.posM.i+' de '+A.posM.n:''}.`:''}</p>`:'';
+    const rk=A.rank.length?`<h3>Ranking ${rm?'del municipio':'del departamento'} · ${r.rankAnio||A.ult}${critTxt(r)}</h3><table><tr><th>Puesto</th><th>Establecimiento</th><th>Sector</th><th class="n">Evaluados</th><th class="n">Global</th></tr>${lista.slice(0,9).map((x,i)=>{const mine=x.dane===r.dane;return`<tr ${mine?`style="font-weight:700"`:''}><td ${mine?`style="background:#dbeafe"`:''}>${i+1}</td><td ${mine?`style="background:#dbeafe"`:''}>${e(clean(x.nombre))}${mine?' ◀':''}</td><td ${mine?`style="background:#dbeafe"`:''}>${e(x.sector||'')}</td><td class="n" ${mine?`style="background:#dbeafe"`:''}>${f0(x.n)}</td><td class="n" ${mine?`style="background:#dbeafe"`:''}><b>${f1(x.g)}</b></td></tr>`}).join('')}</table><p class="note">Solo establecimientos con 5 o más evaluados y puntaje global publicado${A.rankExcl?` (se excluyeron ${A.rankExcl} sin resultado o con muestra menor)`:''}. ${A.posD?`Posición departamental: ${A.posD.i} de ${A.posD.n}${A.posM?'; municipal: '+A.posM.i+' de '+A.posM.n:''}.`:''}</p>`:'';
     P('territorial',`<h2>Comparación territorial</h2><p class="sub">Institución frente al municipio, el departamento y el país · ${A.ult}</p>${gPuntos(A)}
     <table><tr><th>Prueba</th><th class="n">Inst.</th>${A.colego&&A.r.mun&&A.r.mun.length?'<th class="n">Munic.</th>':''}<th class="n">Depto.</th><th class="n">País</th>${A.colego&&A.r.mun&&A.r.mun.length?'<th class="n">Brecha munic.</th>':''}<th class="n">Brecha depto.</th><th class="n">Brecha país</th></tr>${filas}</table>
     <div class="box b">${A.gap.d!=null&&A.brechaIni.d!=null?`Frente al departamento, la brecha pasó de <b>${sg(A.brechaIni.d)}</b> en ${A.an[0]} a <b>${sg(A.gap.d)}</b> en ${A.ult}. `:''}${A.gap.m!=null&&A.brechaIni.m!=null?`Frente al municipio, de <b>${sg(A.brechaIni.m)}</b> a <b>${sg(A.gap.m)}</b>. `:''}Esto indica si la institución se mueve con su entorno o se separa de él.</div>${rk}`);
@@ -412,7 +415,7 @@ function build(r,ctx){
     P('anexos',`<h2>Anexo A · Tablas completas (2/2)</h2><p class="sub">Promedios por año y evaluados</p><table>${hdr}${G.slice(3).map(blk).join('')}${ev}</table>`);
     const rm=A.rankMun&&A.rankMun.length?A.rankMun:[];
     P('anexos',`<h2>Anexo B · Glosario, fuentes y advertencias</h2>
-    ${rm.length?`<h3>Ranking completo del municipio · ${A.ult}</h3><table><tr><th>Puesto</th><th>Establecimiento</th><th class="n">Evaluados</th><th class="n">Global</th></tr>${rm.map((x,i)=>`<tr><td>${i+1}</td><td>${e(clean(x.nombre))}${x.dane===r.dane?' ◀':''}</td><td class="n">${f0(x.n)}</td><td class="n">${f1(x.g)}</td></tr>`).join('')}</table>`:''}
+    ${rm.length?`<h3>Ranking completo del municipio · ${r.rankAnio||A.ult}${critTxt(r)}</h3><table><tr><th>Puesto</th><th>Establecimiento</th><th class="n">Evaluados</th><th class="n">Global</th></tr>${rm.map((x,i)=>`<tr><td>${i+1}</td><td>${e(clean(x.nombre))}${x.dane===r.dane?' ◀':''}</td><td class="n">${f0(x.n)}</td><td class="n">${f1(x.g)}</td></tr>`).join('')}</table>`:''}
     <h3>Glosario</h3><ul><li><b>Puntaje global:</b> índice de 0 a 500 que pondera las cinco pruebas (Lectura, Matemáticas, Sociales y Naturales con peso 3; Inglés con peso 1).</li><li><b>Brecha:</b> diferencia entre la institución y una referencia; la relativa se expresa como porcentaje de la referencia.</li><li><b>Δ por año:</b> cambio dividido por los años reales transcurridos.</li><li><b>Recta de tendencia:</b> línea de mínimos cuadrados sobre los años reales de la serie.</li><li><b>Banda de incertidumbre (95 %):</b> rango dentro del cual caería el resultado esperado según la variación histórica de la serie.</li><li><b>Fortaleza relativa interna:</b> la prueba más cercana al país dentro de la propia institución.</li></ul>
     <h3>Fuentes y advertencias</h3><ul><li>ICFES · Resultados únicos Saber 11 (datos.gov.co) y archivos oficiales de resultados agregados por establecimiento.</li><li>${A.adv.length?A.adv.map(e).join('</li><li>'):'Sin advertencias adicionales de muestra.'}</li><li>Este informe describe resultados; no establece causas. Informe generado por AULA360 el ${e(emit)}.</li></ul>`);
   }

@@ -172,6 +172,19 @@ function vUna(){const m=M0();if(!m.deptos){mInit();return''}
    </div>
    <div style="margin-top:10px"><button onclick="AUD.mGuardar()" style="background:#16a34a;color:#fff;padding:10px 16px;border-radius:10px;font-weight:800">💾 Guardar esta institución</button></div>
    <p style="font-size:12px;color:#64748b;margin-top:6px">El puntaje global (0–500) lo calcula la plataforma con la fórmula del ICFES. Si ya había datos de ese colegio, año y calendario, se reemplazan.</p></div>`}
+async function cargarZonas(files){
+  const f=files&&files[0];if(!f||Z.ic.busy)return;Z.ic.busy=true;Z.ic.log=['⏳ '+f.name+': leyendo zonas…'];render();
+  try{if(typeof XLSX==='undefined')await loadScript(LIB.xlsx);
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const A=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    const nm=c=>String(c).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    let hi=-1,id=-1,iz=-1;
+    for(let i=0;i<Math.min(A.length,30)&&hi<0;i++){const H=A[i].map(nm);const a=H.findIndex(c=>/^(CODIGODANE|CODIGOESTABLECIMIENTO|CODDANE|DANE|CODIGODANEESTABLECIMIENTO|CODIGODANESEDE|CODINST)/.test(c)),b=H.findIndex(c=>c==='ZONA'||c.startsWith('ZONA'));if(a>=0&&b>=0){hi=i;id=a;iz=b}}
+    if(hi<0)throw new Error('no encontré las columnas del código DANE y de ZONA');
+    const rows=[];for(const r of A.slice(hi+1)){const d=String(r[id]).replace(/\D/g,''),z=nm(r[iz]);if(!d)continue;rows.push({dane:d,zona:z.startsWith('RURAL')?'Rural':z.startsWith('URBAN')?'Urbana':''})}
+    let ok=0;for(let i=0;i<rows.length;i+=1000){const r=await sb.rpc('colegio_zona_bulk',{p_rows:rows.slice(i,i+1000)});if(r.error)throw r.error;ok+=r.data||0}
+    Z.ic.log=['✅ '+f.name+': '+ok+' colegios con zona guardada']
+  }catch(x){Z.ic.log=['⚠️ '+(x.message||x)]}
+  Z.ic.busy=false;render()}
 function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="font-weight:800;font-size:17px">📥 Datos Saber 11 del ICFES</h3>
   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">Estos datos alimentan «Crear análisis de mi institución» para todos los colegios. Se cargan una sola vez por año.</p>
   <div style="display:grid;gap:14px">
@@ -180,11 +193,14 @@ function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="f
    <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px"><b>2) Cargar un año nuevo (por ejemplo 2026)</b>
     <p style="font-size:12px;color:#64748b;margin:4px 0 8px">Elige el archivo Excel «Resultados agregados Saber 11» que publica el ICFES. Puedes elegir varios a la vez.</p>
     <input type="file" accept=".xlsx" multiple ${Z.ic.busy?'disabled':''} onchange="AUD.cargarExcel(this.files)" style="font-size:13px"></div>
+   <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px"><b>3) Zona rural / urbana de los colegios</b>
+    <p style="font-size:12px;color:#64748b;margin:4px 0 8px">Sube un Excel con el código DANE y la ZONA (Urbana/Rural) de los establecimientos (por ejemplo, el directorio de establecimientos educativos del MEN). Los colegios también pueden marcarla ellos mismos.</p>
+    <input type="file" accept=".xlsx,.xls,.csv" ${Z.ic.busy?'disabled':''} onchange="AUD.cargarZonas(this.files)" style="font-size:13px"></div>
    ${vUna()}
   </div>
   ${Z.ic.log.length?`<div style="margin-top:12px;font-size:13px;line-height:1.7">${Z.ic.log.map(l=>'<div>'+e(l)+'</div>').join('')}</div>`:''}</div>`}
 function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='colegios'?vColegios():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):Z.sub==='icfes'?vIcfes():vSalud())}
-const api={mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,load,view,revisar,
+const api={mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,cargarZonas,load,view,revisar,
   filtro(v){Z.filtro=v;render()},
   async estado(id,est){const rsp=(document.getElementById('rsp_'+id)||{}).value||null;const r=await sb.from('soporte_reportes').update({estado:est,respuesta:rsp,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)return err(r.error);toast('✅','Reporte actualizado','');await cargar();render()},
   async entrarRep(id,nom,rol){const m={Docente:'prof',Rector:'rector',Coordinador:'coordinador'};await loadScript('vercomo.js?v=5');return VC.entrar(id,nom,m[rol]||'prof','aud')},

@@ -8,8 +8,8 @@ const f1=x=>x==null?'—':(Math.round(x*10)/10).toLocaleString('es-CO',{minimumF
 const f0=x=>x==null?'—':Math.round(x).toLocaleString('es-CO');
 const sg=x=>x==null?'—':(x>0?'▲ +':x<0?'▼ ':'= ')+f1(x);
 const col=x=>x==null?'#64748b':x>0?'#15803d':x<0?'#b91c1c':'#64748b';
-const AC=new Date().getFullYear(),VENT=Array.from({length:8},(_,i)=>AC-7+i);
-let Z={sec:{},obs:'',hor:[1,3],out:null,cal:'A',deptos:[],mcpios:[],cols:[],anios:[],dep:'',mun:'',dane:'',colNombre:'',sel:[],busy:false,msg:'',rep:null,html:''};
+const AC=new Date().getFullYear(),VENT=Array.from({length:Math.max(1,AC-2020)},(_,i)=>2021+i);
+let Z={sec:{},obs:'',hor:[1,3],out:null,cal:'A',deptos:[],mcpios:[],cols:[],anios:[],dep:'',mun:'',dane:'',colNombre:'',sel:[],zona:'',own:[],ownDane:'',rk:{anio:'',mun:'',sector:'',zona:'',lista:null,busy:false,max:30,zt:null},busy:false,msg:'',rep:null,html:''};
 const R=()=>render();
 const rpc=async(n,a)=>{const r=await sb.rpc(n,a);if(r.error)throw r.error;return r.data};
 async function load(){
@@ -26,13 +26,27 @@ async function load(){
           const k=Z.cols.find(x=>norm(x.nombre).replace(/\b(INSTITUCION EDUCATIVA|I E|IE|COLEGIO)\b/g,'').trim()===cn);
           if(k){Z.dane=k.dane;Z.colNombre=k.nombre}}}}
   }catch(x){Z.msg='No se pudieron cargar los datos del ICFES: '+(x.message||x)}
+  Z.ownDane=Z.dane;await cargaExtra();
+  if(!Z.rk.anio)Z.rk.anio=String(Z.anios.filter(a=>a>=2021).slice(-1)[0]||'');
 }
+async function cargaExtra(){
+  Z.zona='';Z.own=[];
+  if(Z.dane){try{Z.zona=(await rpc('saber_ficha_zona',{p_dane:Z.dane}))||''}catch(x){}}
+  try{Z.rk.zt=await rpc('saber_zonas_total')}catch(x){}
+  if(M&&M.colegio_id&&Z.dane&&Z.dane===Z.ownDane){
+    try{const r=await sb.from('icfes_resultados').select('anio,global,lc,mat,soc,cn,ing').eq('colegio_id',M.colegio_id).limit(5000);
+      if(!r.error&&r.data){const g={};r.data.forEach(x=>{(g[x.anio]=g[x.anio]||[]).push(x)});
+        const mean=(a,k)=>{const v=a.map(x=>x[k]).filter(x=>x!=null);return v.length?Math.round(v.reduce((s,x)=>s+x,0)/v.length*10)/10:null};
+        Z.own=Object.keys(g).map(a=>({anio:+a,n:g[a].length,global:mean(g[a],'global'),lec:mean(g[a],'lc'),mat:mean(g[a],'mat'),soc:mean(g[a],'soc'),nat:mean(g[a],'cn'),ing:mean(g[a],'ing')})).filter(x=>x.global!=null)}}catch(x){}}
+}
+const ownOk=a=>!Z.anios.includes(a)&&VENT.includes(a)&&!!Z.dane&&Z.dane===Z.ownDane&&Z.own.some(x=>x.anio===a);
+const avail=a=>Z.anios.includes(a)||ownOk(a);
 const sel=(id,lab,opts,val,fn)=>`<label style="font-size:13px;font-weight:700;display:block">${lab}<select id="${id}" onchange="${fn}(this.value)" style="display:block;width:100%;margin-top:4px;border:1.5px solid #cbd5e1;border-radius:10px;padding:10px;font-weight:400;font-size:14px;background:#fff"><option value="">Elige…</option>${opts.map(o=>`<option value="${e(o[0])}" ${String(o[0])===String(val)?'selected':''}>${e(o[1])}</option>`).join('')}</select></label>`;
 function view(){
   const nSel=Z.sel.length;
   return`<div style="display:grid;gap:14px">
   <div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:19px">📊 Crear análisis de mi institución</h2>
-   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">Elige el lugar y los años. La plataforma toma los <b>resultados reales de Saber 11</b> publicados por el ICFES (datos abiertos del Estado colombiano) y arma un informe profesional con comparativos contra el municipio, el departamento y el país, en la ventana de los últimos 8 años.</p>
+   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">Elige el lugar y los años. La plataforma toma los <b>resultados reales de Saber 11</b> publicados por el ICFES (datos abiertos del Estado colombiano) y arma un informe profesional con comparativos contra el municipio, el departamento y el país, desde 2021 en adelante.</p>
    ${Z.msg?`<p style="font-size:13px;color:#b45309;margin-bottom:8px">${e(Z.msg)}</p>`:''}
    <div style="margin-bottom:12px"><b style="font-size:13px">Calendario del colegio</b><div style="display:flex;gap:8px;margin-top:6px">${['A','B'].map(c=>`<button onclick="ANA.setCal('${c}')" style="padding:9px 16px;border-radius:10px;font-weight:800;border:1.5px solid ${Z.cal===c?'#1e63e9':'#cbd5e1'};background:${Z.cal===c?'#e8f1ff':'#fff'};color:${Z.cal===c?'#1e3a8a':'#334155'}">Calendario ${c}</button>`).join('')}</div><p style="font-size:12px;color:#64748b;margin-top:4px">${Z.cal==='A'?'Calendario A: la mayoría de colegios (el examen se presenta en el segundo semestre).':'Calendario B: colegios que presentan el examen en el primer semestre (en su mayoría privados).'} Los análisis de A y de B se hacen por separado.</p></div>
    <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
@@ -41,12 +55,34 @@ function view(){
     ${sel('an_col','3. Colegio (institución)',Z.cols.map(c=>[c.dane,c.nombre]),Z.dane,'ANA.col')}
    </div>
    <p style="font-size:12px;color:#64748b;margin-top:6px">Si no eliges colegio, el análisis se hace del municipio (o del departamento si tampoco eliges municipio).</p>
-   <div style="margin-top:12px"><b style="font-size:13px">4. Años a analizar</b> <span style="font-size:12px;color:#64748b">(${nSel} elegido${nSel===1?'':'s'}; la lista se mueve sola cada año: sale el más antiguo)</span>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${VENT.map(a=>{const ok=Z.anios.includes(a);return ok?`<label style="border:1.5px solid #cbd5e1;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;${Z.sel.includes(a)?'background:#e8f1ff;border-color:#1e63e9;font-weight:800':''}"><input type="checkbox" ${Z.sel.includes(a)?'checked':''} onchange="ANA.anio(${a},this.checked)"> ${a}</label>`:`<span title="El ICFES aún no publica este año" style="border:1.5px dashed #e2e8f0;border-radius:10px;padding:8px 12px;font-size:13px;color:#94a3b8">${a} · sin datos</span>`}).join('')}</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"><button onclick="ANA.ult(3)" style="background:#e8f1ff;color:#1e3a8a;padding:7px 12px;border-radius:9px;font-weight:700;font-size:13px">Últimos 3 años (${VENT[5]}–${VENT[7]})</button><button onclick="ANA.ult(5)" style="background:#e8f1ff;color:#1e3a8a;padding:7px 12px;border-radius:9px;font-weight:700;font-size:13px">Últimos 5 años (${VENT[3]}–${VENT[7]})</button><button onclick="ANA.ult(8)" style="background:#e8f1ff;color:#1e3a8a;padding:7px 12px;border-radius:9px;font-weight:700;font-size:13px">Todos (${VENT[0]}–${VENT[7]})</button><button class="aic-link" onclick="ANA.quitar()">Quitar todos</button></div></div>
+   ${zonaUi()}
+   <div style="margin-top:12px"><b style="font-size:13px">4. Años a analizar</b> <span style="font-size:12px;color:#64748b">(${nSel} elegido${nSel===1?'':'s'}; desde 2021; cada año se agrega el nuevo)</span>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${VENT.map(a=>{const ok=Z.anios.includes(a);if(ownOk(a))return`<label title="Resultados individuales subidos por tu colegio (el ICFES aún no publica el año)" style="border:1.5px solid #cbd5e1;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;${Z.sel.includes(a)?'background:#fef3c7;border-color:#d97706;font-weight:800':''}"><input type="checkbox" ${Z.sel.includes(a)?'checked':''} onchange="ANA.anio(${a},this.checked)"> ${a} · resultados propios</label>`;return ok?`<label style="border:1.5px solid #cbd5e1;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;${Z.sel.includes(a)?'background:#e8f1ff;border-color:#1e63e9;font-weight:800':''}"><input type="checkbox" ${Z.sel.includes(a)?'checked':''} onchange="ANA.anio(${a},this.checked)"> ${a}</label>`:`<span title="El ICFES aún no publica este año" style="border:1.5px dashed #e2e8f0;border-radius:10px;padding:8px 12px;font-size:13px;color:#94a3b8">${a} · sin datos</span>`}).join('')}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"><button onclick="ANA.ult(3)" style="background:#e8f1ff;color:#1e3a8a;padding:7px 12px;border-radius:9px;font-weight:700;font-size:13px">Últimos 3 años</button><button onclick="ANA.ult(5)" style="background:#e8f1ff;color:#1e3a8a;padding:7px 12px;border-radius:9px;font-weight:700;font-size:13px">Últimos 5 años</button><button onclick="ANA.ult(99)" style="background:#e8f1ff;color:#1e3a8a;padding:7px 12px;border-radius:9px;font-weight:700;font-size:13px">Todos (desde 2021)</button><button class="aic-link" onclick="ANA.quitar()">Quitar todos</button></div></div>
    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button onclick="ANA.generar()" ${Z.busy?'disabled':''} style="background:#1e63e9;color:#fff;padding:12px 18px;border-radius:10px;font-weight:800">${Z.busy?'⏳ Preparando el informe…':'📊 Crear análisis'}</button></div>
-   <p style="font-size:12px;color:#64748b;margin-top:10px">Fuente: ICFES, resultados oficiales de Saber 11 (calendario ${Z.cal}). Años con datos: ${Z.anios.length?Z.anios.join(', '):'—'}. Los años nuevos (como 2026) se agregan en cuanto el ICFES los publica.</p></div>
-  ${Z.rep?acciones():''}</div>`}
+   <p style="font-size:12px;color:#64748b;margin-top:10px">Fuente: ICFES, resultados oficiales de Saber 11 (calendario ${Z.cal}). Años con datos: ${Z.anios.length?Z.anios.join(', '):'—'}. Los años nuevos (como 2026) se agregan en cuanto el ICFES los publica. Mientras tanto, si tu colegio subió los resultados individuales de sus estudiantes (en «Pruebas Saber reales»), aparecen como «resultados propios» y los puedes incluir como opción.</p></div>
+  ${Z.rep?acciones():''}${rankUi()}</div>`}
+function zonaUi(){
+  if(!Z.dane)return'';
+  const b=z=>`<button onclick="ANA.setZona('${z}')" style="padding:8px 14px;border-radius:10px;font-weight:800;border:1.5px solid ${Z.zona===z?'#1e63e9':'#cbd5e1'};background:${Z.zona===z?'#e8f1ff':'#fff'};color:${Z.zona===z?'#1e3a8a':'#334155'}">${z==='Urbana'?'🏙️ Urbano':'🌾 Rural'}</button>`;
+  return`<div style="margin-top:12px"><b style="font-size:13px">Zona del colegio</b> <span style="font-size:12px;color:#64748b">(${Z.zona?'registrada: '+Z.zona:'aún sin dato: márcala'})</span><div style="display:flex;gap:8px;margin-top:6px">${b('Urbana')}${b('Rural')}</div><p style="font-size:12px;color:#64748b;margin-top:4px">Sale en la ficha del informe y sirve para filtrar el ranking.</p></div>`}
+const SEC=[['','Todos'],['OFICIAL','Oficial'],['NO OFICIAL','Privado']],ZON=[['','Todas'],['Urbana','Urbana'],['Rural','Rural']];
+function rankUi(){
+  const k=Z.rk,ch=(arr,key)=>arr.map(o=>`<button onclick="ANA.rkSet('${key}','${o[0]}')" style="padding:7px 12px;border-radius:9px;font-weight:700;font-size:13px;border:1.5px solid ${k[key]===o[0]?'#1e63e9':'#cbd5e1'};background:${k[key]===o[0]?'#e8f1ff':'#fff'}">${o[1]}</button>`).join('');
+  const yrs=Z.anios.filter(a=>a>=2021).slice().reverse();
+  let tabla='';
+  if(k.lista){const L=k.lista,mi=L.findIndex(x=>x.dane===Z.dane);
+    tabla=!L.length?'<p style="font-size:13px;color:#b45309;margin-top:10px">No hay colegios con esos criterios.</p>':`<p style="font-size:13px;margin-top:10px"><b>${L.length}</b> establecimientos con resultado${mi>=0?` · tu colegio: puesto <b>${mi+1}</b>`:''}.</p><div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>PUESTO</th><th>ESTABLECIMIENTO</th><th>MUNICIPIO</th><th>SECTOR</th><th>ZONA</th><th>EVAL.</th><th>GLOBAL</th></tr></thead><tbody>${L.slice(0,k.max).map((x,i)=>{const m=x.dane===Z.dane;return`<tr style="${m?'background:#dbeafe;font-weight:700':''}"><td>${i+1}</td><td>${e(x.nombre)}${m?' ◀':''}</td><td>${e(x.mcpio||'')}</td><td>${x.sector==='OFICIAL'?'Oficial':'Privado'}</td><td>${e(x.zona||'sin dato')}</td><td>${f0(x.n)}</td><td><b>${f1(x.g)}</b></td></tr>`}).join('')}</tbody></table></div>${L.length>k.max?`<button class="aic-link" onclick="ANA.rkMas()">Ver más</button>`:''}${k.zona&&k.zt!=null?`<p style="font-size:12px;color:#64748b;margin-top:6px">Zona registrada para ${k.zt} colegios en la plataforma; los que no la tienen no salen al filtrar por zona.</p>`:''}`}
+  return`<div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:19px">🏆 Ranking de instituciones</h2>
+  <p style="font-size:13px;color:#64748b;margin:4px 0 10px">De la mejor a la peor por puntaje global. Escoge el año y los criterios.</p>
+  <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+   ${sel('rk_dep','Departamento',Z.deptos.map(d=>[d,d]),Z.dep,'ANA.dep')}
+   ${sel('rk_mun','Municipio (opcional)',Z.mcpios.map(d=>[d,d]),k.mun,'ANA.rkMun')}
+   ${sel('rk_an','Año',yrs.map(a=>[a,a]),k.anio,'ANA.rkAnio')}</div>
+  <div style="margin-top:10px"><b style="font-size:13px">Sector</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${ch(SEC,'sector')}</div></div>
+  <div style="margin-top:10px"><b style="font-size:13px">Zona</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${ch(ZON,'zona')}</div></div>
+  <button onclick="ANA.rkGo()" ${k.busy?'disabled':''} style="margin-top:12px;background:#1e63e9;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">${k.busy?'⏳ Buscando…':'🏆 Ver ranking'}</button>${tabla}</div>`}
+const rkCall=(anio,mun)=>rpc('saber_ranking2',{p_depto:Z.dep,p_mcpio:mun||null,p_anio:+anio,p_cal:Z.cal,p_sector:Z.rk.sector||null,p_zona:Z.rk.zona||null});
 function acciones(){return`<div class="aic-card" style="padding:18px"><h3 style="font-weight:800;font-size:17px">✅ Tu análisis está listo</h3>
   <p style="font-size:13px;color:#64748b;margin:4px 0 10px">${e(Z.rep.titulo)} · años ${e(Z.rep.anios.join(', '))}</p>
   <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -78,19 +114,21 @@ async function generar(){
   try{
     await prep();
     const an=Z.sel.slice().sort(),nivel=Z.dane?'colegio':Z.mun?'municipio':'departamento';
-    const S=n=>rpc('saber_serie',{p_nivel:n,p_depto:Z.dep,p_mcpio:Z.mun||null,p_dane:Z.dane||null,p_anios:an,p_cal:Z.cal});
-    const [pri,mun,dep,pais,ficha]=await Promise.all([S(nivel),Z.mun?S('municipio'):[],S('departamento'),S('pais'),Z.dane?rpc('saber_ficha',{p_dane:Z.dane}):[]]);
+    const anOf=an.filter(a=>Z.anios.includes(a)),anOwn=an.filter(a=>ownOk(a));
+    const S=n=>anOf.length?rpc('saber_serie',{p_nivel:n,p_depto:Z.dep,p_mcpio:Z.mun||null,p_dane:Z.dane||null,p_anios:anOf,p_cal:Z.cal}):Promise.resolve([]);
+    let [pri,mun,dep,pais,ficha]=await Promise.all([S(nivel),Z.mun?S('municipio'):[],S('departamento'),S('pais'),Z.dane?rpc('saber_ficha',{p_dane:Z.dane}):[]]);
+    if(anOwn.length&&nivel==='colegio'){pri=pri.concat(Z.own.filter(x=>anOwn.includes(x.anio)).map(x=>({anio:x.anio,n:x.n,global:x.global,mat:x.mat,lec:x.lec,nat:x.nat,soc:x.soc,ing:x.ing,propio:true}))).sort((a,b)=>a.anio-b.anio)}
     if(!pri.length)throw new Error('No hay resultados publicados para ese lugar en los años elegidos. Prueba con otros años o con el municipio.');
-    const ult=pri[pri.length-1].anio;let rank=[];
-    try{rank=await rpc('saber_ranking',{p_depto:Z.dep,p_anio:ult,p_cal:Z.cal})}catch(x){}
+    const ult=pri[pri.length-1].anio;let rank=[];const rkA=anOf.length?Math.max(...anOf.filter(a=>pri.some(p=>p.anio===a))):null;
+    if(rkA){try{rank=await rkCall(rkA,'')}catch(x){}}
     const f=(ficha&&ficha[0])||{};
     const titulo=nivel==='colegio'?(f.nombre||Z.colNombre):nivel==='municipio'?'Municipio de '+Z.mun+' ('+Z.dep+')':'Departamento de '+Z.dep;
-    Z.rep={cal:Z.cal,nivel,titulo,anios:pri.map(x=>x.anio),pri,mun,dep,pais,ficha:f,rank,ult,dane:Z.dane};
+    Z.rep={cal:Z.cal,nivel,titulo,anios:pri.map(x=>x.anio),pri,mun,dep,pais,ficha:f,rank,ult,dane:Z.dane,zona:Z.zona,propios:anOwn,rankAnio:rkA,crit:{sector:Z.rk.sector,zona:Z.rk.zona}};
     Z.html=informe(Z.rep);
   }catch(x){Z.msg=x.message||String(x);toast('⚠️','No se pudo crear el análisis',Z.msg)}
   Z.busy=false;R();
 }
-async function prep(){if(!window.INF)await loadScript('informes.js?v=2');if(!window.ANAM)await loadScript('analisis_motor.js?v=1')}
+async function prep(){if(!window.INF)await loadScript('informes.js?v=2');if(!window.ANAM)await loadScript('analisis_motor.js?v=2')}
 const by=(arr,a)=>arr.find(x=>x.anio===a)||{};
 function slope(vs,an){const p=an.map((a,i)=>[a,vs[i]]).filter(x=>x[1]!=null);if(p.length<2)return null;const n=p.length,sx=p.reduce((s,x)=>s+x[0],0),sy=p.reduce((s,x)=>s+x[1],0),sxy=p.reduce((s,x)=>s+x[0]*x[1],0),sxx=p.reduce((s,x)=>s+x[0]*x[0],0);const d=n*sxx-sx*sx;if(!d)return null;const m=(n*sxy-sx*sy)/d;return{m,b:(sy-m*sx)/n}}
 function ctxDoc(){const L=(typeof LH==='function')?LH():{l1:'',l2:'',l3:'',logo:''};
@@ -150,12 +188,15 @@ async function enviarYa(){
     document.getElementById('ana-env')?.remove();toast('📨','Enviado','Lo recibieron '+ok+' persona(s) en su bandeja de Mensajes.');
   }catch(x){if(b){b.disabled=false;b.textContent='Enviar'}err(x)}}
 async function setCal(c){Z.cal=c;Z.rep=null;Z.msg='';
-  try{Z.anios=(await rpc('saber_anios',{p_cal:c}))||[];Z.sel=Z.anios.filter(a=>VENT.includes(a));
+  try{Z.anios=(await rpc('saber_anios',{p_cal:c}))||[];Z.sel=Z.anios.filter(a=>VENT.includes(a));Z.rk.anio=String(Z.anios.filter(a=>a>=2021).slice(-1)[0]||'');Z.rk.lista=null;
     if(Z.dep&&Z.mun){Z.cols=await rpc('saber_colegios',{p_depto:Z.dep,p_mcpio:Z.mun,p_cal:c});if(Z.dane&&!Z.cols.some(x=>x.dane===Z.dane)){Z.dane='';Z.colNombre=''}}}catch(x){err(x)}R()}
 return{setSec,setObs,rehacer,setCal,load,view,generar,vista,imprimir,descargar,enviar,enviarYa,cerrar,
-  async dep(v){Z.dep=v;Z.mun='';Z.dane='';Z.cols=[];Z.mcpios=[];Z.rep=null;Z.msg='';if(v){try{Z.mcpios=await rpc('saber_mcpios',{p_depto:v})}catch(x){err(x)}}R()},
+  async dep(v){Z.rk.lista=null;Z.rk.mun='';Z.dep=v;Z.mun='';Z.dane='';Z.cols=[];Z.mcpios=[];Z.rep=null;Z.msg='';if(v){try{Z.mcpios=await rpc('saber_mcpios',{p_depto:v})}catch(x){err(x)}}R()},
   async mun(v){Z.mun=v;Z.dane='';Z.cols=[];Z.rep=null;if(v){try{Z.cols=await rpc('saber_colegios',{p_depto:Z.dep,p_mcpio:v,p_cal:Z.cal})}catch(x){err(x)}}R()},
-  col(v){Z.dane=v;const c=Z.cols.find(x=>x.dane===v);Z.colNombre=c?c.nombre:'';Z.rep=null;R()},
+  async col(v){Z.dane=v;const c=Z.cols.find(x=>x.dane===v);Z.colNombre=c?c.nombre:'';Z.rep=null;Z.sel=Z.sel.filter(a=>Z.anios.includes(a));await cargaExtra();R()},
+  async setZona(z){try{await rpc('colegio_zona_set',{p_dane:Z.dane,p_zona:z});Z.zona=z;Z.rep=null;Z.rk.lista=null;toast('✅','Zona guardada',z)}catch(x){err(x)}R()},
+  rkSet(k,v){Z.rk[k]=v;Z.rk.lista=null;R()},rkMun(v){Z.rk.mun=v;Z.rk.lista=null;R()},rkAnio(v){Z.rk.anio=v;Z.rk.lista=null;R()},rkMas(){Z.rk.max+=40;R()},
+  async rkGo(){if(!Z.dep)return toast('⚠️','Elige el departamento','');if(!Z.rk.anio)return toast('⚠️','Elige el año','');Z.rk.busy=true;Z.rk.max=30;R();try{Z.rk.lista=await rkCall(Z.rk.anio,Z.rk.mun)}catch(x){err(x)}Z.rk.busy=false;R()},
   anio(a,on){const s=new Set(Z.sel);on?s.add(a):s.delete(a);Z.sel=[...s].sort();Z.rep=null;R()},
-  ult(n){Z.sel=VENT.slice(-n).filter(a=>Z.anios.includes(a));Z.rep=null;if(!Z.sel.length)Z.msg='Para esos años el ICFES aún no ha publicado resultados en datos abiertos.';else Z.msg='';R()},quitar(){Z.sel=[];Z.rep=null;R()},
+  ult(n){Z.sel=VENT.slice(-n).filter(avail);Z.rep=null;if(!Z.sel.length)Z.msg='Para esos años el ICFES aún no ha publicado resultados en datos abiertos.';else Z.msg='';R()},quitar(){Z.sel=[];Z.rep=null;R()},
   _t:{informe,set:async x=>{await prep();Z.rep=x;Z.html=informe(x)},html:()=>Z.html,out:()=>Z.out}}})();
