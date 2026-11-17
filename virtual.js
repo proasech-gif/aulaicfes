@@ -6,10 +6,10 @@ const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 const isEst=()=>!(M&&(M.role==='prof'||M.role==='rector'||M.role==='coordinador'));
 const isDoc=()=>M&&M.role==='prof';
 const TIPOS=['pdf','doc','docx','xls','xlsx','ppt','pptx','jpg','png','zip'];
-let Z={lista:[],f:null,det:null,arch:{},ents:{},desc:{},mis:{}};
+let Z={ed:'taller',es:'taller',lista:[],f:null,det:null,arch:{},ents:{},desc:{},mis:{}};
 const fF=d=>d?new Date(d).toLocaleString('es-CO',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'Sin fecha';
 const mb=n=>n==null?'':(n/1048576).toFixed(1)+' MB';
-const nuevo=()=>({titulo:'',descripcion:'',tipo:'trabajo',fecha:'',maxd:'',maxe:1,maxmb:10,tipos:['pdf','doc','docx','jpg','png'],tarde:false,cursos:[],files:[]});
+const nuevo=()=>({cat:'taller',titulo:'',descripcion:'',tipo:'trabajo',fecha:'',maxd:'',maxe:1,maxmb:10,tipos:['pdf','doc','docx','jpg','png'],tarde:false,cursos:[],files:[]});
 const inp='style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px"';
 async function load(){
   Z.f=Z.f||nuevo();
@@ -31,7 +31,7 @@ async function crear(){
   if(!f.tipos.length)return toast('⚠️','Tipos de archivo','Marca al menos un tipo permitido.');
   if(f.tipo==='material'&&!f.files.length)return toast('⚠️','Falta el archivo','Adjunta al menos un archivo para descargar.');
   toast('⏳','Guardando…',f.titulo);
-  const r=await sb.from('virtual_trabajos').insert({docente_id:M.id,titulo:f.titulo.trim(),descripcion:f.descripcion.trim()||null,tipo:f.tipo,fecha_limite:f.fecha?new Date(f.fecha).toISOString():null,max_descargas:f.maxd?+f.maxd:null,max_entregas:+f.maxe||1,max_mb:+f.maxmb||10,tipos_permitidos:f.tipos,permite_tarde:!!f.tarde}).select('id').single();
+  const r=await sb.from('virtual_trabajos').insert({docente_id:M.id,titulo:f.titulo.trim(),descripcion:f.descripcion.trim()||null,tipo:f.tipo,categoria:f.cat==='recuperacion'?'recuperacion':'taller',fecha_limite:f.fecha?new Date(f.fecha).toISOString():null,max_descargas:f.maxd?+f.maxd:null,max_entregas:+f.maxe||1,max_mb:+f.maxmb||10,tipos_permitidos:f.tipos,permite_tarde:!!f.tarde}).select('id').single();
   if(r.error)return err(r.error);
   const id=r.data.id;
   const c=await sb.from('virtual_trabajo_cursos').insert(f.cursos.map(x=>({trabajo_id:id,course_id:x})));
@@ -71,6 +71,7 @@ function docView(){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">
      <label style="font-size:13px">Título<input ${inp} value="${e(f.titulo)}" oninput="VIRT.set('titulo',this.value)"></label>
      <label style="font-size:13px">Tipo<select ${inp} onchange="VIRT.set('tipo',this.value);" ><option value="trabajo" ${f.tipo==='trabajo'?'selected':''}>Trabajo (con entrega)</option><option value="material" ${f.tipo==='material'?'selected':''}>Material (solo descarga)</option></select></label>
+     <label style="font-size:13px">Es un…<select ${inp} onchange="VIRT.set('cat',this.value)"><option value="taller" ${f.cat!=='recuperacion'?'selected':''}>Taller</option><option value="recuperacion" ${f.cat==='recuperacion'?'selected':''}>Recuperación</option></select></label>
      <label style="font-size:13px">Fecha límite<input type="datetime-local" ${inp} value="${f.fecha}" onchange="VIRT.set('fecha',this.value)"></label>
      <label style="font-size:13px">Descargas máx. por estudiante y archivo<input type="number" min="1" max="100" placeholder="Sin límite" ${inp} value="${f.maxd}" oninput="VIRT.set('maxd',this.value)"></label>
      ${f.tipo==='trabajo'?`<label style="font-size:13px">Entregas máx. por estudiante (1 a 10)<input type="number" min="1" max="10" ${inp} value="${f.maxe}" oninput="VIRT.set('maxe',this.value)"></label>
@@ -88,18 +89,23 @@ function entHtml(t){
 }
 /* ---------- estudiante ---------- */
 function estView(){
-  const lista=Z.lista.filter(t=>t.activo).map(t=>{
-    const mis=Z.mis[t.id]||[],usadas=mis.length,vencida=t.fecha_limite&&new Date()>new Date(t.fecha_limite),cierra=t.tipo==='trabajo'&&vencida&&!t.permite_tarde,agot=usadas>=t.max_entregas;
+  const cats=[['taller','Taller'],['recuperacion','Recuperación']],selC=(k,v)=>`<select onchange="VIRT.cat('${k}',this.value)" style="border:1.5px solid #cbd5e1;border-radius:10px;padding:8px;font-weight:700">${cats.map(c=>`<option value="${c[0]}" ${v===c[0]?'selected':''}>${c[1]}</option>`).join('')}</select>`;
+  const act=Z.lista.filter(t=>t.activo),cat=t=>t.categoria==='recuperacion'?'recuperacion':'taller';
+  const ds=act.filter(t=>cat(t)===Z.ed&&(t.virtual_archivos||[]).length).map(t=>{
     const arch=(t.virtual_archivos||[]).map(a=>{const u=Z.desc[a.id]||0,ag=t.max_descargas!=null&&u>=t.max_descargas;return`<button ${ag?'disabled':''} onclick="VIRT.descargar('${a.id}')" class="aic-link" style="${ag?'opacity:.4':''}">⬇ ${e(a.nombre)} <small>${t.max_descargas!=null?`(${u}/${t.max_descargas})`:''}</small></button>`}).join(' ');
-    return`<div class="aic-card" style="padding:14px;margin-bottom:10px"><b>${t.tipo==='trabajo'?'📎':'📥'} ${e(t.titulo)}</b><div style="font-size:12px;color:#64748b">Límite: ${fF(t.fecha_limite)}${vencida?' (vencida)':''}</div>
-     ${t.descripcion?`<p style="font-size:13px;margin:6px 0;white-space:pre-wrap">${e(t.descripcion)}</p>`:''}
-     ${arch?`<div style="margin:6px 0">${arch}</div>`:''}
-     ${t.tipo==='trabajo'?`<div style="font-size:13px;margin-top:8px;border-top:1px solid #e2e8f0;padding-top:8px">Entregas usadas: <b>${usadas} de ${t.max_entregas}</b> · Máx. ${t.max_mb} MB · Tipos: ${t.tipos_permitidos.map(x=>'.'+x).join(' ')}
-       ${mis.map(m=>`<div style="margin-top:4px">✅ ${e(m.nombre)} <small>(${fF(m.created_at)})</small>${m.nota!=null?` · <b>Nota ${m.nota}</b>`:' · sin calificar'}${m.retroalimentacion?`<div style="color:#475569">💬 ${e(m.retroalimentacion)}</div>`:''}</div>`).join('')}
-       ${cierra?'<div style="color:#b91c1c;margin-top:6px">Ya no se reciben entregas.</div>':agot?'<div style="color:#b45309;margin-top:6px">Ya usaste todas tus entregas.</div>':`<div style="margin-top:8px"><input type="file" id="f_${t.id}" accept="${t.tipos_permitidos.map(x=>'.'+x).join(',')}"> <input id="c_${t.id}" placeholder="Comentario (opcional)" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px"> <button onclick="VIRT.entregar('${t.id}')" style="padding:8px 14px;border-radius:10px;background:#059669;color:#fff;border:0;font-weight:700">⬆ Entregar</button></div>`}</div>`:''}</div>`}).join('')||'<p style="color:#64748b">Tu docente aún no ha publicado trabajos ni materiales.</p>';
-  return`<div><h2 style="font-weight:800;font-size:20px;margin-bottom:10px">📎 Trabajos y entregas</h2>${lista}</div>`;
+    return`<div style="border-top:1px solid #e2e8f0;padding:8px 0"><b>${e(t.titulo)}</b>${t.descripcion?`<div style="font-size:12.5px;color:#475569;white-space:pre-wrap">${e(t.descripcion)}</div>`:''}<div style="margin-top:4px">${arch}</div></div>`}).join('')||'<p style="font-size:13px;color:#64748b">Tu docente aún no ha publicado nada para descargar aquí.</p>';
+  const sb2=act.filter(t=>t.tipo==='trabajo'&&cat(t)===Z.es).map(t=>{
+    const mis=Z.mis[t.id]||[],usadas=mis.length,vencida=t.fecha_limite&&new Date()>new Date(t.fecha_limite),cierra=vencida&&!t.permite_tarde,agot=usadas>=t.max_entregas;
+    return`<div style="border-top:1px solid #e2e8f0;padding:8px 0"><b>${e(t.titulo)}</b> <small style="color:#64748b">Límite: ${fF(t.fecha_limite)}${vencida?' (vencida)':''}</small>
+     <div style="font-size:13px;margin-top:4px">Entregas usadas: <b>${usadas} de ${t.max_entregas}</b> · Máx. ${t.max_mb} MB · Tipos: ${t.tipos_permitidos.map(x=>'.'+x).join(' ')}</div>
+     ${mis.map(m=>`<div style="margin-top:4px;font-size:13px">✅ ${e(m.nombre)} <small>(${fF(m.created_at)})</small>${m.nota!=null?` · <b>Nota ${m.nota}</b>`:' · sin calificar'}${m.retroalimentacion?`<div style="color:#475569">💬 ${e(m.retroalimentacion)}</div>`:''}</div>`).join('')}
+     ${cierra?'<div style="color:#b91c1c;margin-top:6px">Ya no se reciben entregas.</div>':agot?'<div style="color:#b45309;margin-top:6px">Ya usaste todas tus entregas.</div>':`<div style="margin-top:8px"><input type="file" id="f_${t.id}" accept="${t.tipos_permitidos.map(x=>'.'+x).join(',')}"> <input id="c_${t.id}" placeholder="Comentario (opcional)" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px"> <button onclick="VIRT.entregar('${t.id}')" style="padding:8px 14px;border-radius:10px;background:#059669;color:#fff;border:0;font-weight:700">⬆ Subir</button></div>`}</div>`}).join('')||'<p style="font-size:13px;color:#64748b">No hay nada para subir en esta categoría.</p>';
+  return`<div style="display:grid;gap:14px"><h2 style="font-weight:800;font-size:20px">📎 Talleres y entregas</h2>
+  <div class="aic-card" style="padding:14px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="font-size:16px">⬇ Descargar</b>${selC('ed',Z.ed)}</div>${ds}</div>
+  <div class="aic-card" style="padding:14px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="font-size:16px">⬆ Subir</b>${selC('es',Z.es)}</div>${sb2}</div></div>`;
 }
 const api={
+  cat(k,v){Z[k]=v;R()},
   load,view:()=>isEst()?estView():docView(),
   set(k,v){Z.f[k]=v;if(k==='tipo')R()},
   curso(id,on){const s=new Set(Z.f.cursos);on?s.add(id):s.delete(id);Z.f.cursos=[...s]},

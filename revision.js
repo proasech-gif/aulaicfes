@@ -57,7 +57,7 @@ function view(){
   ${filtros()}${tabs()}${Z.tab==='guardados'?guardados():lista()}</div>`}
 /* ---------- documentos ---------- */
 async function htmlDe(x){
-  if(Z.tab==='planeador'){if(!window.PLN)await loadScript('planeador.js?v=6');return PLN.htmlDe(x)}
+  if(Z.tab==='planeador'){if(!window.PLN)await loadScript('planeador.js?v=7');return PLN.htmlDe(x)}
   if(Z.tab==='observador'||Z.tab==='ficha'){if(!window.OBS)await loadScript('observador.js?v=2');await OBS.load(Z.tab==='ficha'?'fseg':'obsv');return OBS.docDe(x)}
   return ''}
 const titulo=x=>{const d=nomDoc();return Z.tab==='planeador'?`Planeador · ${d} · ${fF(x.fecha)} · ${x.asignatura||''}`:Z.tab==='plan'?`Plan de área · ${d} · ${x.asignatura||''} ${x.grado||''} · ${x.anio}`:`${NOM[Z.tab]} · ${d} · ${x.est_nombre||''}`};

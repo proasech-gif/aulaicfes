@@ -4,10 +4,11 @@ window.PER=(function(){
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const IM=()=>typeof IMG!=='undefined'?IMG:'';
 const isEst=()=>!(M&&(M.role==='prof'||M.role==='rector'||M.role==='coordinador'));
-let Z={lista:[],subs:[],res:null,f:null,banco:[],sel:new Set(),q:'',R:null,timer:null,det:null};
+let Z={tipo:'periodo',rec:{asig:'',periodo:1,umbral:60,busy:false},lista:[],subs:[],res:null,f:null,banco:[],sel:new Set(),q:'',R:null,timer:null,det:null};
 const fmtF=d=>d?new Date(d).toLocaleString('es-CO',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
 const nuevoF=()=>({titulo:'',asig:'',periodo:1,min:60,intentos:1,abre:'',cierra:'',cursos:[]});
-async function load(){
+async function load(t){
+  Z.tipo=t==='examc'?'clase':t==='recup'?'recuperacion':'periodo';
   if(!isEst()&&!window.CUAD)await loadScript('cuadernillo.js?v=1');
   if(isEst()){
     const r=await sb.from('periodo_pruebas').select('id,titulo,asignatura,periodo,minutos,max_intentos,abre,cierra').eq('estado','publicada').order('created_at',{ascending:false});
@@ -48,7 +49,7 @@ async function guardar(publicar){
   const v=validar();if(v)return toast('⚠️','Falta algo',v);
   if(publicar&&!Z.f.cursos.length)return toast('⚠️','Elige los cursos','Marca los cursos que la presentarán.');
   const f=Z.f,qs=seleccionadas();
-  const r=await sb.from('periodo_pruebas').insert({titulo:f.titulo.trim(),asignatura:f.asig,grado:11,periodo:+f.periodo,minutos:+f.min,max_intentos:+f.intentos,abre:f.abre?new Date(f.abre).toISOString():null,cierra:f.cierra?new Date(f.cierra).toISOString():null,estado:publicar?'publicada':'borrador'}).select('id').single();
+  const r=await sb.from('periodo_pruebas').insert({titulo:f.titulo.trim(),asignatura:f.asig,grado:11,periodo:+f.periodo,minutos:+f.min,max_intentos:+f.intentos,abre:f.abre?new Date(f.abre).toISOString():null,cierra:f.cierra?new Date(f.cierra).toISOString():null,estado:publicar?'publicada':'borrador',tipo:Z.tipo==='recuperacion'?'periodo':Z.tipo}).select('id').single();
   if(r.error)return err(r.error);
   const id=r.data.id;
   const it=await sb.from('periodo_items').insert(qs.map((q,i)=>({prueba_id:id,pos:i+1,question_id:q.id})));
@@ -79,7 +80,7 @@ function viewDoc(){
   const temas=(()=>{if(!Z.plan||!f.asig)return[];const out=[];Z.plan.filter(p=>p.asignatura===f.asig).forEach(p=>{((p.malla&&p.malla.periodos)||[]).filter(x=>String(x.n)===String(f.periodo)).forEach(x=>(x.filas||[]).forEach(r=>{if(r.tema&&!out.includes(r.tema))out.push(r.tema)}))});return out})();
   const grupos=[];let last=null;
   banco.forEach(x=>{const k=x.grupo_key&&x.stimulus_content?x.grupo_key:null;if(k&&last&&last.k===k)last.items.push(x);else{last={k,items:[x]};grupos.push(last)}});
-  const lista=Z.lista.map(p=>`<div class="aic-card" style="padding:14px;margin-bottom:10px"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
+  const lista=Z.lista.filter(p=>(p.tipo||'periodo')===(Z.tipo==='recuperacion'?'periodo':Z.tipo)).map(p=>`<div class="aic-card" style="padding:14px;margin-bottom:10px"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
     <div><b>${e(p.titulo)}</b> <span style="font-size:12px;padding:2px 8px;border-radius:99px;background:${p.estado==='publicada'?'#dcfce7':p.estado==='cerrada'?'#fee2e2':'#e2e8f0'}">${p.estado}</span><div style="font-size:12px;color:#64748b">${e(p.asignatura)} · Periodo ${p.periodo} · ${p.periodo_items?.[0]?.count||0} preguntas · ${p.minutos} min · ${p.max_intentos} intento(s) · cierra ${fmtF(p.cierra)}</div></div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       <button class="aic-link" onclick="PER.ver('${p.id}')">👁 Vista previa</button>
@@ -91,8 +92,8 @@ function viewDoc(){
   const cursos=(D.courses||[]).map(c=>`<label style="display:inline-flex;gap:4px;align-items:center;margin-right:10px;font-size:13px"><input type="checkbox" ${f.cursos.includes(c.id)?'checked':''} onchange="PER.curso('${c.id}',this.checked)">${c.grade}° ${e(c.name)}</label>`).join('')||'<span style="font-size:13px;color:#64748b">Primero crea un curso.</span>';
   const inp='style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px"';
   return`<div style="display:grid;gap:16px">
-  <div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:18px">🧾 Nueva prueba de periodo o examen</h2>
-   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">1) Llena los datos. 2) Marca las preguntas del banco. 3) Mira la vista previa. 4) Imprímela desde la vista previa.${virt?' Como estás en el Aula virtual, también puedes publicarla como examen virtual y programar cuándo empieza y cuándo termina.':''}</p>
+  <div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:18px">${Z.tipo==='clase'?'📝 Nuevo examen de clase':'🧾 Nuevo examen de periodo'}</h2>
+   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">${Z.tipo==='clase'?'Escribe el tema o los temas del examen en el buscador y marca las preguntas del banco (incluye las creadas con IA) que quieras.':''} 1) Llena los datos. 2) Marca las preguntas del banco. 3) Mira la vista previa. 4) Imprímela desde la vista previa.${virt?' Como estás en el Aula virtual, también puedes publicarla como examen virtual y programar cuándo empieza y cuándo termina.':''}</p>
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
     <label style="font-size:13px">Nombre<input ${inp} value="${e(f.titulo)}" oninput="PER.set('titulo',this.value)" placeholder="Ej. Prueba del 2.º periodo"></label>
     <label style="font-size:13px">Asignatura<select ${inp} onchange="PER.set('asig',this.value);PER.banco()"><option value="">— Elegir —</option>${Z.subs.map(s=>`<option ${s.nombre===f.asig?'selected':''}>${e(s.nombre)}</option>`).join('')}</select></label>
@@ -139,10 +140,27 @@ function viewEst(){
     <button ${usados>=p.max_intentos?'disabled':''} onclick="PER.empezar('${p.id}')" style="padding:9px 16px;border-radius:10px;background:#4f46e5;color:#fff;border:0;font-weight:700;opacity:${usados>=p.max_intentos?.4:1}">${usados>=p.max_intentos?'Intentos agotados':'▶ Presentar'}</button></div>`}).join('')||'<p style="color:#64748b">Tu docente aún no ha publicado exámenes.</p>';
   return`<div><h2 style="font-weight:800;font-size:20px;margin-bottom:10px">🧾 Mis exámenes virtuales</h2>${rows}</div>`;
 }
-function view(v){Z.virt=!!v;return isEst()?viewEst():viewDoc()}
+function viewRec(){
+  const r=Z.rec,inp='style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px"';
+  const lista=Z.lista.filter(p=>p.tipo==='recuperacion').map(p=>`<div class="aic-card" style="padding:12px;margin-bottom:8px"><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center"><div><b>${e(p.titulo)}</b> <span style="font-size:12px;padding:2px 8px;border-radius:99px;background:${p.estado==='publicada'?'#dcfce7':'#e2e8f0'}">${p.estado==='publicada'?'publicada':'borrador'}</span><div style="font-size:12px;color:#64748b">${p.periodo_items?.[0]?.count||0} preguntas</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="aic-link" onclick="PER.ver('${p.id}')">👁 Ver</button><button class="aic-link" onclick="PER.imp('${p.id}')">🖨️ Imprimir</button><button class="aic-link" onclick="PER.resultados('${p.id}')">📊 Resultado</button>${p.estado==='publicada'?`<button class="aic-link" onclick="PER.estado('${p.id}','cerrada')">⛔ Cerrar</button>`:`<button class="aic-link" onclick="PER.estado('${p.id}','publicada')">✅ Aplicar ahora</button>`}<button class="aic-link" style="color:#b91c1c" onclick="PER.borrar('${p.id}')">🗑</button></div></div>${Z.det&&Z.det.id===p.id?detHtml():''}</div>`).join('')||'<p style="color:#64748b;font-size:13px">Aún no has armado recuperaciones.</p>';
+  return`<div style="display:grid;gap:16px"><div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:18px">🔁 Recuperación</h2>
+  <p style="font-size:13px;color:#64748b;margin:4px 0 12px">La plataforma revisa los exámenes que hiciste de esa asignatura y periodo y, a cada estudiante que los perdió, le arma su propia recuperación con las preguntas que falló. Tú la aplicas cuando quieras.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">
+   <label style="font-size:13px">Asignatura<select ${inp} onchange="PER.recSet('asig',this.value)"><option value="">— Elegir —</option>${Z.subs.map(x=>`<option ${x.nombre===r.asig?'selected':''}>${e(x.nombre)}</option>`).join('')}</select></label>
+   <label style="font-size:13px">Periodo<select ${inp} onchange="PER.recSet('periodo',this.value)">${[1,2,3,4].map(n=>`<option ${+r.periodo===n?'selected':''}>${n}</option>`).join('')}</select></label>
+   <label style="font-size:13px">Pierde con menos de (%)<input type="number" min="10" max="100" ${inp} value="${r.umbral}" oninput="PER.recSet('umbral',this.value)"></label></div>
+  <button onclick="PER.recArmar()" ${r.busy?'disabled':''} style="margin-top:12px;background:#4f46e5;color:#fff;padding:11px 16px;border-radius:10px;font-weight:800">${r.busy?'⏳ Armando…':'🔁 Armar recuperaciones'}</button></div>
+  <div class="aic-card" style="padding:18px"><h3 style="font-weight:800;margin-bottom:10px">Recuperaciones armadas</h3>${lista}</div></div>`}
+function view(v){Z.virt=!!v;if(!isEst()&&Z.tipo==='recuperacion')return viewRec();return isEst()?viewEst():viewDoc()}
 /* ---------- acciones ---------- */
 const api={
   load,view,
+  recSet(k,v){Z.rec[k]=v},
+  async recArmar(){const r=Z.rec;if(!r.asig)return toast('⚠️','Elige la asignatura','');r.busy=true;rerender();
+    const x=await sb.rpc('recuperacion_armar',{p_asignatura:r.asig,p_periodo:+r.periodo,p_umbral:+r.umbral});r.busy=false;
+    if(x.error){rerender();return err(x.error)}
+    const d=x.data||{};await load('recup');rerender();
+    toast(d.creadas?'✅':'ℹ️',d.creadas?d.creadas+' recuperación(es) armada(s)':'No hay estudiantes por recuperar',d.creadas?'Revísalas y pulsa «Aplicar ahora» cuando quieras.':'Nadie perdió exámenes de esa asignatura y periodo con ese porcentaje.')},
   set(k,v){Z.f[k]=v;if(['asig','periodo'].includes(k))rerender()},
   curso(id,on){const s=new Set(Z.f.cursos);on?s.add(id):s.delete(id);Z.f.cursos=[...s]},
   banco:cargarBanco,

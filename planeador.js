@@ -24,7 +24,7 @@ async function load(t){
   }else if(isDir()){const r=await sb.rpc('planeador_recibidos');if(r.error)throw r.error;Z.rec=r.data||[]}
   if(isDoc()&&Z.vista==='diario')await cargaDiario();
 }
-async function cargaDiario(){if(!window.DOCP)await loadScript('docente.js?v=9');await DOCP.load('diario')}
+async function cargaDiario(){if(!window.DOCP)await loadScript('docente.js?v=10');await DOCP.load('diario')}
 /* ---------- plan de área ---------- */
 function filasPlan(asig){
   const c=Z.cur;asig=asig||(c&&c.asignatura);if(!c||!asig||c.grado==='')return[];
