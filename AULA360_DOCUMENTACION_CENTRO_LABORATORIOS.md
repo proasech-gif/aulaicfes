@@ -16,6 +16,17 @@ Lectura guiada (literal/inferencial/crítico), Dilema ético (perspectivas, sin 
 - Más actividades: 2 lecturas y 1 texto argumentativo, 2 dilemas éticos más, regiones naturales, fuentes históricas, mecanismos de participación, separación de poderes, caso de burlas, color, capacidades físicas y estructura de una sesión (25 actividades en total).
 - Documento aparte: AULA360_SUGERENCIAS_MEJORAS_LABORATORIOS.md.
 
+## Etapa 6 (agregada): laboratorios en vivo, debate con nota, gráficas profesionales
+- **En vivo** (Supabase Realtime): mensajes de la sala, estado de la sala, lista de asistencia del docente, entregas y experiencias se actualizan solos. Hay respaldo automático por consulta periódica si el tiempo real falla.
+- **Participantes en línea** (presencia): docente y estudiantes ven quién está conectado, cuántos mensajes lleva cada uno y de qué tipo (💡 aporte, ⚔️ refutación, 👍 apoyo, ❓ pregunta). El docente ve también quién aún no ha participado.
+- **Refutar y apoyar**: cada mensaje puede responder a otro; se muestra "Ana refuta a Luis" y cada estudiante ve el panel "Respuestas a tus ideas" (quién lo refutó, apoyó o le preguntó).
+- **Voz**: "🎤 Hablar" convierte la voz en texto (con marca 🎤) y "🔊 Escuchar" lee cualquier mensaje en voz alta; opción de escuchar automáticamente lo que escriben los demás. Es voz↔texto del navegador (gratis), NO una llamada de audio en directo.
+- **Docente**: puede escribir, borrar mensajes, silenciar/devolver la palabra a un estudiante, cerrar/reabrir la sala y elegir ser el moderador (el tutor IA queda en pausa) o dejar moderar al tutor IA.
+- **Nota del debate**: al final, el docente ve por estudiante mensajes, aportes, refutaciones, apoyos, preguntas e interacciones, con una nota sugerida por regla fija (40% participación, 30% interacción con compañeros, 30% desarrollo de ideas) y decide la nota final y un comentario. Se guarda en el registro del docente y el estudiante la ve (con el detalle) cuando el docente la publica; también aparece en "Mis notas". La IA nunca califica.
+- **Gráficas profesionales** (Física y Matemáticas): proyectil (trayectoria, y(t), velocidades, animación), movimiento rectilíneo, Ley de Ohm, función cuadrática y función lineal, con ejes, cuadrícula, números, puntos clave rotulados (vértice, raíces, cortes, máximos, impacto), líneas de referencia, ecuaciones y tarjetas de datos.
+- Diseño renovado de laboratorios (color por laboratorio, tarjetas con relieve).
+- Límite: la voz en directo entre varios (llamada de audio) requiere un servicio externo (p. ej., Jitsi o LiveKit); no se activó sin tu aprobación por privacidad de menores y posible costo.
+
 ## Qué incluye la etapa 1
 - Menú "🔬 Laboratorios" para estudiante (pestaña), docente (grupo Evaluar) y rector/coordinador (grupo Seguimiento, solo lectura).
 - Centro principal con los 13 laboratorios (Química, Física, Biología, Matemáticas, Lectura Crítica, English Lab, Educación Física, Ética y Filosofía, Democracia, Política, Ciencias Sociales, Competencias Ciudadanas, Arte y Cultura).

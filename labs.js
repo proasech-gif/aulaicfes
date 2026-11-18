@@ -21,7 +21,10 @@ const isDir=()=>M&&(M.role==='rector'||M.role==='coordinador');
 const isProf=()=>M&&M.role==='prof';
 const isEst=()=>M&&!isDir()&&!isProf()&&!M.is_admin;
 let Z={salas:[],msgs:[],sala:null,v:'home',lab:null,exps:[],ents:{},cursos:[],cfg:{},nom:{},ed:null,cur:null,ent:null,lista:[],chat:[],nivel:'A1',ing:null,ok:false,busy:false};
-const card='background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px';
+const card='background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(15,23,42,.06)';
+const LC={quimica:'#0ea5e9',fisica:'#6366f1',biologia:'#16a34a',matematicas:'#f59e0b',lectura:'#8b5cf6',ingles:'#ec4899',edfisica:'#ef4444',etica:'#0d9488',democracia:'#2563eb',politica:'#475569',sociales:'#b45309',ciudadanas:'#db2777',arte:'#c026d3'};
+const lcol=k=>LC[k]||'#1e63e9';
+(function(){if(document.getElementById('labcss'))return;const s=document.createElement('style');s.id='labcss';s.textContent='.lb-card{transition:transform .15s,box-shadow .15s}.lb-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(15,23,42,.14)!important}@media(min-width:900px){.lb-sala{grid-template-columns:minmax(0,1fr) 280px!important}}';document.head.appendChild(s)})();
 const B=(c,t,x='')=>`<button ${x} style="background:${c};color:#fff;padding:9px 14px;border-radius:10px;font-weight:800;font-size:13px">${t}</button>`;
 const inp='width:100%;padding:9px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px';
 const fF=d=>d?new Date(d).toLocaleString('es-CO',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
@@ -40,14 +43,14 @@ async function flush(){
 window.addEventListener('online',()=>{try{flush()}catch(_){}});
 
 async function load(){
-  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=3');
+  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=4');
   const [x,c]=await Promise.all([sb.from('lab_experiencias').select('*').order('created_at',{ascending:false}),
     isProf()?sb.from('courses').select('id,grade,name').eq('teacher_id',M.id).order('grade').order('name'):Promise.resolve({data:[]})]);
   Z.exps=x.data||[];Z.cursos=c.data||[];
   if(isEst()){const r=await sb.from('lab_entregas').select('*').eq('user_id',M.id);Z.ents=Object.fromEntries((r.data||[]).map(a=>[a.experiencia_id,a]));flush()}
   if(isDir()){const r=await sb.from('lab_config').select('*');Z.cfg=Object.fromEntries((r.data||[]).map(a=>[a.lab,a]));
     const ids=[...new Set(Z.exps.map(a=>a.docente_id))];if(ids.length){const p=await sb.from('profiles').select('id,full_name').in('id',ids);Z.nom=Object.fromEntries((p.data||[]).map(a=>[a.id,a.full_name]))}}
-  await cargaSalas();Z.ok=true;
+  await cargaSalas();Z.ok=true;liveGen();
 }
 const exDe=l=>Z.exps.filter(x=>x.lab===l);
 
@@ -64,43 +67,104 @@ function vAlista(){const L=Z.alista||[],p=L.filter(a=>a.presente).length;
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${Z.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[Z.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">✋ Asistencia de hoy · ${e(LN[Z.lab][2])}</h2><p style="color:#64748b">${p} de ${L.length} estudiantes registraron asistencia hoy.</p>
   <div class="aic-table-wrap"><table style="min-width:420px"><thead><tr><th>CURSO</th><th>ESTUDIANTE</th><th>ASISTENCIA</th><th>HORA</th></tr></thead><tbody>${L.map(a=>`<tr><td>${e(a.curso)}</td><td>${e(a.full_name)}</td><td>${a.presente?'✅ Sí':'—'}</td><td>${a.hora?fF(a.hora):''}</td></tr>`).join('')}</tbody></table></div></div>`}
 
-/* ---------- salas de debate ---------- */
+/* ---------- salas de debate (EN VIVO) ---------- */
 const MODO={companeros:'👥 Entre compañeros',tutor:'🤖 Con el tutor IA',mixto:'👥+🤖 Compañeros y tutor'};
+const TIPO={aporte:['💡','Aporte'],refutacion:['⚔️','Refuta'],apoyo:['👍','Apoya'],pregunta:['❓','Pregunta'],moderacion:['🎙️','Moderación']};
+const onLabs=()=>typeof tab==='undefined'||tab==='labs';
 async function cargaSalas(){const r=await sb.from('lab_salas').select('*').order('created_at',{ascending:false});Z.salas=r.data||[]}
+function stopLive(){try{if(Z.ch&&sb.removeChannel)sb.removeChannel(Z.ch)}catch(_){}Z.ch=null;if(Z.poll){clearInterval(Z.poll);Z.poll=null}Z.pres={};try{speechSynthesis.cancel()}catch(_){}}
+function liveGen(){if(Z.gen||!sb.channel)return;try{let t=null;const f=()=>{clearTimeout(t);t=setTimeout(async()=>{if(!onLabs())return;
+    if(Z.v==='alista')await verAsis();else if(Z.v==='entregas'&&Z.cur)await entregas(Z.cur.id);else if(Z.v==='lab'||Z.v==='home'){await cargaSalas();const x=await sb.from('lab_experiencias').select('*').order('created_at',{ascending:false});Z.exps=x.data||Z.exps;render()}else if(Z.v==='dash')await cargaDash()},700)};
+  Z.gen=sb.channel('lab-gen-'+M.id);['lab_salas','lab_asistencia','lab_entregas','lab_experiencias'].forEach(tb=>Z.gen.on('postgres_changes',{event:'*',schema:'public',table:tb},f));Z.gen.subscribe()}catch(_){}}
 function nuevaSala(){Z.v='salaNew';render()}
-function vSalaNew(){return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${Z.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[Z.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">💬 Nueva sala de debate</h2>
+function vSalaNew(){return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${Z.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[Z.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">💬 Nueva sala de debate en vivo</h2>
   <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">Título</label><input id="sn_t" style="${inp}" placeholder="Ej.: ¿Es justo copiar en un examen?">
   <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">Tema o pregunta orientadora</label><textarea id="sn_d" rows="3" style="${inp}"></textarea>
   <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">Curso</label><select id="sn_c" style="${inp}">${Z.cursos.map(c=>`<option value="${c.id}">${c.grade}° ${e(c.name)}</option>`).join('')}</select>
   <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">¿Quién participa?</label><select id="sn_m" style="${inp}">${Object.entries(MODO).map(([k,v])=>`<option value="${k}" ${k==='mixto'?'selected':''}>${v}</option>`).join('')}</select>
-  <p style="font-size:12px;color:#64748b;margin-top:6px">Tú también puedes escribir y borrar mensajes inapropiados en cualquier momento. El tutor IA solo modera y pregunta; no toma partido.</p>
+  <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">¿Quién modera?</label><select id="sn_o" style="${inp}"><option value="ia">🤖 El tutor IA (yo puedo intervenir cuando quiera)</option><option value="docente">🎙️ Yo, el docente (el tutor IA queda en pausa)</option></select>
+  <p style="font-size:12px;color:#64748b;margin-top:6px">En el debate los estudiantes marcan cada mensaje como aporte, refutación, apoyo o pregunta. Al final podrás ver una nota sugerida por participación y decidir la nota definitiva.</p>
   <div style="margin-top:12px">${B('#16a34a','Crear sala','onclick="LAB.salaCrear()"')}</div></div>`}
 async function salaCrear(){const t=document.getElementById('sn_t').value.trim(),c=document.getElementById('sn_c').value;if(!t)return toast('Escribe un título');if(!c)return toast('Elige un curso');
-  const m=document.getElementById('sn_m').value;const {error}=await sb.from('lab_salas').insert({docente_id:M.id,colegio_id:M.colegio_id,curso_id:c,lab:Z.lab,titulo:t,tema:document.getElementById('sn_d').value,modo:m,estado:'abierta',tutor_activo:m!=='companeros'});if(error)return err(error);
+  const m=document.getElementById('sn_m').value;const {error}=await sb.from('lab_salas').insert({docente_id:M.id,colegio_id:M.colegio_id,curso_id:c,lab:Z.lab,titulo:t,tema:document.getElementById('sn_d').value,modo:m,moderador:document.getElementById('sn_o').value,estado:'abierta',tutor_activo:m!=='companeros'});if(error)return err(error);
   toast('✅ Sala creada');await cargaSalas();Z.v='lab';render()}
-async function entrarSala(id){Z.sala=Z.salas.find(a=>a.id===id);Z.msgs=[];await refrescaMsgs(true);Z.v='sala';render();setTimeout(()=>{scrollM();arrancaPoll()},30)}
+async function cargaResumen(){Z.resumen=[];Z.mio=null;if(!Z.sala)return;const r=await sb.rpc('lab_sala_resumen',{p_sala:Z.sala.id});const d=r.data||[];if(isEst())Z.mio=d[0]||null;else Z.resumen=d}
+async function entrarSala(id){stopLive();Z.sala=Z.salas.find(a=>a.id===id);Z.msgs=[];Z.tipo=isProf()?'moderacion':'aporte';Z.resp=null;Z.vozFlag=false;await refrescaMsgs(true);await cargaResumen();Z.v='sala';render();setTimeout(()=>{scrollM();liveSala()},30)}
 const scrollM=()=>{const c=document.getElementById('msgs');if(c)c.scrollTop=c.scrollHeight};
-async function refrescaMsgs(sinDom){const r=await sb.from('lab_mensajes').select('*').eq('sala_id',Z.sala.id).order('created_at',{ascending:true}).limit(300);if(r.error)return;const d=r.data||[];
-  if(d.length!==Z.msgs.length||(d.length&&d[d.length-1].id!==(Z.msgs[Z.msgs.length-1]||{}).id)){Z.msgs=d;if(!sinDom){const c=document.getElementById('msgs');if(c){const bajo=c.scrollTop+c.clientHeight>=c.scrollHeight-40;c.innerHTML=msgsHtml();if(bajo)scrollM()}}}}
-function arrancaPoll(){if(Z.poll)clearInterval(Z.poll);Z.poll=setInterval(()=>{if(Z.v!=='sala'||!document.getElementById('msgs')){clearInterval(Z.poll);Z.poll=null;return}refrescaMsgs()},4000)}
-function msgsHtml(){if(!Z.msgs.length)return'<p style="color:#64748b">Todavía no hay mensajes. ¡Rompe el hielo!</p>';
-  return Z.msgs.map(m=>{const yo=m.user_id===(M&&M.id)&&m.autor!=='ia',c=m.autor==='ia'?'#f3e8ff':m.autor==='doc'?'#dbeafe':yo?'#dcfce7':'#f1f5f9',b=m.autor==='ia'?'🤖 Tutor IA':m.autor==='doc'?'👩‍🏫 '+e(m.nombre):e(m.nombre);
-    return`<div style="background:${c};padding:8px 12px;border-radius:12px;max-width:92%;${yo?'justify-self:end':''}"><div style="font-size:11px;font-weight:800;color:#475569">${b} · ${fF(m.created_at)}${isProf()&&m.autor!=='doc'?` <button onclick="LAB.msgDel('${m.id}')" title="Borrar mensaje" style="color:#dc2626">🗑</button>`:''}</div><div style="white-space:pre-wrap;margin-top:2px">${e(m.texto)}</div></div>`}).join('')}
-function vSala(){const s=Z.sala,ab=s.estado==='abierta',puede=ab&&(isEst()||(isProf()&&s.docente_id===M.id)),ia=ab&&s.modo!=='companeros'&&s.tutor_activo&&puede;
-  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${s.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[s.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">💬 ${e(s.titulo)}</h2>
-  <p style="color:#64748b;font-size:13px">${MODO[s.modo]} · ${ab?'Abierta':'Cerrada'}</p>${s.tema?`<p style="margin:6px 0">${e(s.tema)}</p>`:''}
-  <p style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px">Respeta a tus compañeros: argumenta sin ofender. Tu docente puede leer y borrar mensajes. No escribas datos personales.${s.modo!=='companeros'?' El tutor IA usa un proveedor externo de inteligencia artificial.':''}</p>
-  <div id="msgs" style="display:grid;gap:8px;margin:10px 0;max-height:420px;overflow:auto;padding:4px">${msgsHtml()}</div>
-  ${puede?`<div style="display:flex;gap:6px"><textarea id="sm" rows="2" style="${inp}" placeholder="Escribe tu argumento…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();LAB.msgSend()}"></textarea>${B('#1e63e9','Enviar','onclick="LAB.msgSend()"')}</div>`:(ab?'<p style="color:#64748b">Eres observador: puedes leer pero no escribir.</p>':'<p style="color:#64748b">Esta sala está cerrada.</p>')}
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${ia?B('#7c3aed','🤖 Pedir opinión al tutor IA','onclick="LAB.msgIA()"'):''}${isProf()&&s.docente_id===M.id?B('#b45309',ab?'Cerrar sala':'Reabrir sala','onclick="LAB.salaEstado()"'):''}${B('#475569','↻ Actualizar','onclick="LAB.msgRef()"')}</div></div>`}
-async function msgSend(){const t=document.getElementById('sm');const v=(t.value||'').trim();if(!v||Z.busy)return;Z.busy=true;
-  try{const {error}=await sb.rpc('lab_enviar_mensaje',{p_sala:Z.sala.id,p_texto:v});if(error)throw error;t.value='';await refrescaMsgs();scrollM();
-    if(isEst()&&Z.sala.modo==='tutor'){Z.busy=false;await msgIA(true)}}catch(er){err(er)}Z.busy=false}
+const habla=(t,lang)=>{try{const u=new SpeechSynthesisUtterance(t);u.lang=lang||'es-CO';u.rate=.95;speechSynthesis.speak(u)}catch(_){}};
+const langSala=()=>Z.sala&&Z.sala.lab==='ingles'?'en-US':'es-CO';
+async function refrescaMsgs(sinDom){if(!Z.sala)return;const r=await sb.from('lab_mensajes').select('*').eq('sala_id',Z.sala.id).order('created_at',{ascending:true}).limit(300);if(r.error)return;const d=r.data||[];
+  const cambio=d.length!==Z.msgs.length||(d.length&&d[d.length-1].id!==(Z.msgs[Z.msgs.length-1]||{}).id);
+  if(cambio){const viejos=new Set(Z.msgs.map(m=>m.id));const nuevos=d.filter(m=>!viejos.has(m.id));Z.msgs=d;
+    if(Z.escucha&&Z.msgs.length&&!sinDom)nuevos.filter(m=>m.user_id!==M.id||m.autor==='ia').forEach(m=>habla((m.autor==='ia'?'Tutor IA':m.nombre)+' dice: '+m.texto,langSala()));
+    if(!sinDom)pinta()}}
+function pinta(){const c=document.getElementById('msgs');if(c){const bajo=c.scrollTop+c.clientHeight>=c.scrollHeight-60;c.innerHTML=msgsHtml();if(bajo)scrollM()}const p=document.getElementById('part');if(p)p.innerHTML=partHtml()}
+async function refrescaSala(){if(!Z.sala)return;const r=await sb.from('lab_salas').select('*').eq('id',Z.sala.id).maybeSingle();const s=r.data;if(!s)return;
+  if(s.estado!==Z.sala.estado||s.moderador!==Z.sala.moderador||s.tutor_activo!==Z.sala.tutor_activo||JSON.stringify(s.silenciados)!==JSON.stringify(Z.sala.silenciados)){Z.sala=s;if(s.estado==='cerrada')await cargaResumen();reSala()}}
+function reSala(){const t=document.getElementById('sm'),v=t?t.value:'';render();const n=document.getElementById('sm');if(n&&v)n.value=v;scrollM()}
+function liveSala(){const id=Z.sala.id;let vivo=false;
+  if(sb.channel){try{const ch=sb.channel('lab-sala-'+id,{config:{presence:{key:M.id}}});Z.ch=ch;
+    ch.on('postgres_changes',{event:'*',schema:'public',table:'lab_mensajes',filter:'sala_id=eq.'+id},()=>{refrescaMsgs();if(!isEst())cargaResumen().then(pinta)})
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'lab_salas',filter:'id=eq.'+id},()=>refrescaSala())
+      .on('presence',{event:'sync'},()=>{const st=ch.presenceState?ch.presenceState():{};Z.pres={};Object.entries(st).forEach(([k,v])=>{Z.pres[k]=(v&&v[0])||{}});pinta()})
+      .subscribe(async s=>{if(s==='SUBSCRIBED'){vivo=true;try{await ch.track({nombre:M.full_name||'',rol:isProf()?'doc':'est'})}catch(_){}}})}catch(_){}}
+  if(Z.poll)clearInterval(Z.poll);Z.poll=setInterval(()=>{if(Z.v!=='sala'||!document.getElementById('msgs')){stopLive();return}refrescaMsgs();refrescaSala()},vivo?15000:4000)}
+function stats(){const S={};Z.msgs.forEach(m=>{if(m.autor==='ia')return;const o=S[m.user_id]||(S[m.user_id]={id:m.user_id,nombre:m.nombre,doc:m.autor==='doc',n:0,aporte:0,refutacion:0,apoyo:0,pregunta:0,moderacion:0});o.n++;o[m.tipo]=(o[m.tipo]||0)+1});return S}
+function aMi(){const mine=new Set(Z.msgs.filter(m=>m.user_id===M.id&&m.autor!=='ia').map(m=>m.id)),R={};Z.msgs.forEach(m=>{if(m.responde_a&&mine.has(m.responde_a)&&m.user_id!==M.id&&m.autor!=='ia'){const k=m.nombre+'|'+m.tipo;R[k]=(R[k]||0)+1}});return Object.entries(R).map(([k,v])=>{const [n,t]=k.split('|');return{n,t,v}})}
+function partHtml(){const S=stats(),on=Z.pres||{},sil=(Z.sala&&Z.sala.silenciados)||[];const rows=[];const vistos=new Set();
+  Object.values(S).forEach(o=>{vistos.add(o.id);rows.push({id:o.id,nombre:o.nombre,n:o.n,ref:o.refutacion,apo:o.apoyo,pre:o.pregunta,ap:o.aporte,doc:o.doc})});
+  Object.entries(on).forEach(([k,v])=>{if(!vistos.has(k)){vistos.add(k);rows.push({id:k,nombre:v.nombre||'Conectado',n:0,ref:0,apo:0,pre:0,ap:0,doc:v.rol==='doc'})}});
+  (Z.resumen||[]).forEach(r=>{if(!vistos.has(r.user_id)){vistos.add(r.user_id);rows.push({id:r.user_id,nombre:r.nombre,n:0,ref:0,apo:0,pre:0,ap:0,doc:false})}});
+  rows.sort((a,b)=>b.n-a.n);const pu=isProf()&&Z.sala.docente_id===M.id&&Z.sala.estado==='abierta';
+  const h=rows.map(r=>`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #f1f5f9"><span title="${on[r.id]?'Conectado ahora':'Desconectado'}">${on[r.id]?'🟢':'⚪'}</span><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis">${e(r.nombre)}${r.id===M.id?' (tú)':''}${r.doc?' 👩‍🏫':''}</div><div style="font-size:11px;color:#64748b">${r.n?`${r.n} msj · 💡${r.ap} ⚔️${r.ref} 👍${r.apo} ❓${r.pre}`:'sin participar'}</div></div>${pu&&!r.doc&&r.id!==M.id?`<button onclick="LAB.silen('${r.id}')" title="${sil.includes(r.id)?'Devolver la palabra':'Silenciar'}" style="font-size:16px">${sil.includes(r.id)?'🔇':'🔊'}</button>`:''}</div>`).join('');
+  const mi=isEst()?aMi():[];const cn=Object.values(on).length;
+  return`<div style="font-weight:800;margin-bottom:4px">👥 Participantes <span style="font-weight:600;color:#16a34a;font-size:12px">· ${cn} en línea</span></div>${h||'<p style="color:#64748b;font-size:13px">Aún no hay participantes.</p>'}${mi.length?`<div style="margin-top:10px;padding:8px;background:#fffbeb;border-radius:10px;font-size:13px"><b>Respuestas a tus ideas</b>${mi.map(x=>`<div>${(TIPO[x.t]||TIPO.aporte)[0]} ${e(x.n)} ${x.t==='refutacion'?'te refutó':x.t==='apoyo'?'te apoyó':x.t==='pregunta'?'te preguntó':'te respondió'}${x.v>1?' ('+x.v+' veces)':''}</div>`).join('')}</div>`:''}`}
+function msgsHtml(){if(!Z.msgs.length)return'<p style="color:#64748b">Todavía no hay mensajes. ¡Rompe el hielo!</p>';const puede=salaPuede();
+  return Z.msgs.map(m=>{const yo=m.user_id===(M&&M.id)&&m.autor!=='ia',c=m.autor==='ia'?'#f3e8ff':m.autor==='doc'?'#dbeafe':yo?'#dcfce7':'#f1f5f9',t=TIPO[m.tipo]||TIPO.aporte,orig=m.responde_a&&Z.msgs.find(x=>x.id===m.responde_a);
+    const b=m.autor==='ia'?'🤖 Tutor IA':m.autor==='doc'?'👩‍🏫 '+e(m.nombre):e(m.nombre);
+    return`<div style="background:${c};padding:9px 12px;border-radius:14px;max-width:94%;${yo?'justify-self:end;':''}box-shadow:0 1px 2px rgba(15,23,42,.06)"><div style="font-size:11px;font-weight:800;color:#475569">${b} · <span style="color:#1e63e9">${t[0]} ${t[1]}${orig?' a '+e(orig.nombre):''}</span>${m.voz?' · 🎤':''} · ${fF(m.created_at)}</div>${orig?`<div style="font-size:11px;color:#64748b;border-left:3px solid #cbd5e1;padding-left:6px;margin:3px 0">«${e(String(orig.texto).slice(0,90))}${orig.texto.length>90?'…':''}»</div>`:''}<div style="white-space:pre-wrap;margin-top:2px">${e(m.texto)}</div>
+    <div style="margin-top:3px;font-size:12px"><button onclick="LAB.leerM('${m.id}')" title="Escuchar este mensaje">🔊 Escuchar</button>${puede&&m.autor!=='ia'&&!yo?` <button onclick="LAB.resp('${m.id}')" style="color:#1e63e9;font-weight:700">↩ Responder</button>`:''}${isProf()&&Z.sala.docente_id===M.id&&m.autor!=='doc'?` <button onclick="LAB.msgDel('${m.id}')" title="Borrar mensaje" style="color:#dc2626">🗑</button>`:''}</div></div>`}).join('')}
+function salaPuede(){const s=Z.sala;return s&&s.estado==='abierta'&&(isEst()||(isProf()&&s.docente_id===M.id))}
+function vSala(){const s=Z.sala,ab=s.estado==='abierta',puede=salaPuede(),dueno=isProf()&&s.docente_id===M.id,docMod=s.moderador==='docente';
+  const iaOk=ab&&s.modo!=='companeros'&&s.tutor_activo&&puede&&(!docMod||dueno);const rep=Z.resp&&Z.msgs.find(x=>x.id===Z.resp);
+  const tipos=(dueno?['moderacion','aporte','pregunta']:['aporte','refutacion','apoyo','pregunta']);
+  const SRok=!!SR;
+  const resultado=isEst()&&!ab?(Z.mio&&Z.mio.nota!=null?`<div style="${card};background:linear-gradient(135deg,#ecfdf5,#eff6ff);margin-top:12px"><div style="font-weight:800;font-size:16px">🎓 Tu resultado en este debate</div><div style="font-size:34px;font-weight:800;color:#15803d">${Z.mio.nota} <span style="font-size:15px;color:#64748b">/ 5</span></div><div style="font-size:13px">${Z.mio.mensajes} mensajes · 💡${Z.mio.aportes} aportes · ⚔️${Z.mio.refutaciones} refutaciones · 👍${Z.mio.apoyos} apoyos · ❓${Z.mio.preguntas} preguntas · ${Z.mio.interacciones} interacciones con compañeros</div>${Z.mio.retro?`<div style="margin-top:6px"><b>Comentario del docente:</b> ${e(Z.mio.retro)}</div>`:''}</div>`:`<div style="${card};margin-top:12px">⏳ La sala está cerrada. Tu docente publicará pronto tu nota según tus aportes y tu participación.</div>`):'';
+  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${s.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[s.lab][2])}</button>
+  <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="font-weight:800;font-size:19px;margin:6px 0">💬 ${e(s.titulo)}</h2><span style="background:${ab?'#dcfce7':'#fee2e2'};color:${ab?'#15803d':'#b91c1c'};font-weight:800;font-size:12px;padding:4px 10px;border-radius:99px">${ab?'● EN VIVO':'Cerrada'}</span></div>
+  <p style="color:#64748b;font-size:13px">${MODO[s.modo]} · Modera: ${docMod?'👩‍🏫 el docente':'🤖 el tutor IA'}</p>${s.tema?`<p style="margin:6px 0">${e(s.tema)}</p>`:''}
+  <p style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px">Respeta a tus compañeros: argumenta sin ofender. Tu docente lee todo y puede borrar mensajes. No escribas datos personales.${s.modo!=='companeros'?' El tutor IA usa un proveedor externo de inteligencia artificial.':''} Tu nota depende de tus aportes y participación.</p>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:10px" class="lb-sala"><div>
+   <div id="msgs" style="display:grid;gap:8px;max-height:430px;overflow:auto;padding:4px;background:#f8fafc;border-radius:12px">${msgsHtml()}</div>
+   ${puede?`<div style="margin-top:8px">${rep?`<div style="font-size:12px;background:#eef2ff;border-radius:8px;padding:6px 8px;margin-bottom:6px">↩ Respondiendo a <b>${e(rep.nombre)}</b>: «${e(String(rep.texto).slice(0,70))}» <button onclick="LAB.resp(null)" style="color:#dc2626">✕</button></div>`:''}
+   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${tipos.map(k=>`<button onclick="LAB.tipo('${k}')" style="padding:5px 10px;border-radius:99px;font-weight:800;font-size:12px;border:1.5px solid ${Z.tipo===k?'#1e63e9':'#cbd5e1'};background:${Z.tipo===k?'#e8f1ff':'#fff'}">${TIPO[k][0]} ${k==='refutacion'?'Refutar':k==='apoyo'?'Apoyar':TIPO[k][1]}</button>`).join('')}</div>
+   <div style="display:flex;gap:6px"><textarea id="sm" rows="2" style="${inp}" placeholder="${Z.tipo==='refutacion'?'Refuto porque…':Z.tipo==='apoyo'?'Apoyo porque…':'Escribe tu argumento…'}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();LAB.msgSend()}"></textarea><div style="display:grid;gap:4px">${B('#1e63e9','Enviar','onclick="LAB.msgSend()"')}${SRok?B('#7c3aed','🎤 Hablar','onclick="LAB.hablarV()"'):''}</div></div>
+   <div style="font-size:12px;margin-top:4px;display:flex;gap:14px;flex-wrap:wrap"><label><input type="checkbox" ${Z.escucha?'checked':''} onchange="LAB.togEscucha(this.checked)"> 🔊 Escuchar en voz alta lo que escriben los demás</label>${SRok?`<label><input type="checkbox" ${Z.autoVoz?'checked':''} onchange="LAB.togAuto(this.checked)"> Enviar al terminar de hablar</label>`:'<span style="color:#92400e">Tu navegador no reconoce voz: puedes escribir y escuchar a los demás.</span>'}</div></div>`:(ab?'<p style="color:#64748b;margin-top:8px">Eres observador: puedes leer y escuchar pero no escribir.</p>':'<p style="color:#64748b;margin-top:8px">Esta sala está cerrada.</p>')}
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${iaOk?B('#7c3aed','🤖 Pedir opinión al tutor IA','onclick="LAB.msgIA()"'):''}${dueno?B('#0d9488',docMod?'🤖 Que modere el tutor IA':'🎙️ Yo seré el moderador','onclick="LAB.mod()"'):''}${dueno?B('#b45309',ab?'Cerrar sala':'Reabrir sala','onclick="LAB.salaEstado()"'):''}${(isProf()||isDir())?B('#be185d','📊 Notas del debate','onclick="LAB.notasView()"'):''}${B('#475569','↻ Actualizar','onclick="LAB.msgRef()"')}</div>${resultado}</div>
+  <div id="part" style="${card}">${partHtml()}</div></div></div>`}
+async function msgSend(){const t=document.getElementById('sm');const v=(t.value||'').trim();if(!v||Z.busy)return;
+  if((Z.tipo==='refutacion'||Z.tipo==='apoyo')&&!Z.resp)return toast('Para '+(Z.tipo==='refutacion'?'refutar':'apoyar')+', toca "↩ Responder" en el mensaje de tu compañero');
+  Z.busy=true;try{const {error}=await sb.rpc('lab_enviar_mensaje',{p_sala:Z.sala.id,p_texto:v,p_tipo:Z.tipo,p_responde:Z.resp||null,p_voz:!!Z.vozFlag});if(error)throw error;t.value='';Z.resp=null;Z.vozFlag=false;if(isEst())Z.tipo='aporte';await refrescaMsgs(true);reSala();
+    if(isEst()&&Z.sala.modo==='tutor'&&Z.sala.moderador!=='docente'){Z.busy=false;await msgIA(true)}}catch(er){err(er)}Z.busy=false}
 async function msgIA(auto){if(Z.busy&&!auto)return;Z.busy=true;if(!auto)toast('🤖 El tutor está pensando…');
   try{const {data,error}=await sb.functions.invoke('lab-tutor',{body:{sala_id:Z.sala.id}});if(error){let m=error.message;try{const b=await error.context.json();if(b&&b.error)m=b.error}catch(_){}throw new Error(m)}
     if(data&&data.sin_clave)throw new Error('El tutor IA aún no está activado en el servidor.');if(data.error)throw new Error(data.error);await refrescaMsgs();scrollM()}catch(er){toast(er.message)}Z.busy=false}
-async function msgDel(id){if(!confirm('¿Borrar este mensaje?'))return;const {error}=await sb.from('lab_mensajes').delete().eq('id',id);if(error)return err(error);await refrescaMsgs();}
-async function salaEstado(){const n=Z.sala.estado==='abierta'?'cerrada':'abierta';const {error}=await sb.from('lab_salas').update({estado:n}).eq('id',Z.sala.id);if(error)return err(error);Z.sala.estado=n;await cargaSalas();render()}
+async function msgDel(id){if(!confirm('¿Borrar este mensaje?'))return;const {error}=await sb.from('lab_mensajes').delete().eq('id',id);if(error)return err(error);await refrescaMsgs()}
+async function salaEstado(){const n=Z.sala.estado==='abierta'?'cerrada':'abierta';const {error}=await sb.from('lab_salas').update({estado:n}).eq('id',Z.sala.id);if(error)return err(error);Z.sala.estado=n;await cargaSalas();await cargaResumen();reSala()}
+async function salaMod(){const n=Z.sala.moderador==='docente'?'ia':'docente';const {error}=await sb.from('lab_salas').update({moderador:n}).eq('id',Z.sala.id);if(error)return err(error);Z.sala.moderador=n;toast(n==='docente'?'🎙️ Ahora tú moderas; el tutor IA queda en pausa':'🤖 El tutor IA modera de nuevo');reSala()}
+async function silen(uid){const s=(Z.sala.silenciados||[]).includes(uid);const {error}=await sb.rpc('lab_sala_silenciar',{p_sala:Z.sala.id,p_user:uid,p_silenciar:!s});if(error)return err(error);await refrescaSala();Z.sala.silenciados=s?(Z.sala.silenciados||[]).filter(x=>x!==uid):[...(Z.sala.silenciados||[]),uid];pinta()}
+function hablarV(){if(!SR)return toast('Tu navegador no reconoce voz');const r=new SR();r.lang=langSala();r.interimResults=false;
+  r.onresult=async ev=>{const tx=ev.results[0][0].transcript;const t=document.getElementById('sm');if(t)t.value=((t.value?t.value+' ':'')+tx).trim();Z.vozFlag=true;if(Z.autoVoz)await msgSend()};
+  r.onerror=()=>toast('No se pudo escuchar. Revisa el permiso del micrófono.');r.onend=()=>toast('🎤 Listo: revisa tu mensaje y envíalo');r.start();toast('🎤 Habla ahora…')}
+/* ---------- notas del debate ---------- */
+async function notasView(){await cargaResumen();Z.v='salaNotas';render()}
+function vNotas(){const s=Z.sala,ro=!(isProf()&&s.docente_id===M.id),R=Z.resumen||[];
+  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.sala('${s.id}')" style="font-weight:700;color:#1e63e9">← Volver a la sala</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">📊 Notas del debate · ${e(s.titulo)}</h2>
+  <p style="font-size:13px;color:#475569">La <b>nota sugerida</b> se calcula con reglas fijas: 40% participación (hasta 6 mensajes), 30% interacción con compañeros (refutar, apoyar o responder; hasta 4) y 30% desarrollo de las ideas (longitud promedio, solo como apoyo). <b>Tú decides la nota final.</b> La IA nunca califica.</p>
+  <div class="aic-table-wrap"><table style="min-width:760px"><thead><tr><th>ESTUDIANTE</th><th>MSJ</th><th>💡</th><th>⚔️</th><th>👍</th><th>❓</th><th>INTERAC.</th><th>🎤</th><th>SUGERIDA</th><th>NOTA FINAL</th><th>COMENTARIO</th><th>PUBLICADA</th></tr></thead><tbody>${R.map(r=>`<tr><td>${e(r.nombre)}</td><td>${r.mensajes}</td><td>${r.aportes}</td><td>${r.refutaciones}</td><td>${r.apoyos}</td><td>${r.preguntas}</td><td>${r.interacciones}</td><td>${r.voz}</td><td><b>${r.sugerida}</b></td><td><input class="nt_n" data-u="${r.user_id}" type="number" min="0" max="5" step="0.1" value="${r.nota!=null?r.nota:r.sugerida}" ${ro?'disabled':''} style="width:70px;padding:5px;border:1.5px solid #cbd5e1;border-radius:8px"></td><td><input class="nt_r" data-u="${r.user_id}" value="${e(r.retro||'')}" ${ro?'disabled':''} style="width:180px;padding:5px;border:1.5px solid #cbd5e1;border-radius:8px"></td><td>${r.publicada?'✅':'—'}</td></tr>`).join('')}</tbody></table></div>
+  ${ro?'':`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${B('#475569','💾 Guardar (sin publicar)','onclick="LAB.notasGuardar(false)"')}${B('#16a34a','🚀 Guardar y publicar a los estudiantes','onclick="LAB.notasGuardar(true)"')}</div><p style="font-size:12px;color:#64748b;margin-top:6px">Las notas quedan guardadas en tu registro y aparecen en "Mis notas" del estudiante solo cuando las publicas.</p>`}</div>`}
+async function notasGuardar(pub){const n=[...document.querySelectorAll('.nt_n')].map(i=>({user_id:i.dataset.u,nota:i.value===''?null:+i.value,retro:(document.querySelector('.nt_r[data-u="'+i.dataset.u+'"]')||{}).value||''}));
+  if(pub&&!confirm('¿Publicar estas notas a los estudiantes?'))return;const {data,error}=await sb.rpc('lab_sala_guardar_notas',{p_sala:Z.sala.id,p_notas:n,p_publicar:pub});if(error)return err(error);toast('✅ '+data+' notas guardadas'+(pub?' y publicadas':''));await cargaResumen();render()}
 
 /* ---------- pantalla principal ---------- */
 function home(){
@@ -108,7 +172,7 @@ function home(){
   const rol=isEst()?'Practica, explora y entrega tus experiencias.':isProf()?'Crea experiencias, publícalas a tus cursos y califica.':'Consulta lo que publican los docentes (solo lectura).';
   return`<div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:20px">🔬 Centro de Laboratorios</h2><p style="color:#64748b;margin:4px 0 14px">${rol}</p>
   ${bd}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px">${LABS.map(l=>{const n=exDe(l[0]).filter(x=>isProf()||isDir()||x.estado!=='borrador').length;
-    return`<div onclick="LAB.open('${l[0]}')" style="${card};cursor:pointer"><div style="font-size:30px">${l[1]}</div><div style="font-weight:800;margin-top:4px">${e(l[2])}</div><div style="font-size:12px;color:#64748b;margin:4px 0 8px">${e(l[3])}</div><div style="font-size:12px;font-weight:700;color:#1e63e9">${n} experiencia${n===1?'':'s'}</div></div>`}).join('')}</div></div>`;
+    return`<div class="lb-card" onclick="LAB.open('${l[0]}')" style="${card};cursor:pointer;border-top:5px solid ${lcol(l[0])}"><div style="font-size:34px;width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:${lcol(l[0])}22">${l[1]}</div><div style="font-weight:800;margin-top:4px">${e(l[2])}</div><div style="font-size:12px;color:#64748b;margin:4px 0 8px">${e(l[3])}</div><div style="font-size:12px;font-weight:700;color:#1e63e9">${n} experiencia${n===1?'':'s'}</div></div>`}).join('')}</div></div>`;
 }
 function labPage(){
   const l=LN[Z.lab],xs=exDe(Z.lab).filter(x=>isProf()||isDir()||x.estado==='publicada'||x.estado==='cerrada');
@@ -119,7 +183,7 @@ function labPage(){
   const lista=xs.length?xs.map(x=>{const en=Z.ents[x.id];const st=isEst()?(en?(en.estado==='calificada'?'Calificada: '+(en.nota??'—')+' / 5':en.estado==='enviada'?'Enviada':'En borrador'):'Pendiente'):ESTADO[x.estado];
     return`<div style="${card};display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div style="min-width:200px"><div style="font-weight:800">${e(x.titulo)}</div><div style="font-size:12px;color:#64748b">${e(x.descripcion||'')}${isDir()?' · Docente: '+e(Z.nom[x.docente_id]||''):''}${x.cierra?' · Cierra '+fF(x.cierra):''}</div><div style="font-size:12px;font-weight:700;color:#1e63e9;margin-top:3px">${st}</div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">${isEst()?B('#1e63e9',en?'Abrir':'Empezar',`onclick="LAB.abrir('${x.id}')"`):''}${isProf()?B('#475569','Editar',`onclick="LAB.editar('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`)+B('#64748b','Duplicar',`onclick="LAB.dup('${x.id}')"`):''}${isDir()?B('#1e63e9','Ver',`onclick="LAB.abrir('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`):''}</div></div>`}).join(''):`<p style="color:#64748b">${isEst()?'Tu docente aún no ha publicado experiencias en este laboratorio.':'Todavía no hay experiencias aquí.'}</p>`;
-  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.home()" style="font-weight:700;color:#1e63e9">← Todos los laboratorios</button><h2 style="font-weight:800;font-size:20px;margin-top:8px">${l[1]} ${e(l[2])}</h2><p style="color:#64748b">${e(l[3])}</p>${tools}
+  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.home()" style="font-weight:700;color:#1e63e9">← Todos los laboratorios</button><div style="margin:10px 0;padding:18px;border-radius:16px;color:#fff;background:linear-gradient(135deg,${lcol(Z.lab)},${lcol(Z.lab)}aa);box-shadow:0 6px 18px ${lcol(Z.lab)}55"><div style="font-size:36px">${l[1]}</div><h2 style="font-weight:800;font-size:22px">${e(l[2])}</h2><p style="opacity:.92">${e(l[3])}</p></div>${tools}
   
   ${(window.SIM&&SIM.list(Z.lab).length)?`<h3 style="font-weight:800;margin:6px 0">🧰 Simuladores</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px">${SIM.list(Z.lab).map(s=>`<div onclick="LAB.sim('${s.id}')" style="${card};cursor:pointer"><b>${e(s.t)}</b><div style="font-size:12px;color:#64748b;margin-top:4px">${e(s.d)}</div></div>`).join('')}</div><h3 style="font-weight:800;margin:6px 0">📋 Experiencias</h3>`:''}
   ${salasH}<div style="display:grid;gap:10px">${lista}</div></div>`;
@@ -294,12 +358,12 @@ function vDash(){const fl=Z.fLab||'',fc=Z.fCur||'';const xs=Z.exps.filter(x=>(!f
   ${fila?`<div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>LABORATORIO</th><th>EXPERIENCIA</th><th>ENVIADAS</th><th>CALIFICADAS</th><th>PROMEDIO</th><th>ACIERTO AUTO</th></tr></thead><tbody>${fila}</tbody></table></div>`:'<p style="color:#64748b">Aún no hay experiencias publicadas con estos filtros.</p>'}
   ${Object.keys(by).length?`<h3 style="font-weight:800;margin:14px 0 4px">English Lab · práctica libre por habilidad</h3>${Object.entries(by).map(([k,v])=>`<div>${k}: ${v.p}/${v.t} aciertos (${v.n} intentos)</div>`).join('')}`:''}</div>`}
 function vistaActual(){if(!Z.ok)return'<div class="aic-card" style="padding:18px">Cargando laboratorios…</div>';
-  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim,dash:vDash,gate:vGate,alista:vAlista,salaNew:vSalaNew,sala:vSala})[Z.v]()}
+  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim,dash:vDash,gate:vGate,alista:vAlista,salaNew:vSalaNew,sala:vSala,salaNotas:vNotas})[Z.v]()}
 
 return{load,view:()=>vistaActual(),
-  home(){Z.v='home';render()},
-  async open(l){Z.lab=l;if(isEst()&&!(await asistio(l))){Z.v='gate';render();return}if(isEst()||isProf()||isDir())await cargaSalas();Z.v='lab';render()},
-  asiste:registrarAsis,verAsis,nuevaSala,salaCrear,sala:entrarSala,msgSend,msgIA,msgDel,msgRef(){refrescaMsgs().then(()=>toast('Actualizado'))},salaEstado,
+  home(){stopLive();Z.v='home';render()},
+  async open(l){stopLive();Z.lab=l;if(isEst()&&!(await asistio(l))){Z.v='gate';render();return}if(isEst()||isProf()||isDir())await cargaSalas();Z.v='lab';render()},
+  asiste:registrarAsis,verAsis,nuevaSala,salaCrear,sala:entrarSala,msgSend,msgIA,msgDel,msgRef(){refrescaSala();refrescaMsgs().then(()=>toast('Actualizado'))},salaEstado,mod:salaMod,silen,hablarV,notasView,notasGuardar,tipo(k){Z.tipo=k;reSala()},resp(id){Z.resp=id;if(id&&Z.tipo==='aporte'&&isEst())Z.tipo='refutacion';reSala()},leerM(id){const m=Z.msgs.find(x=>x.id===id);if(m){try{speechSynthesis.cancel()}catch(_){}habla(m.texto,langSala())}},togEscucha(v){Z.escucha=v;if(v)habla('Escucha activada',langSala());else try{speechSynthesis.cancel()}catch(_){}},togAuto(v){Z.autoVoz=v},
   nueva(){Z.ed=nuevaEd();Z.v='build';render()},editar,
   async dup(id){const x=Z.exps.find(a=>a.id===id);const {id:_,created_at,updated_at,...r}=x;const k=await sb.from('lab_claves').select('claves').eq('experiencia_id',id).maybeSingle();
     const n=await sb.from('lab_experiencias').insert({...r,titulo:x.titulo+' (copia)',estado:'borrador'}).select('id').single();if(n.error)return err(n.error);

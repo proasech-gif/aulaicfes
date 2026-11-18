@@ -6,16 +6,6 @@ const bind=(el,ids,f)=>ids.forEach(i=>{const r=$(el,'#'+i);r.oninput=()=>{$(el,'
 const val=(el,i)=>+$(el,'#'+i).value;
 const nota=t=>`<p style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px;margin-top:10px">⚠️ Simulación: es un modelo simplificado, no un experimento real. ${t||''}</p>`;
 const L=[
-{id:'proyectil',lab:'fisica',t:'Lanzamiento de proyectil',d:'Cambia ángulo, velocidad y gravedad; observa alcance y altura (sin aire).',
- mount(el){el.innerHTML=`<canvas id="c" width="600" height="260" style="width:100%;background:#f0f9ff;border-radius:10px"></canvas>${sl('a','Ángulo (°)',5,85,45)}${sl('v','Velocidad (m/s)',5,60,30)}${sl('g','Gravedad (m/s²)',2,25,9.8,.1)}<div id="o" style="font-weight:700;margin-top:8px"></div>${nota('No incluye resistencia del aire.')}`;
-  const c=$(el,'#c'),x=c.getContext('2d');const f=()=>{const a=val(el,'a')*Math.PI/180,v=val(el,'v'),g=val(el,'g'),T=2*v*Math.sin(a)/g,R=v*v*Math.sin(2*a)/g,H=v*v*Math.sin(a)**2/(2*g);
-   x.clearRect(0,0,600,260);const sc=Math.min(540/Math.max(R,1),200/Math.max(H,1));x.strokeStyle='#64748b';x.beginPath();x.moveTo(30,230);x.lineTo(590,230);x.stroke();x.strokeStyle='#1e63e9';x.lineWidth=2;x.beginPath();
-   for(let i=0;i<=60;i++){const t=T*i/60,px=30+v*Math.cos(a)*t*sc,py=230-(v*Math.sin(a)*t-g*t*t/2)*sc;i?x.lineTo(px,py):x.moveTo(px,py)}x.stroke();
-   $(el,'#o').textContent=`Tiempo de vuelo: ${T.toFixed(2)} s · Alcance: ${R.toFixed(1)} m · Altura máxima: ${H.toFixed(1)} m`};
-  bind(el,['a','v','g'],f);f()}},
-{id:'ohm',lab:'fisica',t:'Ley de Ohm (circuito simple)',d:'Voltaje y resistencia → corriente y potencia (V = I·R).',
- mount(el){el.innerHTML=`<div id="b" style="font-size:60px;text-align:center">💡</div>${sl('V','Voltaje (V)',1,24,9)}${sl('R','Resistencia (Ω)',1,100,30)}<div id="o" style="font-weight:700;margin-top:8px"></div>${nota('Resistencia ideal, sin calentamiento.')}`;
-  const f=()=>{const V=val(el,'V'),R=val(el,'R'),I=V/R,P=V*I;$(el,'#o').textContent=`Corriente: ${(I*1000).toFixed(0)} mA · Potencia: ${P.toFixed(2)} W`;$(el,'#b').style.opacity=Math.min(1,.15+P/6)};bind(el,['V','R'],f);f()}},
 {id:'ph',lab:'quimica',t:'Escala de pH y mezcla ácido–base',d:'Mezcla volúmenes de un ácido y una base fuertes y mira el pH resultante y el color del indicador.',
  mount(el){el.innerHTML=`<div id="col" style="height:70px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff"></div>${sl('ma','Ácido fuerte HCl 0,1 M (mL)',0,100,50)}${sl('mb','Base fuerte NaOH 0,1 M (mL)',0,100,20)}<div id="o" style="font-weight:700;margin-top:8px"></div>${nota('Solo ácido y base fuertes monopróticos a 25 °C. En el laboratorio real usa gafas y bata.')}`;
   const col=p=>{const s=['#dc2626','#ea580c','#f59e0b','#facc15','#84cc16','#22c55e','#10b981','#14b8a6','#3b82f6','#6366f1','#7c3aed','#9333ea','#7e22ce','#581c87'];return s[Math.min(13,Math.max(0,Math.round(p)))]};
@@ -31,18 +21,120 @@ const L=[
  mount(el){const O=[['Núcleo','🟣','Guarda el ADN y dirige las actividades de la célula.'],['Mitocondria','🟠','Produce la energía (ATP) por respiración celular.'],['Ribosoma','⚪','Fabrica proteínas.'],['Membrana','🟢','Controla qué entra y sale de la célula.'],['Retículo endoplasmático','🔵','Transporta y modifica sustancias.'],['Cloroplasto (solo en células vegetales)','🌿','Realiza la fotosíntesis.']];
   el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">${O.map((o,i)=>`<button data-i="${i}" style="padding:12px;border:1.5px solid #cbd5e1;border-radius:12px;font-weight:700">${o[1]}<br>${o[0]}</button>`).join('')}</div><div id="o" style="font-weight:700;margin-top:10px;min-height:40px"></div>${nota('Esquema didáctico; las células reales no se ven así.')}`;
   el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>$(el,'#o').textContent=O[b.dataset.i][0]+': '+O[b.dataset.i][2])}},
-{id:'funcion',lab:'matematicas',t:'Función cuadrática',d:'y = a·x² + b·x + c: mira cómo cambian la parábola, el vértice y las raíces.',
- mount(el){el.innerHTML=`<canvas id="cv" width="500" height="300" style="width:100%;background:#fff;border:1px solid #e2e8f0;border-radius:10px"></canvas>${sl('a','a',-5,5,1,.5)}${sl('b','b',-10,10,0,.5)}${sl('c','c',-10,10,-4,.5)}<div id="o" style="font-weight:700;margin-top:8px"></div>`;
-  const c=$(el,'#cv'),x=c.getContext('2d');const f=()=>{const a=val(el,'a'),b=val(el,'b'),k=val(el,'c');x.clearRect(0,0,500,300);const X=v=>250+v*25,Y=v=>150-v*12;
-   x.strokeStyle='#cbd5e1';x.beginPath();x.moveTo(0,150);x.lineTo(500,150);x.moveTo(250,0);x.lineTo(250,300);x.stroke();x.strokeStyle='#dc2626';x.lineWidth=2;x.beginPath();
-   for(let i=-10;i<=10;i+=.1){const y=a*i*i+b*i+k;const px=X(i),py=Y(y);i<=-9.99?x.moveTo(px,py):x.lineTo(px,py)}x.stroke();
-   let t=a===0?'No es cuadrática (a=0): es una recta.':'';if(a!==0){const vx=-b/(2*a),vy=a*vx*vx+b*vx+k,d=b*b-4*a*k;t=`Vértice (${vx.toFixed(2)}, ${vy.toFixed(2)}) · Abre hacia ${a>0?'arriba':'abajo'} · Discriminante ${d.toFixed(1)} → ${d>0?'2 raíces reales: x='+((-b+Math.sqrt(d))/(2*a)).toFixed(2)+' y x='+((-b-Math.sqrt(d))/(2*a)).toFixed(2):d===0?'1 raíz real: x='+(-b/(2*a)).toFixed(2):'sin raíces reales'}`}
-   $(el,'#o').textContent=t};bind(el,['a','b','c'],f);f()}},
 {id:'dados',lab:'matematicas',t:'Probabilidad: lanzar dados',d:'Lanza dos dados muchas veces y compara con la probabilidad teórica.',
  mount(el){el.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap"><button id="b1" style="background:#1e63e9;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">🎲 Lanzar 1 vez</button><button id="b2" style="background:#16a34a;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">🎲 Lanzar 100 veces</button><button id="b3" style="background:#64748b;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">Reiniciar</button></div><div id="o" style="margin-top:10px"></div>${nota('Los resultados son aleatorios de verdad: cambian cada vez.')}`;
   let n=0;const c=Array(13).fill(0);const f=()=>{const m=Math.max(1,...c);$(el,'#o').innerHTML=`<b>Lanzamientos: ${n}</b>`+[2,3,4,5,6,7,8,9,10,11,12].map(s=>{const th=(6-Math.abs(s-7))/36*100;return`<div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:3px"><span style="width:22px">${s}</span><div style="background:#7c3aed;height:12px;width:${Math.round(c[s]/m*60)}%;border-radius:4px"></div><span>${n?(c[s]/n*100).toFixed(1):0}% (teórico ${th.toFixed(1)}%)</span></div>`}).join('')};
   const r=k=>{for(let i=0;i<k;i++){c[1+Math.ceil(Math.random()*6)+Math.ceil(Math.random()*6)-1]++;n++}f()};
   $(el,'#b1').onclick=()=>r(1);$(el,'#b2').onclick=()=>r(100);$(el,'#b3').onclick=()=>{c.fill(0);n=0;f()};f()}}];
+
+
+/* ===== Gráficas profesionales ===== */
+(function(){if(document.getElementById('simcss'))return;const st=document.createElement('style');st.id='simcss';st.textContent=`
+.sim-grid{display:grid;grid-template-columns:minmax(250px,320px) minmax(0,1fr);gap:14px;align-items:start}
+@media(max-width:820px){.sim-grid{grid-template-columns:1fr}}
+.sim-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;box-shadow:0 2px 8px rgba(15,23,42,.06);margin-bottom:12px}
+.sim-h{font-weight:800;font-size:13px;color:#334155;margin-bottom:6px;letter-spacing:.2px}
+.sim-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:4px 0 10px}
+.sim-tile{border-radius:12px;padding:9px 11px;color:#fff;box-shadow:0 2px 6px rgba(15,23,42,.12)}
+.sim-tile small{display:block;font-size:11px;opacity:.9;font-weight:700}.sim-tile b{font-size:19px}
+.sim-eq{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:10px 14px;font-family:ui-monospace,Menlo,monospace;font-size:13px;margin-bottom:8px;overflow:auto;white-space:pre-wrap}
+.sim-btn{background:#1e63e9;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800;font-size:13px;margin:8px 6px 0 0}
+.sim-tab{width:100%;border-collapse:collapse;font-size:12px;text-align:center}.sim-tab td,.sim-tab th{border:1px solid #e2e8f0;padding:3px 6px}.sim-tab th{background:#f1f5f9}
+`;document.head.appendChild(st)})();
+const nice=r=>{const e=Math.pow(10,Math.floor(Math.log10(r))),f=r/e;return(f<1.5?1:f<3?2:f<7?5:10)*e};
+const fm=v=>{if(Math.abs(v)<1e-9)return'0';const a=Math.abs(v);return String(+(a>=100?v.toFixed(0):a>=10?v.toFixed(1):v.toFixed(2)))};
+const tile=(l,v,c)=>`<div class="sim-tile" style="background:${c}"><small>${l}</small><b>${v}</b></div>`;
+function plot(cv,o){const dpr=window.devicePixelRatio||1,cw=cv.clientWidth||600,ch=o.h||300;cv.width=Math.round(cw*dpr);cv.height=Math.round(ch*dpr);cv.style.height=ch+'px';
+ const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);const L=50,Rr=16,T=24,Bm=38,pw=cw-L-Rr,ph=ch-T-Bm;
+ const X=v=>L+(v-o.xmin)/(o.xmax-o.xmin)*pw,Y=v=>T+ph-(v-o.ymin)/(o.ymax-o.ymin)*ph;
+ x.fillStyle='#fff';x.fillRect(0,0,cw,ch);x.font='11px system-ui,Segoe UI,sans-serif';
+ const sx=nice((o.xmax-o.xmin)/8),sy=nice((o.ymax-o.ymin)/6);
+ x.fillStyle='#f8fafc';x.fillRect(L,T,pw,ph);
+ for(let v=Math.ceil(o.xmin/sx)*sx;v<=o.xmax+1e-9;v+=sx){x.strokeStyle=Math.abs(v)<1e-9?'#94a3b8':'#e6ebf2';x.lineWidth=1;x.beginPath();x.moveTo(X(v),T);x.lineTo(X(v),T+ph);x.stroke();x.fillStyle='#475569';x.textAlign='center';x.fillText(fm(v),X(v),T+ph+15)}
+ for(let v=Math.ceil(o.ymin/sy)*sy;v<=o.ymax+1e-9;v+=sy){x.strokeStyle=Math.abs(v)<1e-9?'#94a3b8':'#e6ebf2';x.beginPath();x.moveTo(L,Y(v));x.lineTo(L+pw,Y(v));x.stroke();x.fillStyle='#475569';x.textAlign='right';x.fillText(fm(v),L-6,Y(v)+4)}
+ x.strokeStyle='#334155';x.lineWidth=1.6;const ay=Math.min(Math.max(0,o.ymin),o.ymax),ax=Math.min(Math.max(0,o.xmin),o.xmax);
+ x.beginPath();x.moveTo(L,Y(ay));x.lineTo(L+pw,Y(ay));x.moveTo(X(ax),T);x.lineTo(X(ax),T+ph);x.stroke();x.strokeRect(L,T,pw,ph);
+ x.fillStyle='#334155';x.beginPath();x.moveTo(L+pw,Y(ay));x.lineTo(L+pw-7,Y(ay)-4);x.lineTo(L+pw-7,Y(ay)+4);x.fill();x.beginPath();x.moveTo(X(ax),T);x.lineTo(X(ax)-4,T+7);x.lineTo(X(ax)+4,T+7);x.fill();
+ x.save();x.beginPath();x.rect(L,T,pw,ph);x.clip();
+ (o.areas||[]).forEach(a=>{x.fillStyle=a.color||'rgba(99,102,241,.18)';x.beginPath();x.moveTo(X(a.x0),Y(0));for(let i=0;i<=80;i++){const u=a.x0+(a.x1-a.x0)*i/80;x.lineTo(X(u),Y(a.f(u)))}x.lineTo(X(a.x1),Y(0));x.closePath();x.fill()});
+ (o.vlines||[]).forEach(v=>{x.setLineDash([6,4]);x.strokeStyle=v.color||'#64748b';x.lineWidth=1.3;x.beginPath();x.moveTo(X(v.x),T);x.lineTo(X(v.x),T+ph);x.stroke();x.setLineDash([])});
+ (o.hlines||[]).forEach(v=>{x.setLineDash([6,4]);x.strokeStyle=v.color||'#64748b';x.lineWidth=1.3;x.beginPath();x.moveTo(L,Y(v.y));x.lineTo(L+pw,Y(v.y));x.stroke();x.setLineDash([])});
+ (o.drops||[]).forEach(p=>{x.setLineDash([4,4]);x.strokeStyle='#94a3b8';x.lineWidth=1.2;x.beginPath();x.moveTo(X(p.x),Y(p.y));x.lineTo(X(p.x),Y(0));x.moveTo(X(p.x),Y(p.y));x.lineTo(X(0),Y(p.y));x.stroke();x.setLineDash([])});
+ (o.series||[]).forEach(s=>{x.strokeStyle=s.color||'#1e63e9';x.lineWidth=s.w||2.6;x.setLineDash(s.dash||[]);x.lineJoin='round';x.beginPath();let on=false;
+   if(s.pts){s.pts.forEach((p,i)=>{i?x.lineTo(X(p[0]),Y(p[1])):x.moveTo(X(p[0]),Y(p[1]))})}
+   else{const a=s.x0!=null?s.x0:o.xmin,b=s.x1!=null?s.x1:o.xmax,N=260;for(let i=0;i<=N;i++){const u=a+(b-a)*i/N,y=s.f(u);if(!isFinite(y)){on=false;continue}on?x.lineTo(X(u),Y(y)):x.moveTo(X(u),Y(y));on=true}}
+   x.stroke();x.setLineDash([])});
+ x.restore();
+ (o.pts||[]).forEach(p=>{if(p.x<o.xmin||p.x>o.xmax||p.y<o.ymin||p.y>o.ymax)return;x.beginPath();x.arc(X(p.x),Y(p.y),p.r||5.5,0,7);x.fillStyle=p.fill||'#fff';x.fill();x.lineWidth=2.4;x.strokeStyle=p.color||'#dc2626';x.stroke();
+   if(p.label){x.font='bold 11px system-ui,sans-serif';const w=x.measureText(p.label).width+10;let lx=X(p.x)+9,ly=Y(p.y)-(p.below?-18:12);if(lx+w>cw-4)lx=X(p.x)-9-w;if(ly<T+8)ly=Y(p.y)+22;x.fillStyle='rgba(255,255,255,.94)';x.strokeStyle=p.color||'#dc2626';x.lineWidth=1;x.beginPath();x.roundRect?x.roundRect(lx,ly-12,w,17,5):x.rect(lx,ly-12,w,17);x.fill();x.stroke();x.fillStyle='#0f172a';x.textAlign='left';x.fillText(p.label,lx+5,ly)}});
+ (o.vlines||[]).forEach(v=>{if(v.label){x.font='bold 10px system-ui,sans-serif';x.fillStyle=v.color||'#475569';x.textAlign='left';x.fillText(v.label,Math.min(X(v.x)+4,cw-120),T+12)}});
+ (o.hlines||[]).forEach(v=>{if(v.label){x.font='bold 10px system-ui,sans-serif';x.fillStyle=v.color||'#475569';x.textAlign='left';x.fillText(v.label,L+6,Y(v.y)-4)}});
+ x.font='bold 11px system-ui,sans-serif';x.fillStyle='#0f172a';x.textAlign='center';if(o.xl)x.fillText(o.xl,L+pw/2,ch-6);
+ if(o.yl){x.save();x.translate(12,T+ph/2);x.rotate(-Math.PI/2);x.fillText(o.yl,0,0);x.restore()}
+ let lx=L+8;(o.series||[]).filter(s=>s.name).forEach(s=>{x.fillStyle=s.color||'#1e63e9';x.fillRect(lx,T+5,14,4);x.fillStyle='#334155';x.textAlign='left';x.font='11px system-ui,sans-serif';x.fillText(s.name,lx+18,T+10);lx+=x.measureText(s.name).width+34})}
+const shell=(el,ctrl,graphs)=>{el.innerHTML=`<div class="sim-grid"><div><div class="sim-panel"><div class="sim-h">🎛️ Controles</div>${ctrl}</div><div class="sim-panel"><div class="sim-h">📐 Ecuaciones</div><div id="eq" class="sim-eq" style="margin:0"></div></div></div><div>${graphs}</div></div><div class="sim-tiles" id="tl"></div>`};
+const gph=(id,t,h)=>`<div class="sim-panel"><div class="sim-h">${t}</div><canvas id="${id}" style="width:100%;display:block;border-radius:8px"></canvas></div>`;
+L.push(
+{id:'proyectil',lab:'fisica',t:'Lanzamiento de proyectil',d:'Trayectoria, alturas, tiempos y velocidades con gráficas y puntos clave.',
+ mount(el){shell(el,sl('a','Ángulo (°)',5,85,45)+sl('v','Velocidad inicial (m/s)',5,60,30)+sl('g','Gravedad (m/s²)',2,25,9.8,.1)+sl('h','Altura inicial (m)',0,30,0)+'<button class="sim-btn" id="go">▶ Lanzar</button><button class="sim-btn" id="rs" style="background:#64748b">⟲ Quieto</button>'+nota('Sin resistencia del aire.'),
+  gph('cv1','Trayectoria  y(x)')+gph('cv2','Altura en función del tiempo  y(t)')+gph('cv3','Velocidades en función del tiempo'));
+  let t0=null,tc=null;const draw=()=>{const a=val(el,'a')*Math.PI/180,v=val(el,'v'),g=val(el,'g'),h0=val(el,'h'),vx=v*Math.cos(a),vy0=v*Math.sin(a),T=(vy0+Math.sqrt(vy0*vy0+2*g*h0))/g,R=vx*T,tH=Math.max(0,vy0/g),H=h0+vy0*tH-.5*g*tH*tH,vyf=vy0-g*T,vf=Math.hypot(vx,vyf);
+   const Y=t=>h0+vy0*t-.5*g*t*t,xs=t=>vx*t;const cur=tc==null?null:Math.min(tc,T);
+   plot($(el,'#cv1'),{h:300,xmin:-R*.04-.5,xmax:R*1.08+1,ymin:-H*.1-.5,ymax:H*1.28+1,xl:'x — distancia horizontal (m)',yl:'y — altura (m)',
+    series:[{f:x=>h0+Math.tan(a)*x-g*x*x/(2*vx*vx),x0:0,x1:R,color:'#2563eb',name:'Trayectoria'}],vlines:[{x:vx*tH,label:'x = '+fm(vx*tH)+' m'}],hlines:[{y:H,color:'#16a34a',label:'H = '+fm(H)+' m'}],
+    pts:[{x:0,y:h0,label:'Lanzamiento (0, '+fm(h0)+')',color:'#7c3aed'},{x:vx*tH,y:H,label:'Altura máx. ('+fm(vx*tH)+', '+fm(H)+')',color:'#16a34a'},{x:R,y:0,label:'Impacto  x = '+fm(R)+' m',color:'#dc2626',below:1}].concat(cur!=null?[{x:xs(cur),y:Y(cur),r:7,fill:'#f59e0b',color:'#b45309'}]:[])});
+   plot($(el,'#cv2'),{h:230,xmin:0,xmax:T*1.06,ymin:-H*.1-.5,ymax:H*1.28+1,xl:'t — tiempo (s)',yl:'y (m)',series:[{f:Y,x0:0,x1:T,color:'#16a34a',name:'y(t)'}],vlines:[{x:tH,label:'t = '+fm(tH)+' s (sube → baja)'}],
+    pts:[{x:tH,y:H,label:'Máx. '+fm(H)+' m',color:'#16a34a'},{x:T,y:0,label:'Cae: T = '+fm(T)+' s',color:'#dc2626',below:1}].concat(cur!=null?[{x:cur,y:Y(cur),r:6,fill:'#f59e0b',color:'#b45309'}]:[])});
+   const vmax=Math.max(v,Math.abs(vyf),vf)*1.3+3;plot($(el,'#cv3'),{h:230,xmin:0,xmax:T*1.06,ymin:-vmax,ymax:vmax,xl:'t — tiempo (s)',yl:'v (m/s)',
+    series:[{f:()=>vx,x0:0,x1:T,color:'#2563eb',name:'vx (constante)'},{f:t=>vy0-g*t,x0:0,x1:T,color:'#dc2626',name:'vy(t)'},{f:t=>Math.hypot(vx,vy0-g*t),x0:0,x1:T,color:'#7c3aed',dash:[5,4],name:'|v|'}],
+    pts:[{x:tH,y:0,label:'vy = 0 en t = '+fm(tH)+' s',color:'#dc2626'},{x:0,y:vy0,label:'vy₀ = '+fm(vy0),color:'#dc2626'},{x:T,y:vyf,label:'vy = '+fm(vyf),color:'#dc2626',below:1}]});
+   $(el,'#tl').innerHTML=tile('Alcance R',fm(R)+' m','#2563eb')+tile('Altura máxima H',fm(H)+' m','#16a34a')+tile('Tiempo de vuelo',fm(T)+' s','#f59e0b')+tile('Tiempo en subir',fm(tH)+' s','#0d9488')+tile('Velocidad horizontal vx',fm(vx)+' m/s','#6366f1')+tile('Velocidad vertical inicial',fm(vy0)+' m/s','#8b5cf6')+tile('Velocidad al impacto',fm(vf)+' m/s','#dc2626');
+   $(el,'#eq').textContent=`x(t) = v₀·cosθ·t = ${fm(vx)}·t\ny(t) = h₀ + v₀·senθ·t − ½·g·t²\n     = ${fm(h0)} + ${fm(vy0)}·t − ${fm(g/2)}·t²\nvy(t) = ${fm(vy0)} − ${fm(g)}·t`;return T};
+  let T=draw();const re=()=>{tc=null;T=draw()};bind(el,['a','v','g','h'],re);
+  const loop=ts=>{if(!el.isConnected||t0==null)return;const el_=(ts-t0)/1000,k=Math.min(1,el_/3.2);tc=T*k;T=draw();if(k<1)requestAnimationFrame(loop)};
+  $(el,'#go').onclick=()=>{t0=performance.now();requestAnimationFrame(loop)};$(el,'#rs').onclick=()=>{t0=null;re()}}},
+{id:'funcion',lab:'matematicas',t:'Función cuadrática',d:'Parábola con vértice, raíces, eje de simetría e intersecciones señalados.',
+ mount(el){shell(el,sl('a','a',-5,5,1,.5)+sl('b','b',-10,10,0,.5)+sl('c','c',-10,10,-4,.5)+'<div style="margin-top:8px"><button class="sim-btn" data-p="1,0,-4" style="background:#6366f1">x²−4</button><button class="sim-btn" data-p="-1,4,0" style="background:#0d9488">−x²+4x</button><button class="sim-btn" data-p="1,2,1" style="background:#f59e0b">(x+1)²</button><button class="sim-btn" data-p="1,0,2" style="background:#dc2626">x²+2</button></div>',
+  gph('cv1','Gráfica  y = ax² + bx + c')+'<div class="sim-panel"><div class="sim-h">Tabla de valores</div><div id="tb"></div></div>');
+  const f=()=>{const a=val(el,'a'),b=val(el,'b'),c=val(el,'c');const F=x=>a*x*x+b*x+c;
+   if(a===0){const m=b,hw=10;plot($(el,'#cv1'),{h:340,xmin:-10,xmax:10,ymin:-20,ymax:20,xl:'x',yl:'y',series:[{f:x=>m*x+c,color:'#dc2626'}],pts:[{x:0,y:c,label:'(0, '+fm(c)+')'}]});$(el,'#eq').textContent='a = 0: ya no es parábola.\ny = '+fm(b)+'·x + '+fm(c);$(el,'#tl').innerHTML='';$(el,'#tb').innerHTML='';return}
+   const vx=-b/(2*a),vy=F(vx),d=b*b-4*a*c,rs=d>=0?[(-b+Math.sqrt(d))/(2*a),(-b-Math.sqrt(d))/(2*a)]:[];
+   let hw=Math.max(4,rs.length?Math.max(Math.abs(rs[0]-vx),Math.abs(rs[1]-vx))*1.5:4);let x0=Math.min(vx-hw,-1.5),x1=Math.max(vx+hw,1.5);
+   let yl=Math.min(vy,0,c,F(x0),F(x1)),yh=Math.max(vy,0,c,F(x0),F(x1));if(a>0)yh=Math.min(yh,vy+Math.abs(vy)*2+25);else yl=Math.max(yl,vy-Math.abs(vy)*2-25);const pad=(yh-yl)*.12+1;
+   const pts=[{x:vx,y:vy,label:'Vértice ('+fm(vx)+', '+fm(vy)+')',color:a>0?'#16a34a':'#7c3aed'},{x:0,y:c,label:'Corte con y: (0, '+fm(c)+')',color:'#f59e0b',below:1}];
+   rs.forEach((r,i)=>{if(i===1&&d===0)return;pts.push({x:r,y:0,label:'Raíz x'+(d===0?'':(i+1))+' = '+fm(r),color:'#dc2626'})});
+   plot($(el,'#cv1'),{h:360,xmin:x0,xmax:x1,ymin:yl-pad,ymax:yh+pad,xl:'x',yl:'y',series:[{f:F,color:'#2563eb',name:'y = '+fm(a)+'x² + '+fm(b)+'x + '+fm(c)}],vlines:[{x:vx,label:'Eje de simetría x = '+fm(vx),color:'#7c3aed'}],pts});
+   $(el,'#tl').innerHTML=tile('Vértice','('+fm(vx)+', '+fm(vy)+')','#16a34a')+tile('Concavidad',a>0?'Hacia arriba ∪':'Hacia abajo ∩','#6366f1')+tile('Discriminante Δ',fm(d),'#f59e0b')+tile('Raíces',rs.length?(d===0?'x = '+fm(rs[0]):'x₁ = '+fm(rs[0])+' · x₂ = '+fm(rs[1])):'No tiene reales','#dc2626')+tile('Corte con eje y','(0, '+fm(c)+')','#0d9488')+tile(a>0?'Valor mínimo':'Valor máximo','y = '+fm(vy),'#2563eb')+tile('Rango',a>0?'y ≥ '+fm(vy):'y ≤ '+fm(vy),'#8b5cf6');
+   $(el,'#eq').textContent=`y = ${fm(a)}x² + ${fm(b)}x + ${fm(c)}\nVértice: x = −b/(2a) = ${fm(vx)}\nΔ = b² − 4ac = ${fm(d)}\n`+(rs.length?`Raíces: x = (−b ± √Δ)/(2a)\n       x₁ = ${fm(rs[0])},  x₂ = ${fm(rs[1])}`:'Δ < 0: no corta el eje x');
+   const xs=[];for(let i=-3;i<=3;i++)xs.push(Math.round(vx)+i);$(el,'#tb').innerHTML='<table class="sim-tab"><tr><th>x</th>'+xs.map(v=>'<td>'+fm(v)+'</td>').join('')+'</tr><tr><th>y</th>'+xs.map(v=>'<td>'+fm(F(v))+'</td>').join('')+'</tr></table>'};
+  bind(el,['a','b','c'],f);el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const [a,bb,c]=b.dataset.p.split(',');[['a',a],['b',bb],['c',c]].forEach(([i,v])=>{$(el,'#'+i).value=v;$(el,'#'+i+'v').textContent=v});f()});f()}},
+{id:'lineal',lab:'matematicas',t:'Función lineal',d:'Pendiente, cortes con los ejes y triángulo de pendiente.',
+ mount(el){shell(el,sl('m','Pendiente m',-5,5,2,.5)+sl('b','Ordenada b',-10,10,-3,.5),gph('cv1','Gráfica  y = mx + b'));
+  const f=()=>{const m=val(el,'m'),b=val(el,'b'),F=x=>m*x+b,r=m!==0?-b/m:null;const ext=Math.max(6,Math.abs(r||0)*1.4+1,Math.abs(b)/Math.max(.5,Math.abs(m))*1.2);
+   const pts=[{x:0,y:b,label:'Corte con y: (0, '+fm(b)+')',color:'#f59e0b',below:1}];if(r!=null)pts.push({x:r,y:0,label:'Raíz: x = '+fm(r),color:'#dc2626'});
+   plot($(el,'#cv1'),{h:340,xmin:-ext,xmax:ext,ymin:-ext*1.1,ymax:ext*1.1,xl:'x',yl:'y',series:[{f:F,color:'#2563eb',name:'y = '+fm(m)+'x + '+fm(b)},{pts:[[0,b],[1,b],[1,b+m]],color:'#16a34a',dash:[5,4],w:2,name:'Triángulo de pendiente: Δx = 1, Δy = '+fm(m)}],pts});
+   $(el,'#tl').innerHTML=tile('Pendiente m',fm(m),'#2563eb')+tile('Ordenada b',fm(b),'#f59e0b')+tile('Raíz',r!=null?'x = '+fm(r):'No hay (paralela a x)','#dc2626')+tile('Comportamiento',m>0?'Creciente ↗':m<0?'Decreciente ↘':'Constante →','#16a34a')+tile('Ángulo con x',fm(Math.atan(m)*180/Math.PI)+'°','#6366f1');
+   $(el,'#eq').textContent=`y = ${fm(m)}x + ${fm(b)}\nm = Δy/Δx = ${fm(m)}\nCorte con y: (0, ${fm(b)})\n`+(r!=null?`Corte con x: y = 0 → x = −b/m = ${fm(r)}`:'m = 0: no corta el eje x')};bind(el,['m','b'],f);f()}},
+{id:'ohm',lab:'fisica',t:'Ley de Ohm (circuito simple)',d:'Gráfica corriente–voltaje, potencia y punto de operación.',
+ mount(el){shell(el,'<div id="b" style="font-size:54px;text-align:center;line-height:1">💡</div>'+sl('V','Voltaje V (volt)',1,24,9)+sl('R','Resistencia R (Ω)',1,100,30)+nota('Resistencia ideal, sin calentamiento.'),gph('cv1','Corriente en función del voltaje  I(V)')+gph('cv2','Potencia en función del voltaje  P(V)'));
+  const f=()=>{const V=val(el,'V'),R=val(el,'R'),I=V/R,P=V*I,Imax=24/Math.max(1,R/2)*1.0;
+   plot($(el,'#cv1'),{h:280,xmin:0,xmax:26,ymin:0,ymax:24/Math.max(1,R/2)*1.05,xl:'V — voltaje (V)',yl:'I — corriente (A)',series:[{f:x=>x/R,color:'#2563eb',name:'R = '+fm(R)+' Ω'},{f:x=>x/(R*2),color:'#94a3b8',dash:[5,4],w:1.8,name:'2R'},{f:x=>x/(R/2),color:'#94a3b8',dash:[2,3],w:1.8,name:'R/2'}],drops:[{x:V,y:I}],pts:[{x:V,y:I,label:'V = '+fm(V)+' V · I = '+fm(I)+' A',color:'#dc2626'}]});
+   plot($(el,'#cv2'),{h:240,xmin:0,xmax:26,ymin:0,ymax:26*26/R*1.05,xl:'V (V)',yl:'P (W)',series:[{f:x=>x*x/R,color:'#7c3aed',name:'P = V²/R'}],drops:[{x:V,y:P}],pts:[{x:V,y:P,label:'P = '+fm(P)+' W',color:'#dc2626'}]});
+   $(el,'#b').style.opacity=Math.min(1,.2+P/8);$(el,'#b').style.filter='drop-shadow(0 0 '+Math.min(24,P*2)+'px #fde047)';
+   $(el,'#tl').innerHTML=tile('Corriente I',fm(I)+' A','#2563eb')+tile('Corriente',fm(I*1000)+' mA','#6366f1')+tile('Potencia P',fm(P)+' W','#7c3aed')+tile('Voltaje V',fm(V)+' V','#0d9488')+tile('Resistencia R',fm(R)+' Ω','#f59e0b')+tile('Pendiente de la recta (1/R)',fm(1/R)+' A/V','#dc2626');
+   $(el,'#eq').textContent=`V = I · R\nI = V/R = ${fm(V)}/${fm(R)} = ${fm(I)} A\nP = V · I = ${fm(P)} W`};bind(el,['V','R'],f);f()}},
+{id:'mru',lab:'fisica',t:'Movimiento rectilíneo (MRU y MRUA)',d:'Posición, velocidad y aceleración contra el tiempo; el área es el desplazamiento.',
+ mount(el){shell(el,sl('x0','Posición inicial x₀ (m)',-20,20,0)+sl('v0','Velocidad inicial v₀ (m/s)',-20,20,4)+sl('a','Aceleración a (m/s²)',-6,6,1,.5)+sl('t','Tiempo t (s)',0,10,4,.1),
+  gph('cv1','Posición  x(t)')+gph('cv2','Velocidad  v(t)  — el área sombreada es el desplazamiento')+gph('cv3','Aceleración  a(t)'));
+  const f=()=>{const x0=val(el,'x0'),v0=val(el,'v0'),a=val(el,'a'),t=val(el,'t');const X=s=>x0+v0*s+.5*a*s*s,Vv=s=>v0+a*s;const xs=[0,5,10].map(X),xl=Math.min(...xs,x0)-5,xh=Math.max(...xs,x0)+5,vs=[Vv(0),Vv(10)],vl=Math.min(...vs,0)-2,vh=Math.max(...vs,0)+2;
+   const px=[{x:0,y:x0,label:'x₀ = '+fm(x0),color:'#7c3aed'},{x:t,y:X(t),label:'t = '+fm(t)+' s → x = '+fm(X(t))+' m',color:'#dc2626',r:7,fill:'#f59e0b'}];
+   if(a!==0&&-v0/a>0&&-v0/a<10){const tv=-v0/a;px.push({x:tv,y:X(tv),label:'Se detiene en t = '+fm(tv)+' s',color:'#16a34a',below:1})}
+   plot($(el,'#cv1'),{h:260,xmin:0,xmax:10,ymin:xl,ymax:xh,xl:'t (s)',yl:'x (m)',series:[{f:X,color:'#2563eb',name:'x(t)'}],vlines:[{x:t}],pts:px});
+   plot($(el,'#cv2'),{h:230,xmin:0,xmax:10,ymin:vl,ymax:vh,xl:'t (s)',yl:'v (m/s)',series:[{f:Vv,color:'#16a34a',name:'v(t)'}],areas:[{f:Vv,x0:0,x1:t,color:'rgba(34,197,94,.25)'}],vlines:[{x:t}],pts:[{x:0,y:v0,label:'v₀ = '+fm(v0),color:'#7c3aed'},{x:t,y:Vv(t),label:'v = '+fm(Vv(t))+' m/s',color:'#dc2626',r:7,fill:'#f59e0b'}]});
+   plot($(el,'#cv3'),{h:200,xmin:0,xmax:10,ymin:-8,ymax:8,xl:'t (s)',yl:'a (m/s²)',series:[{f:()=>a,color:'#dc2626',name:'a(t) constante'}],pts:[{x:0,y:a,label:'a = '+fm(a)+' m/s²',color:'#dc2626'}]});
+   $(el,'#tl').innerHTML=tile('Posición x(t)',fm(X(t))+' m','#2563eb')+tile('Velocidad v(t)',fm(Vv(t))+' m/s','#16a34a')+tile('Desplazamiento Δx',fm(X(t)-x0)+' m','#f59e0b')+tile('Aceleración a',fm(a)+' m/s²','#dc2626')+tile('Tipo',a===0?'MRU (velocidad constante)':'MRUA (aceleración constante)','#6366f1');
+   $(el,'#eq').textContent=`x(t) = x₀ + v₀·t + ½·a·t²\n     = ${fm(x0)} + ${fm(v0)}·t + ${fm(a/2)}·t²\nv(t) = v₀ + a·t = ${fm(v0)} + ${fm(a)}·t\nΔx = x(t) − x₀ = ${fm(X(t)-x0)} m`};bind(el,['x0','v0','a','t'],f);f()}}
+);
 
 /* ---- actividades interactivas (ordenar, clasificar, preguntas, dilema) ---- */
 const mez=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]);
