@@ -40,7 +40,7 @@ async function flush(){
 window.addEventListener('online',()=>{try{flush()}catch(_){}});
 
 async function load(){
-  Z.ok=false;
+  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=1');
   const [x,c]=await Promise.all([sb.from('lab_experiencias').select('*').order('created_at',{ascending:false}),
     isProf()?sb.from('courses').select('id,grade,name').eq('teacher_id',M.id).order('grade').order('name'):Promise.resolve({data:[]})]);
   Z.exps=x.data||[];Z.cursos=c.data||[];
@@ -66,7 +66,8 @@ function labPage(){
     return`<div style="${card};display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div style="min-width:200px"><div style="font-weight:800">${e(x.titulo)}</div><div style="font-size:12px;color:#64748b">${e(x.descripcion||'')}${isDir()?' · Docente: '+e(Z.nom[x.docente_id]||''):''}${x.cierra?' · Cierra '+fF(x.cierra):''}</div><div style="font-size:12px;font-weight:700;color:#1e63e9;margin-top:3px">${st}</div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">${isEst()?B('#1e63e9',en?'Abrir':'Empezar',`onclick="LAB.abrir('${x.id}')"`):''}${isProf()?B('#475569','Editar',`onclick="LAB.editar('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`)+B('#64748b','Duplicar',`onclick="LAB.dup('${x.id}')"`):''}${isDir()?B('#1e63e9','Ver',`onclick="LAB.abrir('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`):''}</div></div>`}).join(''):`<p style="color:#64748b">${isEst()?'Tu docente aún no ha publicado experiencias en este laboratorio.':'Todavía no hay experiencias aquí.'}</p>`;
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.home()" style="font-weight:700;color:#1e63e9">← Todos los laboratorios</button><h2 style="font-weight:800;font-size:20px;margin-top:8px">${l[1]} ${e(l[2])}</h2><p style="color:#64748b">${e(l[3])}</p>${tools}
-  ${Z.lab==='ingles'?'':'<p style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px;margin-bottom:10px">ℹ️ Los simuladores de este laboratorio se agregan por etapas. Por ahora puedes usar las experiencias de tu docente y el tutor IA. Las simulaciones son modelos, no experimentos reales.</p>'}
+  
+  ${(window.SIM&&SIM.list(Z.lab).length)?`<h3 style="font-weight:800;margin:6px 0">🧰 Simuladores</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px">${SIM.list(Z.lab).map(s=>`<div onclick="LAB.sim('${s.id}')" style="${card};cursor:pointer"><b>${e(s.t)}</b><div style="font-size:12px;color:#64748b;margin-top:4px">${e(s.d)}</div></div>`).join('')}</div><h3 style="font-weight:800;margin:6px 0">📋 Experiencias</h3>`:''}
   <div style="display:grid;gap:10px">${lista}</div></div>`;
 }
 
@@ -77,7 +78,7 @@ const loc=d=>d?new Date(d).toISOString().slice(0,16):'';
 async function editar(id){const x=Z.exps.find(a=>a.id===id);const k=await sb.from('lab_claves').select('claves').eq('experiencia_id',id).maybeSingle();
   Z.ed={...x,abre:loc(x.abre),cierra:loc(x.cierra),claves:(k.data&&k.data.claves)||{},rubrica:(x.rubrica||[]).map(r=>r.c).join('\n'),bloques:x.bloques||{},preguntas:x.preguntas||[]};Z.v='build';render()}
 function sync(){const g=i=>document.getElementById(i);if(!Z.ed||!g('lb_t'))return;const d=Z.ed;
-  d.titulo=g('lb_t').value;d.descripcion=g('lb_d').value;d.objetivos=g('lb_o').value;d.competencias=g('lb_c').value;if(g('lb_n'))d.nivel=g('lb_n').value;
+  d.titulo=g('lb_t').value;d.descripcion=g('lb_d').value;d.objetivos=g('lb_o').value;d.competencias=g('lb_c').value;if(g('lb_n'))d.nivel=g('lb_n').value;if(g('lb_s'))d.sim=g('lb_s').value;
   d.cursos=[...document.querySelectorAll('.lb_cu:checked')].map(c=>c.value);BL.forEach(([k])=>d.bloques[k]=g('lb_b_'+k).value);
   d.rubrica=g('lb_r').value;d.abre=g('lb_ab').value;d.cierra=g('lb_ci').value;d.intentos=Math.max(1,+g('lb_in').value||1);d.tutor_activo=g('lb_tu').checked;d.evaluable=g('lb_ev').checked;
   d.preguntas.forEach((q,i)=>{q.tipo=g('lq_t'+i).value;q.texto=g('lq_x'+i).value;if(q.tipo==='opcion'){q.opciones=g('lq_o'+i).value.split('\n').map(s=>s.trim()).filter(Boolean);const c=document.querySelector('input[name=lq_c'+i+']:checked');d.claves[q.id]=c?c.value:(d.claves[q.id]||'0')}})}
@@ -86,6 +87,7 @@ function builder(){const d=Z.ed;if(!d)return'';const ing=d.lab==='ingles';
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${d.lab}')" style="font-weight:700;color:#1e63e9">← Volver</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">${LN[d.lab][1]} ${d.id?'Editar':'Nueva'} experiencia · ${e(LN[d.lab][2])}</h2>
   ${lab('Título','<input id="lb_t" style="'+inp+'" value="'+e(d.titulo)+'">')}${lab('Descripción corta','<input id="lb_d" style="'+inp+'" value="'+e(d.descripcion)+'">')}
   ${lab('Objetivos de aprendizaje','<textarea id="lb_o" rows="2" style="'+inp+'">'+e(d.objetivos)+'</textarea>')}${lab('Competencias / DBA (los que tú indiques)','<input id="lb_c" style="'+inp+'" value="'+e(d.competencias)+'">')}
+  ${(window.SIM&&SIM.list(d.lab).length)?lab('Simulador para esta experiencia (opcional)','<select id="lb_s" style="'+inp+'"><option value="">Ninguno</option>'+SIM.list(d.lab).map(s=>`<option value="${s.id}" ${d.sim===s.id?'selected':''}>${e(s.t)}</option>`).join('')+'</select>'):''}
   ${ing?lab('Nivel','<select id="lb_n" style="'+inp+'">'+['Pre-A1','A1','A2','B1'].map(n=>`<option ${n===d.nivel?'selected':''}>${n}</option>`).join('')+'</select>'):''}
   ${lab('Cursos a los que se asigna',Z.cursos.length?Z.cursos.map(c=>`<label style="margin-right:12px;font-size:14px"><input type="checkbox" class="lb_cu" value="${c.id}" ${d.cursos.includes(c.id)?'checked':''}> ${c.grade}° ${e(c.name)}</label>`).join(''):'<span style="color:#b91c1c">No tienes cursos creados todavía.</span>')}
   ${BL.map(([k,t])=>lab(t,'<textarea id="lb_b_'+k+'" rows="3" style="'+inp+'">'+e(d.bloques[k]||'')+'</textarea>')).join('')}
@@ -102,7 +104,7 @@ function builder(){const d=Z.ed;if(!d)return'';const ing=d.lab==='ingles';
 async function guardar(estado){sync();const d=Z.ed;if(!d.titulo.trim())return toast('Escribe un título');
   if(estado==='publicada'&&!d.cursos.length)return toast('Elige al menos un curso para publicar');
   if(d.preguntas.some(q=>!q.texto.trim()||(q.tipo==='opcion'&&(q.opciones||[]).length<2)))return toast('Revisa las preguntas: enunciado y mínimo 2 opciones');
-  const row={docente_id:M.id,colegio_id:M.colegio_id,lab:d.lab,titulo:d.titulo.trim(),descripcion:d.descripcion,objetivos:d.objetivos,competencias:d.competencias,nivel:d.lab==='ingles'?d.nivel:null,cursos:d.cursos,bloques:d.bloques,
+  const row={docente_id:M.id,colegio_id:M.colegio_id,lab:d.lab,titulo:d.titulo.trim(),descripcion:d.descripcion,objetivos:d.objetivos,competencias:d.competencias,nivel:d.lab==='ingles'?d.nivel:null,sim:d.sim||null,cursos:d.cursos,bloques:d.bloques,
     preguntas:d.preguntas.map(({id,tipo,texto,opciones})=>({id,tipo,texto,opciones:opciones||[]})),rubrica:d.rubrica.split('\n').map(s=>s.trim()).filter(Boolean).map(c=>({c})),abre:d.abre?new Date(d.abre).toISOString():null,cierra:d.cierra?new Date(d.cierra).toISOString():null,intentos:d.intentos,tutor_activo:d.tutor_activo,evaluable:d.evaluable,estado,updated_at:new Date().toISOString()};
   let id=d.id,r;if(id)r=await sb.from('lab_experiencias').update(row).eq('id',id).select('id').single();else r=await sb.from('lab_experiencias').insert(row).select('id').single();
   if(r.error)return err(r.error);id=r.data.id;
@@ -117,6 +119,7 @@ function exp(){const x=Z.cur,en=Z.ents[x.id]||{},bl=x.bloques||{};const cerr=en.
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${x.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[x.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">${e(x.titulo)}</h2>
   ${x.objetivos?`<p><b>Objetivos:</b> ${e(x.objetivos)}</p>`:''}${x.competencias?`<p style="font-size:12px;color:#64748b">Competencias: ${e(x.competencias)}</p>`:''}
   ${BL.filter(([k])=>bl[k]).map(([k,t])=>`<div style="${card};margin:8px 0"><b>${t}</b><div style="white-space:pre-wrap;margin-top:4px">${e(bl[k])}</div></div>`).join('')}
+  ${x.sim&&window.SIM&&SIM.get(x.sim)?`<div style="margin:8px 0">${B('#7c3aed','🧰 Abrir simulador: '+e(SIM.get(x.sim).t),'onclick="LAB.sim(\''+x.sim+'\',\'exp\')"')}</div>`:''}
   ${(x.preguntas||[]).map((q,i)=>`<div style="${card};margin:8px 0"><b>${i+1}. ${e(q.texto)}</b>${q.tipo==='opcion'?(q.opciones||[]).map((o,k)=>`<label style="display:block;margin:5px 0"><input type="radio" data-q="${q.id}" name="r_${q.id}" value="${k}" ${String(R[q.id])===String(k)?'checked':''} ${ro?'disabled':''}> ${e(o)}</label>`).join('')
    :q.tipo==='abierta'?`<textarea data-q="${q.id}" rows="3" style="${inp};margin-top:6px" ${ro?'disabled':''}>${e(R[q.id]||'')}</textarea>`
    :`<div style="margin-top:6px">${(en.evidencias||[]).filter(v=>v.q===q.id).map(v=>`<div style="font-size:12px">📎 ${e(v.nombre)}</div>`).join('')}${ro||isDir()?'':q.tipo==='audio'?B('#dc2626','🎙️ Grabar','onclick="LAB.grabar(\''+q.id+'\')"')+' <span id="rec_'+q.id+'" style="font-size:12px"></span>':`<input type="file" onchange="LAB.sube('${q.id}',this)" accept="image/*,application/pdf,audio/*">`}</div>`}</div>`).join('')}
@@ -215,8 +218,9 @@ function vIng(){const n=Z.nivel,w=VOC[n],S=Z.ing||(Z.ing={tab:'voc',i:0,q:null,r
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('ingles')" style="font-weight:700;color:#1e63e9">← English Lab</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">🗣️ Practicar inglés</h2>
   <label style="font-size:12px;font-weight:800">Nivel </label><select onchange="LAB.nv(this.value)" style="padding:6px;border-radius:8px;border:1.5px solid #cbd5e1">${['Pre-A1','A1','A2','B1'].map(x=>`<option ${x===n?'selected':''}>${x}</option>`).join('')}</select>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${tabs}</div>${c}</div>`}
+function vSim(){const s=SIM.get(Z.simId);return`<div class="aic-card" style="padding:18px"><button onclick="LAB.${Z.cur&&Z.back==='exp'?'abrir(\''+Z.cur.id+'\')':'open(\''+Z.lab+'\')'}" style="font-weight:700;color:#1e63e9">← Volver</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">🧰 ${e(s.t)}</h2><p style="color:#64748b;margin-bottom:8px">${e(s.d)}</p><div id="simbox"></div></div>`}
 function vistaActual(){if(!Z.ok)return'<div class="aic-card" style="padding:18px">Cargando laboratorios…</div>';
-  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng})[Z.v]()}
+  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim})[Z.v]()}
 
 return{load,view:()=>vistaActual(),
   home(){Z.v='home';render()},
@@ -233,6 +237,7 @@ return{load,view:()=>vistaActual(),
   async abrir(id){Z.cur=Z.exps.find(a=>a.id===id);if(isEst()&&!navigator.onLine===false){const r=await sb.from('lab_entregas').select('*').eq('experiencia_id',id).eq('user_id',M.id).maybeSingle();if(r.data)Z.ents[id]=r.data}Z.v='exp';render()},
   envia,grabar,async sube(q,el){const f=el.files[0];if(f)await subir(f,f.name,q)},
   entregas,calif,guardaNota,
+  sim(id,back){Z.simId=id;Z.back=back||'lab';Z.v='sim';render();setTimeout(()=>{const b=document.getElementById('simbox');if(b)SIM.get(id).mount(b)},0)},
   cfgView(){Z.v='cfg';render()},guardaCfg,
   tutor(expId){Z.tutorExp=expId||null;Z.v='tutor';render()},envT,dictar,
   leer(i){hablar(Z.chat[i].content.replace(/Tip:.*$/ms,''),'en-US')},

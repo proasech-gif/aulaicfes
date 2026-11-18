@@ -1,0 +1,46 @@
+/* AULA360 — Simuladores propios (código propio, sin licencias externas). Son MODELOS simplificados, no experimentos reales. */
+window.SIM=(function(){
+const $=(el,s)=>el.querySelector(s);
+const sl=(id,t,min,max,v,st)=>`<label style="display:block;font-size:12px;font-weight:800;margin-top:8px">${t}: <span id="${id}v">${v}</span></label><input id="${id}" type="range" min="${min}" max="${max}" step="${st||1}" value="${v}" style="width:100%">`;
+const bind=(el,ids,f)=>ids.forEach(i=>{const r=$(el,'#'+i);r.oninput=()=>{$(el,'#'+i+'v').textContent=r.value;f()}});
+const val=(el,i)=>+$(el,'#'+i).value;
+const nota=t=>`<p style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px;margin-top:10px">⚠️ Simulación: es un modelo simplificado, no un experimento real. ${t||''}</p>`;
+const L=[
+{id:'proyectil',lab:'fisica',t:'Lanzamiento de proyectil',d:'Cambia ángulo, velocidad y gravedad; observa alcance y altura (sin aire).',
+ mount(el){el.innerHTML=`<canvas id="c" width="600" height="260" style="width:100%;background:#f0f9ff;border-radius:10px"></canvas>${sl('a','Ángulo (°)',5,85,45)}${sl('v','Velocidad (m/s)',5,60,30)}${sl('g','Gravedad (m/s²)',2,25,9.8,.1)}<div id="o" style="font-weight:700;margin-top:8px"></div>${nota('No incluye resistencia del aire.')}`;
+  const c=$(el,'#c'),x=c.getContext('2d');const f=()=>{const a=val(el,'a')*Math.PI/180,v=val(el,'v'),g=val(el,'g'),T=2*v*Math.sin(a)/g,R=v*v*Math.sin(2*a)/g,H=v*v*Math.sin(a)**2/(2*g);
+   x.clearRect(0,0,600,260);const sc=Math.min(540/Math.max(R,1),200/Math.max(H,1));x.strokeStyle='#64748b';x.beginPath();x.moveTo(30,230);x.lineTo(590,230);x.stroke();x.strokeStyle='#1e63e9';x.lineWidth=2;x.beginPath();
+   for(let i=0;i<=60;i++){const t=T*i/60,px=30+v*Math.cos(a)*t*sc,py=230-(v*Math.sin(a)*t-g*t*t/2)*sc;i?x.lineTo(px,py):x.moveTo(px,py)}x.stroke();
+   $(el,'#o').textContent=`Tiempo de vuelo: ${T.toFixed(2)} s · Alcance: ${R.toFixed(1)} m · Altura máxima: ${H.toFixed(1)} m`};
+  bind(el,['a','v','g'],f);f()}},
+{id:'ohm',lab:'fisica',t:'Ley de Ohm (circuito simple)',d:'Voltaje y resistencia → corriente y potencia (V = I·R).',
+ mount(el){el.innerHTML=`<div id="b" style="font-size:60px;text-align:center">💡</div>${sl('V','Voltaje (V)',1,24,9)}${sl('R','Resistencia (Ω)',1,100,30)}<div id="o" style="font-weight:700;margin-top:8px"></div>${nota('Resistencia ideal, sin calentamiento.')}`;
+  const f=()=>{const V=val(el,'V'),R=val(el,'R'),I=V/R,P=V*I;$(el,'#o').textContent=`Corriente: ${(I*1000).toFixed(0)} mA · Potencia: ${P.toFixed(2)} W`;$(el,'#b').style.opacity=Math.min(1,.15+P/6)};bind(el,['V','R'],f);f()}},
+{id:'ph',lab:'quimica',t:'Escala de pH y mezcla ácido–base',d:'Mezcla volúmenes de un ácido y una base fuertes y mira el pH resultante y el color del indicador.',
+ mount(el){el.innerHTML=`<div id="col" style="height:70px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff"></div>${sl('ma','Ácido fuerte HCl 0,1 M (mL)',0,100,50)}${sl('mb','Base fuerte NaOH 0,1 M (mL)',0,100,20)}<div id="o" style="font-weight:700;margin-top:8px"></div>${nota('Solo ácido y base fuertes monopróticos a 25 °C. En el laboratorio real usa gafas y bata.')}`;
+  const col=p=>{const s=['#dc2626','#ea580c','#f59e0b','#facc15','#84cc16','#22c55e','#10b981','#14b8a6','#3b82f6','#6366f1','#7c3aed','#9333ea','#7e22ce','#581c87'];return s[Math.min(13,Math.max(0,Math.round(p)))]};
+  const f=()=>{const vt=val(el,'ma')+val(el,'mb');let pH=7;const n=(val(el,'ma')-val(el,'mb'))*0.1/1000,V=vt/1000;if(V>0){const c=n/V;pH=Math.abs(c)<1e-7?7:c>0?-Math.log10(c):14+Math.log10(-c)}
+   $(el,'#col').style.background=col(pH);$(el,'#col').textContent='pH '+pH.toFixed(2);$(el,'#o').textContent=pH<6.9?'Solución ácida':pH>7.1?'Solución básica':'Solución neutra'};bind(el,['ma','mb'],f);f()}},
+{id:'punnett',lab:'biologia',t:'Cuadro de Punnett (genética)',d:'Cruza dos padres para un gen con alelo dominante y recesivo.',
+ mount(el){const o=['AA','Aa','aa'];el.innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap"><label>Padre <select id="p1" style="padding:6px">${o.map((x,i)=>`<option ${i==1?'selected':''}>${x}</option>`)}</select></label><label>Madre <select id="p2" style="padding:6px">${o.map((x,i)=>`<option ${i==1?'selected':''}>${x}</option>`)}</select></label></div><div id="t" style="margin-top:10px"></div><div id="o" style="font-weight:700;margin-top:8px"></div>${nota('Herencia mendeliana simple (un gen, dominancia completa).')}`;
+  const f=()=>{const a=$(el,'#p1').value,b=$(el,'#p2').value,c=[];let h=0;let t='<table border="1" style="border-collapse:collapse;text-align:center;min-width:180px"><tr><th></th><th>'+a[0]+'</th><th>'+a[1]+'</th></tr>';
+   [b[0],b[1]].forEach(m=>{t+='<tr><th>'+m+'</th>';[a[0],a[1]].forEach(p=>{const g=[p,m].sort().join('');const gg=g==='aA'?'Aa':g;c.push(gg);t+='<td style="padding:10px;font-weight:800">'+gg+'</td>'});t+='</tr>'});
+   const dom=c.filter(x=>x.includes('A')).length;$(el,'#t').innerHTML=t+'</table>';$(el,'#o').textContent=`Fenotipo dominante: ${dom*25}% · recesivo: ${(4-dom)*25}% · AA ${c.filter(x=>x==='AA').length*25}% · Aa ${c.filter(x=>x==='Aa').length*25}% · aa ${c.filter(x=>x==='aa').length*25}%`};
+  $(el,'#p1').onchange=f;$(el,'#p2').onchange=f;f()}},
+{id:'celula',lab:'biologia',t:'Explora la célula',d:'Toca cada orgánulo para saber qué hace.',
+ mount(el){const O=[['Núcleo','🟣','Guarda el ADN y dirige las actividades de la célula.'],['Mitocondria','🟠','Produce la energía (ATP) por respiración celular.'],['Ribosoma','⚪','Fabrica proteínas.'],['Membrana','🟢','Controla qué entra y sale de la célula.'],['Retículo endoplasmático','🔵','Transporta y modifica sustancias.'],['Cloroplasto (solo en células vegetales)','🌿','Realiza la fotosíntesis.']];
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">${O.map((o,i)=>`<button data-i="${i}" style="padding:12px;border:1.5px solid #cbd5e1;border-radius:12px;font-weight:700">${o[1]}<br>${o[0]}</button>`).join('')}</div><div id="o" style="font-weight:700;margin-top:10px;min-height:40px"></div>${nota('Esquema didáctico; las células reales no se ven así.')}`;
+  el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>$(el,'#o').textContent=O[b.dataset.i][0]+': '+O[b.dataset.i][2])}},
+{id:'funcion',lab:'matematicas',t:'Función cuadrática',d:'y = a·x² + b·x + c: mira cómo cambian la parábola, el vértice y las raíces.',
+ mount(el){el.innerHTML=`<canvas id="cv" width="500" height="300" style="width:100%;background:#fff;border:1px solid #e2e8f0;border-radius:10px"></canvas>${sl('a','a',-5,5,1,.5)}${sl('b','b',-10,10,0,.5)}${sl('c','c',-10,10,-4,.5)}<div id="o" style="font-weight:700;margin-top:8px"></div>`;
+  const c=$(el,'#cv'),x=c.getContext('2d');const f=()=>{const a=val(el,'a'),b=val(el,'b'),k=val(el,'c');x.clearRect(0,0,500,300);const X=v=>250+v*25,Y=v=>150-v*12;
+   x.strokeStyle='#cbd5e1';x.beginPath();x.moveTo(0,150);x.lineTo(500,150);x.moveTo(250,0);x.lineTo(250,300);x.stroke();x.strokeStyle='#dc2626';x.lineWidth=2;x.beginPath();
+   for(let i=-10;i<=10;i+=.1){const y=a*i*i+b*i+k;const px=X(i),py=Y(y);i<=-9.99?x.moveTo(px,py):x.lineTo(px,py)}x.stroke();
+   let t=a===0?'No es cuadrática (a=0): es una recta.':'';if(a!==0){const vx=-b/(2*a),vy=a*vx*vx+b*vx+k,d=b*b-4*a*k;t=`Vértice (${vx.toFixed(2)}, ${vy.toFixed(2)}) · Abre hacia ${a>0?'arriba':'abajo'} · Discriminante ${d.toFixed(1)} → ${d>0?'2 raíces reales: x='+((-b+Math.sqrt(d))/(2*a)).toFixed(2)+' y x='+((-b-Math.sqrt(d))/(2*a)).toFixed(2):d===0?'1 raíz real: x='+(-b/(2*a)).toFixed(2):'sin raíces reales'}`}
+   $(el,'#o').textContent=t};bind(el,['a','b','c'],f);f()}},
+{id:'dados',lab:'matematicas',t:'Probabilidad: lanzar dados',d:'Lanza dos dados muchas veces y compara con la probabilidad teórica.',
+ mount(el){el.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap"><button id="b1" style="background:#1e63e9;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">🎲 Lanzar 1 vez</button><button id="b2" style="background:#16a34a;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">🎲 Lanzar 100 veces</button><button id="b3" style="background:#64748b;color:#fff;padding:9px 14px;border-radius:10px;font-weight:800">Reiniciar</button></div><div id="o" style="margin-top:10px"></div>${nota('Los resultados son aleatorios de verdad: cambian cada vez.')}`;
+  let n=0;const c=Array(13).fill(0);const f=()=>{const m=Math.max(1,...c);$(el,'#o').innerHTML=`<b>Lanzamientos: ${n}</b>`+[2,3,4,5,6,7,8,9,10,11,12].map(s=>{const th=(6-Math.abs(s-7))/36*100;return`<div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:3px"><span style="width:22px">${s}</span><div style="background:#7c3aed;height:12px;width:${Math.round(c[s]/m*60)}%;border-radius:4px"></div><span>${n?(c[s]/n*100).toFixed(1):0}% (teórico ${th.toFixed(1)}%)</span></div>`}).join('')};
+  const r=k=>{for(let i=0;i<k;i++){c[1+Math.ceil(Math.random()*6)+Math.ceil(Math.random()*6)-1]++;n++}f()};
+  $(el,'#b1').onclick=()=>r(1);$(el,'#b2').onclick=()=>r(100);$(el,'#b3').onclick=()=>{c.fill(0);n=0;f()};f()}}];
+return{list:lab=>L.filter(s=>s.lab===lab),get:id=>L.find(s=>s.id===id),all:L};})();

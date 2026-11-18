@@ -1,6 +1,9 @@
 # AULA360 — Centro de Laboratorios y Experiencias (Etapa 1)
 
-## Qué incluye esta etapa
+## Etapa 2 (agregada): simuladores propios (sims.js)
+Física: lanzamiento de proyectil, Ley de Ohm. Química: pH y mezcla ácido–base. Biología: cuadro de Punnett, explorar la célula. Matemáticas: función cuadrática, probabilidad con dados. Código propio (sin licencias externas), cada uno con aviso de que es un modelo y no un experimento real. El docente puede adjuntar un simulador a una experiencia.
+
+## Qué incluye la etapa 1
 - Menú "🔬 Laboratorios" para estudiante (pestaña), docente (grupo Evaluar) y rector/coordinador (grupo Seguimiento, solo lectura).
 - Centro principal con los 13 laboratorios (Química, Física, Biología, Matemáticas, Lectura Crítica, English Lab, Educación Física, Ética y Filosofía, Democracia, Política, Ciencias Sociales, Competencias Ciudadanas, Arte y Cultura).
 - Constructor de experiencias (docente): introducción, materiales, exploración, práctica, conclusiones, preguntas (opción múltiple autocorregida, abierta, audio, archivo), rúbrica, fechas, intentos, tutor IA sí/no, evaluable sí/no; borrador, publicar, cerrar, duplicar, eliminar.
@@ -19,7 +22,7 @@ Tablas: lab_experiencias, lab_claves (respuestas correctas ocultas al estudiante
 - Laboratorios de política/democracia/sociales/ciudadanas: el tutor tiene instrucción de neutralidad y pluralismo.
 
 ## Límites conocidos (honestos)
-- Aún NO hay simuladores interactivos de Química, Física, Biología ni Matemáticas: esos laboratorios funcionan con experiencias del docente y tutor IA. Se agregan en las siguientes etapas (con revisión de licencias; se preferirá código propio).
+- Los simuladores son pocos (7). Lectura, Educación Física, Ética, Democracia, Política, Sociales, Ciudadanas y Arte funcionan con experiencias del docente y tutor IA; falta portafolio/diario dedicados y un tablero analítico docente más completo.
 - Voz: usa el navegador (gratis). Reconocimiento de voz funciona bien en Chrome (PC/Android); limitado en iPhone y Firefox. Evaluación de pronunciación = coincidencia de palabras, no análisis fonético.
 - Sin internet no se pueden subir archivos/audio; solo texto y respuestas. No se implementó un motor de sincronización nuevo: se usa una cola simple local.
 - Costo: el tutor usa la API de Anthropic ya configurada (se descuenta de tu crédito); límite por estudiante/día controlable.
