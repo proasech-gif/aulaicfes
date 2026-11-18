@@ -53,15 +53,16 @@ const exDe=l=>Z.exps.filter(x=>x.lab===l);
 
 /* ---------- pantalla principal ---------- */
 function home(){
+  const bd=(isProf()||isDir())?`<div style="margin:0 0 12px">${B('#475569','📊 Ver estadísticas','onclick="LAB.dash()"')}</div>`:'';
   const rol=isEst()?'Practica, explora y entrega tus experiencias.':isProf()?'Crea experiencias, publícalas a tus cursos y califica.':'Consulta lo que publican los docentes (solo lectura).';
   return`<div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:20px">🔬 Centro de Laboratorios</h2><p style="color:#64748b;margin:4px 0 14px">${rol}</p>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px">${LABS.map(l=>{const n=exDe(l[0]).filter(x=>isProf()||isDir()||x.estado!=='borrador').length;
+  ${bd}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px">${LABS.map(l=>{const n=exDe(l[0]).filter(x=>isProf()||isDir()||x.estado!=='borrador').length;
     return`<div onclick="LAB.open('${l[0]}')" style="${card};cursor:pointer"><div style="font-size:30px">${l[1]}</div><div style="font-weight:800;margin-top:4px">${e(l[2])}</div><div style="font-size:12px;color:#64748b;margin:4px 0 8px">${e(l[3])}</div><div style="font-size:12px;font-weight:700;color:#1e63e9">${n} experiencia${n===1?'':'s'}</div></div>`}).join('')}</div></div>`;
 }
 function labPage(){
   const l=LN[Z.lab],xs=exDe(Z.lab).filter(x=>isProf()||isDir()||x.estado==='publicada'||x.estado==='cerrada');
   const ing=Z.lab==='ingles';
-  const tools=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${ing&&!isDir()?B('#7c3aed','🗣️ Practicar inglés','onclick="LAB.eng()"'):''}${!isDir()?B('#0ea5e9','🤖 Tutor IA','onclick="LAB.tutor()"'):''}${isProf()?B('#16a34a','➕ Crear experiencia','onclick="LAB.nueva()"'):''}${isDir()?B('#475569','⚙️ Tutor IA del colegio','onclick="LAB.cfgView()"'):''}</div>`;
+  const tools=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${ing&&!isDir()?B('#7c3aed','🗣️ Practicar inglés','onclick="LAB.eng()"'):''}${!isDir()?B('#0ea5e9','🤖 Tutor IA','onclick="LAB.tutor()"'):''}${isProf()?B('#16a34a','➕ Crear experiencia','onclick="LAB.nueva()"'):''}${isProf()?Object.entries(PLA).filter(([k,p])=>p.lab===Z.lab).map(([k,p])=>B('#0d9488',p.nombre+' (plantilla)','onclick="LAB.pla(\''+k+'\')"')).join(''):''}${isDir()?B('#475569','⚙️ Tutor IA del colegio','onclick="LAB.cfgView()"'):''}</div>`;
   const lista=xs.length?xs.map(x=>{const en=Z.ents[x.id];const st=isEst()?(en?(en.estado==='calificada'?'Calificada: '+(en.nota??'—')+' / 5':en.estado==='enviada'?'Enviada':'En borrador'):'Pendiente'):ESTADO[x.estado];
     return`<div style="${card};display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div style="min-width:200px"><div style="font-weight:800">${e(x.titulo)}</div><div style="font-size:12px;color:#64748b">${e(x.descripcion||'')}${isDir()?' · Docente: '+e(Z.nom[x.docente_id]||''):''}${x.cierra?' · Cierra '+fF(x.cierra):''}</div><div style="font-size:12px;font-weight:700;color:#1e63e9;margin-top:3px">${st}</div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">${isEst()?B('#1e63e9',en?'Abrir':'Empezar',`onclick="LAB.abrir('${x.id}')"`):''}${isProf()?B('#475569','Editar',`onclick="LAB.editar('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`)+B('#64748b','Duplicar',`onclick="LAB.dup('${x.id}')"`):''}${isDir()?B('#1e63e9','Ver',`onclick="LAB.abrir('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`):''}</div></div>`}).join(''):`<p style="color:#64748b">${isEst()?'Tu docente aún no ha publicado experiencias en este laboratorio.':'Todavía no hay experiencias aquí.'}</p>`;
@@ -70,6 +71,15 @@ function labPage(){
   ${(window.SIM&&SIM.list(Z.lab).length)?`<h3 style="font-weight:800;margin:6px 0">🧰 Simuladores</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px">${SIM.list(Z.lab).map(s=>`<div onclick="LAB.sim('${s.id}')" style="${card};cursor:pointer"><b>${e(s.t)}</b><div style="font-size:12px;color:#64748b;margin-top:4px">${e(s.d)}</div></div>`).join('')}</div><h3 style="font-weight:800;margin:6px 0">📋 Experiencias</h3>`:''}
   <div style="display:grid;gap:10px">${lista}</div></div>`;
 }
+
+/* ---------- plantillas (diario de práctica, portafolio) ---------- */
+const PLA={
+ diario:{lab:'edfisica',nombre:'📓 Diario de práctica',titulo:'Diario de práctica física',descripcion:'Registra tu actividad física de la semana',objetivos:'Reflexionar sobre mi práctica, mi esfuerzo y mi salud.',
+  q:[['abierta','¿Qué actividad física hiciste y cuánto tiempo duró?'],['abierta','¿Cómo te sentiste antes, durante y después?'],['abierta','¿Qué mejoraste o qué te costó trabajo?'],['archivo','Foto o evidencia de tu práctica (opcional, solo si te sientes cómodo/a)']],r:['Constancia','Reflexión','Esfuerzo y actitud']},
+ portafolio:{lab:'arte',nombre:'🖼️ Portafolio',titulo:'Portafolio artístico',descripcion:'Sube tu obra y explica tu proceso',objetivos:'Crear, explicar y valorar mi proceso artístico.',
+  q:[['archivo','Sube foto o archivo de tu obra'],['abierta','Explica tu idea y los materiales o técnicas que usaste'],['abierta','¿Qué aprendiste y qué mejorarías?'],['audio','Opcional: graba una explicación de tu obra']],r:['Creatividad','Técnica','Proceso y reflexión','Presentación']}};
+function nuevaPla(k){const p=PLA[k];Z.ed={...nuevaEd(),lab:p.lab,titulo:p.titulo,descripcion:p.descripcion,objetivos:p.objetivos,rubrica:p.r.join('\n'),
+  preguntas:p.q.map((q,i)=>({id:'q'+Date.now().toString(36)+i,tipo:q[0],texto:q[1],opciones:[]}))};Z.v='build';render()}
 
 /* ---------- constructor de experiencias (docente) ---------- */
 const BL=[['intro','Introducción'],['materiales','Materiales'],['exploracion','Exploración'],['practica','Práctica'],['conclusiones','Conclusiones']];
@@ -219,8 +229,19 @@ function vIng(){const n=Z.nivel,w=VOC[n],S=Z.ing||(Z.ing={tab:'voc',i:0,q:null,r
   <label style="font-size:12px;font-weight:800">Nivel </label><select onchange="LAB.nv(this.value)" style="padding:6px;border-radius:8px;border:1.5px solid #cbd5e1">${['Pre-A1','A1','A2','B1'].map(x=>`<option ${x===n?'selected':''}>${x}</option>`).join('')}</select>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${tabs}</div>${c}</div>`}
 function vSim(){const s=SIM.get(Z.simId);return`<div class="aic-card" style="padding:18px"><button onclick="LAB.${Z.cur&&Z.back==='exp'?'abrir(\''+Z.cur.id+'\')':'open(\''+Z.lab+'\')'}" style="font-weight:700;color:#1e63e9">← Volver</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">🧰 ${e(s.t)}</h2><p style="color:#64748b;margin-bottom:8px">${e(s.d)}</p><div id="simbox"></div></div>`}
+async function cargaDash(){const r=await sb.from('lab_entregas').select('experiencia_id,estado,nota,auto_correctas,auto_total');Z.dEnt=r.data||[];
+  const p=await sb.from('lab_practica').select('skill,puntaje,total,nivel');Z.dPr=p.data||[];Z.dOk=true;Z.v='dash';render()}
+function vDash(){const fl=Z.fLab||'',fc=Z.fCur||'';const xs=Z.exps.filter(x=>(!fl||x.lab===fl)&&(!fc||(x.cursos||[]).includes(fc))&&x.estado!=='borrador');
+  const fila=xs.map(x=>{const en=Z.dEnt.filter(a=>a.experiencia_id===x.id&&a.estado!=='borrador'),cal=en.filter(a=>a.nota!=null),pr=cal.length?(cal.reduce((s,a)=>s+Number(a.nota),0)/cal.length).toFixed(1):'—';
+    const at=en.filter(a=>a.auto_total),pa=at.length?Math.round(100*at.reduce((s,a)=>s+a.auto_correctas,0)/at.reduce((s,a)=>s+a.auto_total,0))+'%':'—';
+    return`<tr><td>${LN[x.lab][1]} ${e(LN[x.lab][2])}</td><td>${e(x.titulo)}${isDir()?'<br><small>'+e(Z.nom[x.docente_id]||'')+'</small>':''}</td><td>${en.length}</td><td>${cal.length}</td><td>${pr}</td><td>${pa}</td></tr>`}).join('');
+  const by={};Z.dPr.forEach(r=>{(by[r.skill]=by[r.skill]||{p:0,t:0,n:0}).p+=r.puntaje;by[r.skill].t+=r.total;by[r.skill].n++});
+  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.home()" style="font-weight:700;color:#1e63e9">← Laboratorios</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">📊 Estadísticas de laboratorios</h2><p style="font-size:12px;color:#64748b">Datos reales de las entregas de tus estudiantes.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><select onchange="LAB.fl(this.value)" style="padding:7px;border-radius:8px;border:1.5px solid #cbd5e1"><option value="">Todos los laboratorios</option>${LABS.map(l=>`<option value="${l[0]}" ${fl===l[0]?'selected':''}>${l[2]}</option>`).join('')}</select>${isProf()?`<select onchange="LAB.fc(this.value)" style="padding:7px;border-radius:8px;border:1.5px solid #cbd5e1"><option value="">Todos mis cursos</option>${Z.cursos.map(c=>`<option value="${c.id}" ${fc===c.id?'selected':''}>${c.grade}° ${e(c.name)}</option>`).join('')}</select>`:''}</div>
+  ${fila?`<div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>LABORATORIO</th><th>EXPERIENCIA</th><th>ENVIADAS</th><th>CALIFICADAS</th><th>PROMEDIO</th><th>ACIERTO AUTO</th></tr></thead><tbody>${fila}</tbody></table></div>`:'<p style="color:#64748b">Aún no hay experiencias publicadas con estos filtros.</p>'}
+  ${Object.keys(by).length?`<h3 style="font-weight:800;margin:14px 0 4px">English Lab · práctica libre por habilidad</h3>${Object.entries(by).map(([k,v])=>`<div>${k}: ${v.p}/${v.t} aciertos (${v.n} intentos)</div>`).join('')}`:''}</div>`}
 function vistaActual(){if(!Z.ok)return'<div class="aic-card" style="padding:18px">Cargando laboratorios…</div>';
-  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim})[Z.v]()}
+  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim,dash:vDash})[Z.v]()}
 
 return{load,view:()=>vistaActual(),
   home(){Z.v='home';render()},
@@ -238,6 +259,7 @@ return{load,view:()=>vistaActual(),
   envia,grabar,async sube(q,el){const f=el.files[0];if(f)await subir(f,f.name,q)},
   entregas,calif,guardaNota,
   sim(id,back){Z.simId=id;Z.back=back||'lab';Z.v='sim';render();setTimeout(()=>{const b=document.getElementById('simbox');if(b)SIM.get(id).mount(b)},0)},
+  dash:cargaDash,fl(v){Z.fLab=v;render()},fc(v){Z.fCur=v;render()},pla:nuevaPla,
   cfgView(){Z.v='cfg';render()},guardaCfg,
   tutor(expId){Z.tutorExp=expId||null;Z.v='tutor';render()},envT,dictar,
   leer(i){hablar(Z.chat[i].content.replace(/Tip:.*$/ms,''),'en-US')},

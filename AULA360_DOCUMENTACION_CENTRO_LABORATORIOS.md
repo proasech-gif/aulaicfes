@@ -3,6 +3,10 @@
 ## Etapa 2 (agregada): simuladores propios (sims.js)
 Física: lanzamiento de proyectil, Ley de Ohm. Química: pH y mezcla ácido–base. Biología: cuadro de Punnett, explorar la célula. Matemáticas: función cuadrática, probabilidad con dados. Código propio (sin licencias externas), cada uno con aviso de que es un modelo y no un experimento real. El docente puede adjuntar un simulador a una experiencia.
 
+## Etapa 3 (agregada)
+- Plantillas listas: 📓 Diario de práctica (Educación Física) y 🖼️ Portafolio (Arte), con rúbrica; el docente las edita y publica como cualquier experiencia.
+- 📊 Estadísticas (docente y directivos): por laboratorio/curso, enviadas, calificadas, promedio y acierto automático con datos reales; práctica de English Lab por habilidad.
+
 ## Qué incluye la etapa 1
 - Menú "🔬 Laboratorios" para estudiante (pestaña), docente (grupo Evaluar) y rector/coordinador (grupo Seguimiento, solo lectura).
 - Centro principal con los 13 laboratorios (Química, Física, Biología, Matemáticas, Lectura Crítica, English Lab, Educación Física, Ética y Filosofía, Democracia, Política, Ciencias Sociales, Competencias Ciudadanas, Arte y Cultura).

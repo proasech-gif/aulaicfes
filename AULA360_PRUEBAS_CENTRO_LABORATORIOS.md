@@ -3,3 +3,5 @@ Automáticas (navegador simulado, 17 comprobaciones, todas OK): 13 tarjetas; doc
 Pendientes de prueba manual con cuentas reales (colegio 2084): grabación de audio con micrófono real, voz en celular, tutor IA con crédito, envío sin internet.
 
 Etapa 2: los 7 simuladores abren y calculan bien (alcance 90 m con 45°/30 m/s/g=10; pH 7,00 y 1,00; Punnett Aa×Aa = 75%; raíces ±2; dados 100 lanzamientos); selector de simulador en el constructor. Detectado y corregido un conflicto de nombres en el simulador de función.
+
+Etapa 3: plantillas (diario y portafolio) crean 4 preguntas + rúbrica; botón y tablero de estadísticas funcionan para docente y rector, con filtro por laboratorio.
