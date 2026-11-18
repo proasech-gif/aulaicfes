@@ -7,6 +7,9 @@ Física: lanzamiento de proyectil, Ley de Ohm. Química: pH y mezcla ácido–ba
 - Plantillas listas: 📓 Diario de práctica (Educación Física) y 🖼️ Portafolio (Arte), con rúbrica; el docente las edita y publica como cualquier experiencia.
 - 📊 Estadísticas (docente y directivos): por laboratorio/curso, enviadas, calificadas, promedio y acierto automático con datos reales; práctica de English Lab por habilidad.
 
+## Etapa 4 (agregada): actividades para los demás laboratorios
+Lectura guiada (literal/inferencial/crítico), Dilema ético (perspectivas, sin respuesta única), Cómo se hace una ley, Ramas y órganos del poder público, Línea de tiempo de Colombia, Pasos para resolver un conflicto. Total 13 actividades/simuladores. Contenido neutral y factual; es material de práctica, no reemplaza el criterio del docente.
+
 ## Qué incluye la etapa 1
 - Menú "🔬 Laboratorios" para estudiante (pestaña), docente (grupo Evaluar) y rector/coordinador (grupo Seguimiento, solo lectura).
 - Centro principal con los 13 laboratorios (Química, Física, Biología, Matemáticas, Lectura Crítica, English Lab, Educación Física, Ética y Filosofía, Democracia, Política, Ciencias Sociales, Competencias Ciudadanas, Arte y Cultura).
