@@ -7,3 +7,5 @@ Etapa 2: los 7 simuladores abren y calculan bien (alcance 90 m con 45°/30 m/s/g
 Etapa 3: plantillas (diario y portafolio) crean 4 preguntas + rúbrica; botón y tablero de estadísticas funcionan para docente y rector, con filtro por laboratorio.
 
 Etapa 4: las 13 actividades abren; ordenar, clasificar, lectura (3/3) y dilema funcionan.
+
+Pruebas de permisos en la base de datos real (usuarios temporales, deshechas al terminar): el estudiante ve su experiencia pero no las claves; no puede enviar dos veces ni editar su nota; un estudiante de otro colegio no ve nada y no puede guardar; el docente no puede guardar como estudiante; la nota 6 se rechaza; una entrega calificada no se puede cambiar; la nota aparece en mis_notas. Se encontró y corrigió un hueco (comparación con curso nulo) en lab_guardar_entrega.
