@@ -20,7 +20,7 @@ const LN=Object.fromEntries(LABS.map(l=>[l[0],l]));
 const isDir=()=>M&&(M.role==='rector'||M.role==='coordinador');
 const isProf=()=>M&&M.role==='prof';
 const isEst=()=>M&&!isDir()&&!isProf()&&!M.is_admin;
-let Z={v:'home',lab:null,exps:[],ents:{},cursos:[],cfg:{},nom:{},ed:null,cur:null,ent:null,lista:[],chat:[],nivel:'A1',ing:null,ok:false,busy:false};
+let Z={salas:[],msgs:[],sala:null,v:'home',lab:null,exps:[],ents:{},cursos:[],cfg:{},nom:{},ed:null,cur:null,ent:null,lista:[],chat:[],nivel:'A1',ing:null,ok:false,busy:false};
 const card='background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px';
 const B=(c,t,x='')=>`<button ${x} style="background:${c};color:#fff;padding:9px 14px;border-radius:10px;font-weight:800;font-size:13px">${t}</button>`;
 const inp='width:100%;padding:9px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px';
@@ -40,16 +40,67 @@ async function flush(){
 window.addEventListener('online',()=>{try{flush()}catch(_){}});
 
 async function load(){
-  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=2');
+  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=3');
   const [x,c]=await Promise.all([sb.from('lab_experiencias').select('*').order('created_at',{ascending:false}),
     isProf()?sb.from('courses').select('id,grade,name').eq('teacher_id',M.id).order('grade').order('name'):Promise.resolve({data:[]})]);
   Z.exps=x.data||[];Z.cursos=c.data||[];
   if(isEst()){const r=await sb.from('lab_entregas').select('*').eq('user_id',M.id);Z.ents=Object.fromEntries((r.data||[]).map(a=>[a.experiencia_id,a]));flush()}
   if(isDir()){const r=await sb.from('lab_config').select('*');Z.cfg=Object.fromEntries((r.data||[]).map(a=>[a.lab,a]));
     const ids=[...new Set(Z.exps.map(a=>a.docente_id))];if(ids.length){const p=await sb.from('profiles').select('id,full_name').in('id',ids);Z.nom=Object.fromEntries((p.data||[]).map(a=>[a.id,a.full_name]))}}
-  Z.ok=true;
+  await cargaSalas();Z.ok=true;
 }
 const exDe=l=>Z.exps.filter(x=>x.lab===l);
+
+/* ---------- asistencia obligatoria por laboratorio (estudiante) ---------- */
+const hoy=()=>new Date(Date.now()-5*3600*1000).toISOString().slice(0,10);
+const AK=l=>'lab_asis_'+(M&&M.id)+'_'+l+'_'+hoy();
+async function asistio(l){try{if(localStorage.getItem(AK(l))==='1')return true}catch(_){}
+  try{const {data,error}=await sb.rpc('lab_asistio',{p_lab:l});if(!error&&data===true){try{localStorage.setItem(AK(l),'1')}catch(_){}return true}}catch(_){}return false}
+async function registrarAsis(){const {error}=await sb.rpc('lab_registrar_asistencia',{p_lab:Z.lab});if(error)return err(error);try{localStorage.setItem(AK(Z.lab),'1')}catch(_){}toast('✅ Asistencia registrada');await cargaSalas();Z.v='lab';render()}
+function vGate(){const l=LN[Z.lab];return`<div class="aic-card" style="padding:22px;text-align:center"><button onclick="LAB.home()" style="font-weight:700;color:#1e63e9;float:left">← Laboratorios</button><div style="clear:both;font-size:46px;margin-top:8px">${l[1]}</div><h2 style="font-weight:800;font-size:20px;margin:6px 0">${e(l[2])}</h2>
+  <p style="color:#475569;margin:8px 0 14px">Para participar hoy en este laboratorio debes <b>registrar tu asistencia</b>. Sin ella no puedes entrar a las experiencias, las salas de debate ni el tutor IA.</p>${B('#16a34a','✋ Registrar mi asistencia de hoy','onclick="LAB.asiste()"')}</div>`}
+async function verAsis(){const r=await sb.rpc('lab_asistencia_lista',{p_lab:Z.lab});if(r.error)return err(r.error);Z.alista=r.data||[];Z.v='alista';render()}
+function vAlista(){const L=Z.alista||[],p=L.filter(a=>a.presente).length;
+  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${Z.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[Z.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">✋ Asistencia de hoy · ${e(LN[Z.lab][2])}</h2><p style="color:#64748b">${p} de ${L.length} estudiantes registraron asistencia hoy.</p>
+  <div class="aic-table-wrap"><table style="min-width:420px"><thead><tr><th>CURSO</th><th>ESTUDIANTE</th><th>ASISTENCIA</th><th>HORA</th></tr></thead><tbody>${L.map(a=>`<tr><td>${e(a.curso)}</td><td>${e(a.full_name)}</td><td>${a.presente?'✅ Sí':'—'}</td><td>${a.hora?fF(a.hora):''}</td></tr>`).join('')}</tbody></table></div></div>`}
+
+/* ---------- salas de debate ---------- */
+const MODO={companeros:'👥 Entre compañeros',tutor:'🤖 Con el tutor IA',mixto:'👥+🤖 Compañeros y tutor'};
+async function cargaSalas(){const r=await sb.from('lab_salas').select('*').order('created_at',{ascending:false});Z.salas=r.data||[]}
+function nuevaSala(){Z.v='salaNew';render()}
+function vSalaNew(){return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${Z.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[Z.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">💬 Nueva sala de debate</h2>
+  <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">Título</label><input id="sn_t" style="${inp}" placeholder="Ej.: ¿Es justo copiar en un examen?">
+  <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">Tema o pregunta orientadora</label><textarea id="sn_d" rows="3" style="${inp}"></textarea>
+  <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">Curso</label><select id="sn_c" style="${inp}">${Z.cursos.map(c=>`<option value="${c.id}">${c.grade}° ${e(c.name)}</option>`).join('')}</select>
+  <label style="display:block;font-weight:800;font-size:12px;margin-top:8px">¿Quién participa?</label><select id="sn_m" style="${inp}">${Object.entries(MODO).map(([k,v])=>`<option value="${k}" ${k==='mixto'?'selected':''}>${v}</option>`).join('')}</select>
+  <p style="font-size:12px;color:#64748b;margin-top:6px">Tú también puedes escribir y borrar mensajes inapropiados en cualquier momento. El tutor IA solo modera y pregunta; no toma partido.</p>
+  <div style="margin-top:12px">${B('#16a34a','Crear sala','onclick="LAB.salaCrear()"')}</div></div>`}
+async function salaCrear(){const t=document.getElementById('sn_t').value.trim(),c=document.getElementById('sn_c').value;if(!t)return toast('Escribe un título');if(!c)return toast('Elige un curso');
+  const m=document.getElementById('sn_m').value;const {error}=await sb.from('lab_salas').insert({docente_id:M.id,colegio_id:M.colegio_id,curso_id:c,lab:Z.lab,titulo:t,tema:document.getElementById('sn_d').value,modo:m,estado:'abierta',tutor_activo:m!=='companeros'});if(error)return err(error);
+  toast('✅ Sala creada');await cargaSalas();Z.v='lab';render()}
+async function entrarSala(id){Z.sala=Z.salas.find(a=>a.id===id);Z.msgs=[];await refrescaMsgs(true);Z.v='sala';render();setTimeout(()=>{scrollM();arrancaPoll()},30)}
+const scrollM=()=>{const c=document.getElementById('msgs');if(c)c.scrollTop=c.scrollHeight};
+async function refrescaMsgs(sinDom){const r=await sb.from('lab_mensajes').select('*').eq('sala_id',Z.sala.id).order('created_at',{ascending:true}).limit(300);if(r.error)return;const d=r.data||[];
+  if(d.length!==Z.msgs.length||(d.length&&d[d.length-1].id!==(Z.msgs[Z.msgs.length-1]||{}).id)){Z.msgs=d;if(!sinDom){const c=document.getElementById('msgs');if(c){const bajo=c.scrollTop+c.clientHeight>=c.scrollHeight-40;c.innerHTML=msgsHtml();if(bajo)scrollM()}}}}
+function arrancaPoll(){if(Z.poll)clearInterval(Z.poll);Z.poll=setInterval(()=>{if(Z.v!=='sala'||!document.getElementById('msgs')){clearInterval(Z.poll);Z.poll=null;return}refrescaMsgs()},4000)}
+function msgsHtml(){if(!Z.msgs.length)return'<p style="color:#64748b">Todavía no hay mensajes. ¡Rompe el hielo!</p>';
+  return Z.msgs.map(m=>{const yo=m.user_id===(M&&M.id)&&m.autor!=='ia',c=m.autor==='ia'?'#f3e8ff':m.autor==='doc'?'#dbeafe':yo?'#dcfce7':'#f1f5f9',b=m.autor==='ia'?'🤖 Tutor IA':m.autor==='doc'?'👩‍🏫 '+e(m.nombre):e(m.nombre);
+    return`<div style="background:${c};padding:8px 12px;border-radius:12px;max-width:92%;${yo?'justify-self:end':''}"><div style="font-size:11px;font-weight:800;color:#475569">${b} · ${fF(m.created_at)}${isProf()&&m.autor!=='doc'?` <button onclick="LAB.msgDel('${m.id}')" title="Borrar mensaje" style="color:#dc2626">🗑</button>`:''}</div><div style="white-space:pre-wrap;margin-top:2px">${e(m.texto)}</div></div>`}).join('')}
+function vSala(){const s=Z.sala,ab=s.estado==='abierta',puede=ab&&(isEst()||(isProf()&&s.docente_id===M.id)),ia=ab&&s.modo!=='companeros'&&s.tutor_activo&&puede;
+  return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${s.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[s.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">💬 ${e(s.titulo)}</h2>
+  <p style="color:#64748b;font-size:13px">${MODO[s.modo]} · ${ab?'Abierta':'Cerrada'}</p>${s.tema?`<p style="margin:6px 0">${e(s.tema)}</p>`:''}
+  <p style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px">Respeta a tus compañeros: argumenta sin ofender. Tu docente puede leer y borrar mensajes. No escribas datos personales.${s.modo!=='companeros'?' El tutor IA usa un proveedor externo de inteligencia artificial.':''}</p>
+  <div id="msgs" style="display:grid;gap:8px;margin:10px 0;max-height:420px;overflow:auto;padding:4px">${msgsHtml()}</div>
+  ${puede?`<div style="display:flex;gap:6px"><textarea id="sm" rows="2" style="${inp}" placeholder="Escribe tu argumento…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();LAB.msgSend()}"></textarea>${B('#1e63e9','Enviar','onclick="LAB.msgSend()"')}</div>`:(ab?'<p style="color:#64748b">Eres observador: puedes leer pero no escribir.</p>':'<p style="color:#64748b">Esta sala está cerrada.</p>')}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${ia?B('#7c3aed','🤖 Pedir opinión al tutor IA','onclick="LAB.msgIA()"'):''}${isProf()&&s.docente_id===M.id?B('#b45309',ab?'Cerrar sala':'Reabrir sala','onclick="LAB.salaEstado()"'):''}${B('#475569','↻ Actualizar','onclick="LAB.msgRef()"')}</div></div>`}
+async function msgSend(){const t=document.getElementById('sm');const v=(t.value||'').trim();if(!v||Z.busy)return;Z.busy=true;
+  try{const {error}=await sb.rpc('lab_enviar_mensaje',{p_sala:Z.sala.id,p_texto:v});if(error)throw error;t.value='';await refrescaMsgs();scrollM();
+    if(isEst()&&Z.sala.modo==='tutor'){Z.busy=false;await msgIA(true)}}catch(er){err(er)}Z.busy=false}
+async function msgIA(auto){if(Z.busy&&!auto)return;Z.busy=true;if(!auto)toast('🤖 El tutor está pensando…');
+  try{const {data,error}=await sb.functions.invoke('lab-tutor',{body:{sala_id:Z.sala.id}});if(error){let m=error.message;try{const b=await error.context.json();if(b&&b.error)m=b.error}catch(_){}throw new Error(m)}
+    if(data&&data.sin_clave)throw new Error('El tutor IA aún no está activado en el servidor.');if(data.error)throw new Error(data.error);await refrescaMsgs();scrollM()}catch(er){toast(er.message)}Z.busy=false}
+async function msgDel(id){if(!confirm('¿Borrar este mensaje?'))return;const {error}=await sb.from('lab_mensajes').delete().eq('id',id);if(error)return err(error);await refrescaMsgs();}
+async function salaEstado(){const n=Z.sala.estado==='abierta'?'cerrada':'abierta';const {error}=await sb.from('lab_salas').update({estado:n}).eq('id',Z.sala.id);if(error)return err(error);Z.sala.estado=n;await cargaSalas();render()}
 
 /* ---------- pantalla principal ---------- */
 function home(){
@@ -62,14 +113,16 @@ function home(){
 function labPage(){
   const l=LN[Z.lab],xs=exDe(Z.lab).filter(x=>isProf()||isDir()||x.estado==='publicada'||x.estado==='cerrada');
   const ing=Z.lab==='ingles';
-  const tools=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${ing&&!isDir()?B('#7c3aed','🗣️ Practicar inglés','onclick="LAB.eng()"'):''}${!isDir()?B('#0ea5e9','🤖 Tutor IA','onclick="LAB.tutor()"'):''}${isProf()?B('#16a34a','➕ Crear experiencia','onclick="LAB.nueva()"'):''}${isProf()?Object.entries(PLA).filter(([k,p])=>p.lab===Z.lab).map(([k,p])=>B('#0d9488',p.nombre+' (plantilla)','onclick="LAB.pla(\''+k+'\')"')).join(''):''}${isDir()?B('#475569','⚙️ Tutor IA del colegio','onclick="LAB.cfgView()"'):''}</div>`;
+  const tools=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${ing&&!isDir()?B('#7c3aed','🗣️ Practicar inglés','onclick="LAB.eng()"'):''}${!isDir()?B('#0ea5e9','🤖 Tutor IA','onclick="LAB.tutor()"'):''}${isProf()?B('#16a34a','➕ Crear experiencia','onclick="LAB.nueva()"'):''}${isProf()?Object.entries(PLA).filter(([k,p])=>p.lab===Z.lab).map(([k,p])=>B('#0d9488',p.nombre+' (plantilla)','onclick="LAB.pla(\''+k+'\')"')).join(''):''}${isDir()?B('#475569','⚙️ Tutor IA del colegio','onclick="LAB.cfgView()"'):''}${(isProf()||isDir())?B('#0d9488','✋ Asistencia de hoy','onclick="LAB.verAsis()"'):''}${isProf()?B('#be185d','💬 Nueva sala de debate','onclick="LAB.nuevaSala()"'):''}</div>`;
+  const sa=Z.salas.filter(s=>s.lab===Z.lab);
+  const salasH=sa.length?`<h3 style="font-weight:800;margin:6px 0">💬 Salas de debate</h3><div style="display:grid;gap:8px;margin-bottom:14px">${sa.map(s=>`<div style="${card};display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><b>${e(s.titulo)}</b><div style="font-size:12px;color:#64748b">${MODO[s.modo]} · ${s.estado==='abierta'?'Abierta':'Cerrada'}</div></div>${B('#be185d',s.estado==='abierta'?'Entrar':'Ver',`onclick="LAB.sala('${s.id}')"`)}</div>`).join('')}</div>`:'';
   const lista=xs.length?xs.map(x=>{const en=Z.ents[x.id];const st=isEst()?(en?(en.estado==='calificada'?'Calificada: '+(en.nota??'—')+' / 5':en.estado==='enviada'?'Enviada':'En borrador'):'Pendiente'):ESTADO[x.estado];
     return`<div style="${card};display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div style="min-width:200px"><div style="font-weight:800">${e(x.titulo)}</div><div style="font-size:12px;color:#64748b">${e(x.descripcion||'')}${isDir()?' · Docente: '+e(Z.nom[x.docente_id]||''):''}${x.cierra?' · Cierra '+fF(x.cierra):''}</div><div style="font-size:12px;font-weight:700;color:#1e63e9;margin-top:3px">${st}</div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">${isEst()?B('#1e63e9',en?'Abrir':'Empezar',`onclick="LAB.abrir('${x.id}')"`):''}${isProf()?B('#475569','Editar',`onclick="LAB.editar('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`)+B('#64748b','Duplicar',`onclick="LAB.dup('${x.id}')"`):''}${isDir()?B('#1e63e9','Ver',`onclick="LAB.abrir('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`):''}</div></div>`}).join(''):`<p style="color:#64748b">${isEst()?'Tu docente aún no ha publicado experiencias en este laboratorio.':'Todavía no hay experiencias aquí.'}</p>`;
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.home()" style="font-weight:700;color:#1e63e9">← Todos los laboratorios</button><h2 style="font-weight:800;font-size:20px;margin-top:8px">${l[1]} ${e(l[2])}</h2><p style="color:#64748b">${e(l[3])}</p>${tools}
   
   ${(window.SIM&&SIM.list(Z.lab).length)?`<h3 style="font-weight:800;margin:6px 0">🧰 Simuladores</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px">${SIM.list(Z.lab).map(s=>`<div onclick="LAB.sim('${s.id}')" style="${card};cursor:pointer"><b>${e(s.t)}</b><div style="font-size:12px;color:#64748b;margin-top:4px">${e(s.d)}</div></div>`).join('')}</div><h3 style="font-weight:800;margin:6px 0">📋 Experiencias</h3>`:''}
-  <div style="display:grid;gap:10px">${lista}</div></div>`;
+  ${salasH}<div style="display:grid;gap:10px">${lista}</div></div>`;
 }
 
 /* ---------- plantillas (diario de práctica, portafolio) ---------- */
@@ -241,11 +294,12 @@ function vDash(){const fl=Z.fLab||'',fc=Z.fCur||'';const xs=Z.exps.filter(x=>(!f
   ${fila?`<div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>LABORATORIO</th><th>EXPERIENCIA</th><th>ENVIADAS</th><th>CALIFICADAS</th><th>PROMEDIO</th><th>ACIERTO AUTO</th></tr></thead><tbody>${fila}</tbody></table></div>`:'<p style="color:#64748b">Aún no hay experiencias publicadas con estos filtros.</p>'}
   ${Object.keys(by).length?`<h3 style="font-weight:800;margin:14px 0 4px">English Lab · práctica libre por habilidad</h3>${Object.entries(by).map(([k,v])=>`<div>${k}: ${v.p}/${v.t} aciertos (${v.n} intentos)</div>`).join('')}`:''}</div>`}
 function vistaActual(){if(!Z.ok)return'<div class="aic-card" style="padding:18px">Cargando laboratorios…</div>';
-  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim,dash:vDash})[Z.v]()}
+  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim,dash:vDash,gate:vGate,alista:vAlista,salaNew:vSalaNew,sala:vSala})[Z.v]()}
 
 return{load,view:()=>vistaActual(),
   home(){Z.v='home';render()},
-  open(l){Z.lab=l;Z.v='lab';render()},
+  async open(l){Z.lab=l;if(isEst()&&!(await asistio(l))){Z.v='gate';render();return}if(isEst()||isProf()||isDir())await cargaSalas();Z.v='lab';render()},
+  asiste:registrarAsis,verAsis,nuevaSala,salaCrear,sala:entrarSala,msgSend,msgIA,msgDel,msgRef(){refrescaMsgs().then(()=>toast('Actualizado'))},salaEstado,
   nueva(){Z.ed=nuevaEd();Z.v='build';render()},editar,
   async dup(id){const x=Z.exps.find(a=>a.id===id);const {id:_,created_at,updated_at,...r}=x;const k=await sb.from('lab_claves').select('claves').eq('experiencia_id',id).maybeSingle();
     const n=await sb.from('lab_experiencias').insert({...r,titulo:x.titulo+' (copia)',estado:'borrador'}).select('id').single();if(n.error)return err(n.error);

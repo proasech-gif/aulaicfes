@@ -10,6 +10,12 @@ Física: lanzamiento de proyectil, Ley de Ohm. Química: pH y mezcla ácido–ba
 ## Etapa 4 (agregada): actividades para los demás laboratorios
 Lectura guiada (literal/inferencial/crítico), Dilema ético (perspectivas, sin respuesta única), Cómo se hace una ley, Ramas y órganos del poder público, Línea de tiempo de Colombia, Pasos para resolver un conflicto. Total 13 actividades/simuladores. Contenido neutral y factual; es material de práctica, no reemplaza el criterio del docente.
 
+## Etapa 5 (agregada)
+- **Asistencia obligatoria**: el estudiante debe pulsar "Registrar mi asistencia de hoy" en cada laboratorio; sin ella no entra a experiencias, salas ni tutor IA (se exige también en el servidor). Es independiente de la asistencia a clase. Docente y directivos ven la lista del día.
+- **Salas de debate**: las crea el docente por curso y laboratorio. Modos: entre compañeros, con el tutor IA, o mixto. El docente puede escribir, borrar mensajes y cerrar la sala; el rector/coordinador solo lee. El tutor IA modera con neutralidad, sin tomar partido. Los mensajes se actualizan cada 4 segundos. Los estudiantes aparecen con nombre e inicial del apellido.
+- Más actividades: 2 lecturas y 1 texto argumentativo, 2 dilemas éticos más, regiones naturales, fuentes históricas, mecanismos de participación, separación de poderes, caso de burlas, color, capacidades físicas y estructura de una sesión (25 actividades en total).
+- Documento aparte: AULA360_SUGERENCIAS_MEJORAS_LABORATORIOS.md.
+
 ## Qué incluye la etapa 1
 - Menú "🔬 Laboratorios" para estudiante (pestaña), docente (grupo Evaluar) y rector/coordinador (grupo Seguimiento, solo lectura).
 - Centro principal con los 13 laboratorios (Química, Física, Biología, Matemáticas, Lectura Crítica, English Lab, Educación Física, Ética y Filosofía, Democracia, Política, Ciencias Sociales, Competencias Ciudadanas, Arte y Cultura).

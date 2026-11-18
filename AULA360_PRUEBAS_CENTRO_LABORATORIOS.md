@@ -9,3 +9,6 @@ Etapa 3: plantillas (diario y portafolio) crean 4 preguntas + rúbrica; botón y
 Etapa 4: las 13 actividades abren; ordenar, clasificar, lectura (3/3) y dilema funcionan.
 
 Pruebas de permisos en la base de datos real (usuarios temporales, deshechas al terminar): el estudiante ve su experiencia pero no las claves; no puede enviar dos veces ni editar su nota; un estudiante de otro colegio no ve nada y no puede guardar; el docente no puede guardar como estudiante; la nota 6 se rechaza; una entrega calificada no se puede cambiar; la nota aparece en mis_notas. Se encontró y corrigió un hueco (comparación con curso nulo) en lab_guardar_entrega.
+
+Etapa 5 (base de datos real, usuarios temporales deshechos): sin asistencia el estudiante no puede guardar entregas ni escribir en salas; con asistencia sí; no puede inyectar mensajes del tutor ni borrar; el docente ve presentes, borra mensajes y cierra la sala (después nadie escribe); otro colegio no ve salas ni mensajes y no puede escribir ni registrar asistencia. Pantallas (simuladas): compuerta, registro, lista de asistencia, crear sala, escribir, pedir tutor, borrar, cerrar, rector solo lectura; 25 actividades abren. Se corrigió un error de nombres en lab_enviar_mensaje.
+Pendiente con cuentas reales: respuesta real del tutor en la sala (requiere crédito de Anthropic).
