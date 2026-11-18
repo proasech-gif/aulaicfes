@@ -27,6 +27,13 @@ Lectura guiada (literal/inferencial/crítico), Dilema ético (perspectivas, sin 
 - Diseño renovado de laboratorios (color por laboratorio, tarjetas con relieve).
 - Límite: la voz en directo entre varios (llamada de audio) requiere un servicio externo (p. ej., Jitsi o LiveKit); no se activó sin tu aprobación por privacidad de menores y posible costo.
 
+## Etapa 7 (agregada): audio en vivo con LiveKit
+- Botón **🎧 Entrar al audio en vivo** dentro de cada sala de debate. Todos entran con el micrófono apagado; el docente decide quién habla ("Dar la palabra" / "Quitar voz"); el estudiante puede "✋ Pedir la palabra"; se ve quién está hablando.
+- Seguridad: la clave de LiveKit vive solo en el servidor (función lab-audio). El servidor entrega una clave temporal de 2 horas solo a quien pertenece al curso de la sala (o a su docente / rector / coordinador, solo escucha), con la sala abierta y, para estudiantes, con asistencia registrada y sin estar silenciado. El rector/coordinador solo escucha.
+- Para activarlo hay que crear un proyecto gratis en LiveKit Cloud y guardar tres secretos en Supabase: LIVEKIT_URL, LIVEKIT_API_KEY y LIVEKIT_API_SECRET. Mientras no existan, el botón avisa que el audio aún no está activado.
+- Costo: plan gratis de LiveKit = 5.000 minutos de participante al mes (≈ 4 debates de 40 min con 30 personas). Si se supera, el servicio puede cobrar o dejar de funcionar según el plan; revisar el panel de LiveKit.
+- El audio no se graba ni se guarda en la plataforma.
+
 ## Qué incluye la etapa 1
 - Menú "🔬 Laboratorios" para estudiante (pestaña), docente (grupo Evaluar) y rector/coordinador (grupo Seguimiento, solo lectura).
 - Centro principal con los 13 laboratorios (Química, Física, Biología, Matemáticas, Lectura Crítica, English Lab, Educación Física, Ética y Filosofía, Democracia, Política, Ciencias Sociales, Competencias Ciudadanas, Arte y Cultura).

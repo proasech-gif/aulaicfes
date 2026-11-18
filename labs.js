@@ -72,7 +72,7 @@ const MODO={companeros:'👥 Entre compañeros',tutor:'🤖 Con el tutor IA',mix
 const TIPO={aporte:['💡','Aporte'],refutacion:['⚔️','Refuta'],apoyo:['👍','Apoya'],pregunta:['❓','Pregunta'],moderacion:['🎙️','Moderación']};
 const onLabs=()=>typeof tab==='undefined'||tab==='labs';
 async function cargaSalas(){const r=await sb.from('lab_salas').select('*').order('created_at',{ascending:false});Z.salas=r.data||[]}
-function stopLive(){try{if(Z.ch&&sb.removeChannel)sb.removeChannel(Z.ch)}catch(_){}Z.ch=null;if(Z.poll){clearInterval(Z.poll);Z.poll=null}Z.pres={};try{speechSynthesis.cancel()}catch(_){}}
+function stopLive(){try{if(Z.au){Z.au.room.disconnect()}}catch(_){}Z.au=null;try{const bx=document.getElementById('lkAudio');if(bx)bx.innerHTML=''}catch(_){}try{if(Z.ch&&sb.removeChannel)sb.removeChannel(Z.ch)}catch(_){}Z.ch=null;if(Z.poll){clearInterval(Z.poll);Z.poll=null}Z.pres={};try{speechSynthesis.cancel()}catch(_){}}
 function liveGen(){if(Z.gen||!sb.channel)return;try{let t=null;const f=()=>{clearTimeout(t);t=setTimeout(async()=>{if(!onLabs())return;
     if(Z.v==='alista')await verAsis();else if(Z.v==='entregas'&&Z.cur)await entregas(Z.cur.id);else if(Z.v==='lab'||Z.v==='home'){await cargaSalas();const x=await sb.from('lab_experiencias').select('*').order('created_at',{ascending:false});Z.exps=x.data||Z.exps;render()}else if(Z.v==='dash')await cargaDash()},700)};
   Z.gen=sb.channel('lab-gen-'+M.id);['lab_salas','lab_asistencia','lab_entregas','lab_experiencias'].forEach(tb=>Z.gen.on('postgres_changes',{event:'*',schema:'public',table:tb},f));Z.gen.subscribe()}catch(_){}}
@@ -134,6 +134,7 @@ function vSala(){const s=Z.sala,ab=s.estado==='abierta',puede=salaPuede(),dueno=
   <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="font-weight:800;font-size:19px;margin:6px 0">💬 ${e(s.titulo)}</h2><span style="background:${ab?'#dcfce7':'#fee2e2'};color:${ab?'#15803d':'#b91c1c'};font-weight:800;font-size:12px;padding:4px 10px;border-radius:99px">${ab?'● EN VIVO':'Cerrada'}</span></div>
   <p style="color:#64748b;font-size:13px">${MODO[s.modo]} · Modera: ${docMod?'👩‍🏫 el docente':'🤖 el tutor IA'}</p>${s.tema?`<p style="margin:6px 0">${e(s.tema)}</p>`:''}
   <p style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px">Respeta a tus compañeros: argumenta sin ofender. Tu docente lee todo y puede borrar mensajes. No escribas datos personales.${s.modo!=='companeros'?' El tutor IA usa un proveedor externo de inteligencia artificial.':''} Tu nota depende de tus aportes y participación.</p>
+  ${ab?`<div id="audio" style="${card};margin-top:10px">${audioHtml()}</div>`:''}
   <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:10px" class="lb-sala"><div>
    <div id="msgs" style="display:grid;gap:8px;max-height:430px;overflow:auto;padding:4px;background:#f8fafc;border-radius:12px">${msgsHtml()}</div>
    ${puede?`<div style="margin-top:8px">${rep?`<div style="font-size:12px;background:#eef2ff;border-radius:8px;padding:6px 8px;margin-bottom:6px">↩ Respondiendo a <b>${e(rep.nombre)}</b>: «${e(String(rep.texto).slice(0,70))}» <button onclick="LAB.resp(null)" style="color:#dc2626">✕</button></div>`:''}
@@ -152,10 +153,42 @@ async function msgIA(auto){if(Z.busy&&!auto)return;Z.busy=true;if(!auto)toast('�
 async function msgDel(id){if(!confirm('¿Borrar este mensaje?'))return;const {error}=await sb.from('lab_mensajes').delete().eq('id',id);if(error)return err(error);await refrescaMsgs()}
 async function salaEstado(){const n=Z.sala.estado==='abierta'?'cerrada':'abierta';const {error}=await sb.from('lab_salas').update({estado:n}).eq('id',Z.sala.id);if(error)return err(error);Z.sala.estado=n;await cargaSalas();await cargaResumen();reSala()}
 async function salaMod(){const n=Z.sala.moderador==='docente'?'ia':'docente';const {error}=await sb.from('lab_salas').update({moderador:n}).eq('id',Z.sala.id);if(error)return err(error);Z.sala.moderador=n;toast(n==='docente'?'🎙️ Ahora tú moderas; el tutor IA queda en pausa':'🤖 El tutor IA modera de nuevo');reSala()}
-async function silen(uid){const s=(Z.sala.silenciados||[]).includes(uid);const {error}=await sb.rpc('lab_sala_silenciar',{p_sala:Z.sala.id,p_user:uid,p_silenciar:!s});if(error)return err(error);await refrescaSala();Z.sala.silenciados=s?(Z.sala.silenciados||[]).filter(x=>x!==uid):[...(Z.sala.silenciados||[]),uid];pinta()}
+async function silen(uid){const s=(Z.sala.silenciados||[]).includes(uid);const {error}=await sb.rpc('lab_sala_silenciar',{p_sala:Z.sala.id,p_user:uid,p_silenciar:!s});if(error)return err(error);if(!s&&Z.au&&Z.au.dueno)auPermiso(uid,false);await refrescaSala();Z.sala.silenciados=s?(Z.sala.silenciados||[]).filter(x=>x!==uid):[...(Z.sala.silenciados||[]),uid];pinta()}
 function hablarV(){if(!SR)return toast('Tu navegador no reconoce voz');const r=new SR();r.lang=langSala();r.interimResults=false;
   r.onresult=async ev=>{const tx=ev.results[0][0].transcript;const t=document.getElementById('sm');if(t)t.value=((t.value?t.value+' ':'')+tx).trim();Z.vozFlag=true;if(Z.autoVoz)await msgSend()};
   r.onerror=()=>toast('No se pudo escuchar. Revisa el permiso del micrófono.');r.onend=()=>toast('🎤 Listo: revisa tu mensaje y envíalo');r.start();toast('🎤 Habla ahora…')}
+
+/* ---------- audio en vivo (LiveKit; el servidor entrega una clave temporal) ---------- */
+const LKURL='https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js';
+function lkBox(){let b=document.getElementById('lkAudio');if(!b){b=document.createElement('div');b.id='lkAudio';b.style.display='none';document.body.appendChild(b)}return b}
+function audioHtml(){const s=Z.sala;if(!s||s.estado!=='abierta')return'';
+  if(!Z.au)return`<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div><b>🎧 Audio en vivo</b><div style="font-size:12px;color:#64748b">Habla y escucha a tus compañeros en tiempo real. El micrófono empieza apagado.</div></div>${B('#0ea5e9','🎧 Entrar al audio en vivo','onclick="LAB.auEntrar()"')}</div>`;
+  const au=Z.au,rm=au.room,lp=rm.localParticipant,ps=[{p:lp,yo:true},...[...rm.remoteParticipants.values()].map(p=>({p,yo:false}))];
+  const fila=({p,yo})=>{const hab=au.speaking.has(p.identity),puede=yo?au.puede:!!(p.permissions&&p.permissions.canPublish),mano=au.manos.has(p.identity);
+    return`<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #f1f5f9"><span>${hab?'🔊':puede?'🎙️':'👂'}</span><div style="flex:1;font-size:13px;font-weight:${hab?800:600}">${e(p.name||p.identity.slice(0,6))}${yo?' (tú)':''}${mano?' ✋ pide la palabra':''}</div>${au.dueno&&!yo?B(puede?'#b45309':'#16a34a',puede?'Quitar voz':'Dar la palabra',`onclick="LAB.auPermiso('${p.identity}',${!puede})"`):''}</div>`};
+  return`<div style="font-weight:800;margin-bottom:4px">🎧 Audio en vivo · <span style="color:#16a34a">conectado</span> · ${ps.length} en la sala de audio</div><div>${ps.map(fila).join('')}</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${au.puede?B(au.mic?'#dc2626':'#16a34a',au.mic?'🔇 Apagar micrófono':'🎤 Activar micrófono','onclick="LAB.auMic()"'):B('#7c3aed','✋ Pedir la palabra','onclick="LAB.auMano()"')}${B('#475569','Salir del audio','onclick="LAB.auSalir()"')}</div>
+  ${au.puede?'':'<div style="font-size:12px;color:#64748b;margin-top:4px">Estás escuchando. Cuando el docente te dé la palabra podrás activar tu micrófono.</div>'}`}
+function pintaAudio(){const a=document.getElementById('audio');if(a)a.innerHTML=audioHtml()}
+async function auEntrar(){if(Z.busy||Z.au)return;Z.busy=true;
+  try{if(!window.LivekitClient)await loadScript(LKURL);
+    const {data,error}=await sb.functions.invoke('lab-audio',{body:{sala_id:Z.sala.id}});
+    if(error){let m=error.message;try{const b=await error.context.json();if(b&&b.error)m=b.error}catch(_){}throw new Error(m)}
+    if(data&&data.sin_config)throw new Error('El audio en vivo aún no está activado en el servidor.');if(data.error)throw new Error(data.error);
+    const LK=window.LivekitClient,room=new LK.Room({adaptiveStream:true,dynacast:true});Z.au={room,puede:data.puede_hablar,mic:false,speaking:new Set(),manos:new Set(),dueno:!!data.docente};
+    room.on(LK.RoomEvent.TrackSubscribed,t=>{if(t.kind==='audio'){const el=t.attach();lkBox().appendChild(el)}});
+    room.on(LK.RoomEvent.TrackUnsubscribed,t=>{try{t.detach().forEach(x=>x.remove())}catch(_){}});
+    room.on(LK.RoomEvent.ActiveSpeakersChanged,sp=>{if(Z.au){Z.au.speaking=new Set(sp.map(x=>x.identity));pintaAudio()}});
+    room.on(LK.RoomEvent.ParticipantConnected,pintaAudio);room.on(LK.RoomEvent.ParticipantDisconnected,pintaAudio);
+    room.on(LK.RoomEvent.ParticipantPermissionsChanged,(prev,p)=>{if(Z.au&&p&&p.identity===room.localParticipant.identity){Z.au.puede=!!(p.permissions&&p.permissions.canPublish);if(!Z.au.puede)Z.au.mic=false;if(Z.au.puede){Z.au.manos.delete(p.identity);toast('🎤 El docente te dio la palabra')}}pintaAudio()});
+    room.on(LK.RoomEvent.DataReceived,(buf,p)=>{try{const m=JSON.parse(new TextDecoder().decode(buf));if(m.t==='mano'&&p&&Z.au){Z.au.manos.add(p.identity);pintaAudio()}}catch(_){}});
+    room.on(LK.RoomEvent.Disconnected,()=>{if(Z.au){Z.au=null;pintaAudio()}});
+    await room.connect(data.url,data.token);try{await room.startAudio()}catch(_){}pintaAudio();toast('🎧 Conectado al audio')}
+  catch(er){Z.au=null;toast(er.message)}Z.busy=false}
+async function auMic(){if(!Z.au||!Z.au.puede)return;try{const n=!Z.au.mic;await Z.au.room.localParticipant.setMicrophoneEnabled(n);Z.au.mic=n;pintaAudio()}catch(_){toast('No se pudo usar el micrófono. Revisa el permiso del navegador.')}}
+async function auMano(){if(!Z.au)return;try{await Z.au.room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({t:'mano'})),{reliable:true});toast('✋ Pediste la palabra')}catch(_){toast('No se pudo enviar la solicitud')}}
+async function auPermiso(id,puede){const {data,error}=await sb.functions.invoke('lab-audio',{body:{sala_id:Z.sala.id,accion:'permiso',user_id:id,puede}});if(error||(data&&data.error)){let m=error?error.message:data.error;try{const b=await error.context.json();if(b&&b.error)m=b.error}catch(_){}return toast(m)}if(Z.au)Z.au.manos.delete(id);pintaAudio()}
+function auSalir(){try{Z.au&&Z.au.room.disconnect()}catch(_){}Z.au=null;const b=document.getElementById('lkAudio');if(b)b.innerHTML='';pintaAudio()}
 /* ---------- notas del debate ---------- */
 async function notasView(){await cargaResumen();Z.v='salaNotas';render()}
 function vNotas(){const s=Z.sala,ro=!(isProf()&&s.docente_id===M.id),R=Z.resumen||[];
@@ -363,7 +396,7 @@ function vistaActual(){if(!Z.ok)return'<div class="aic-card" style="padding:18px
 return{load,view:()=>vistaActual(),
   home(){stopLive();Z.v='home';render()},
   async open(l){stopLive();Z.lab=l;if(isEst()&&!(await asistio(l))){Z.v='gate';render();return}if(isEst()||isProf()||isDir())await cargaSalas();Z.v='lab';render()},
-  asiste:registrarAsis,verAsis,nuevaSala,salaCrear,sala:entrarSala,msgSend,msgIA,msgDel,msgRef(){refrescaSala();refrescaMsgs().then(()=>toast('Actualizado'))},salaEstado,mod:salaMod,silen,hablarV,notasView,notasGuardar,tipo(k){Z.tipo=k;reSala()},resp(id){Z.resp=id;if(id&&Z.tipo==='aporte'&&isEst())Z.tipo='refutacion';reSala()},leerM(id){const m=Z.msgs.find(x=>x.id===id);if(m){try{speechSynthesis.cancel()}catch(_){}habla(m.texto,langSala())}},togEscucha(v){Z.escucha=v;if(v)habla('Escucha activada',langSala());else try{speechSynthesis.cancel()}catch(_){}},togAuto(v){Z.autoVoz=v},
+  asiste:registrarAsis,verAsis,nuevaSala,salaCrear,sala:entrarSala,msgSend,msgIA,msgDel,msgRef(){refrescaSala();refrescaMsgs().then(()=>toast('Actualizado'))},salaEstado,auEntrar,auMic,auMano,auPermiso,auSalir,mod:salaMod,silen,hablarV,notasView,notasGuardar,tipo(k){Z.tipo=k;reSala()},resp(id){Z.resp=id;if(id&&Z.tipo==='aporte'&&isEst())Z.tipo='refutacion';reSala()},leerM(id){const m=Z.msgs.find(x=>x.id===id);if(m){try{speechSynthesis.cancel()}catch(_){}habla(m.texto,langSala())}},togEscucha(v){Z.escucha=v;if(v)habla('Escucha activada',langSala());else try{speechSynthesis.cancel()}catch(_){}},togAuto(v){Z.autoVoz=v},
   nueva(){Z.ed=nuevaEd();Z.v='build';render()},editar,
   async dup(id){const x=Z.exps.find(a=>a.id===id);const {id:_,created_at,updated_at,...r}=x;const k=await sb.from('lab_claves').select('claves').eq('experiencia_id',id).maybeSingle();
     const n=await sb.from('lab_experiencias').insert({...r,titulo:x.titulo+' (copia)',estado:'borrador'}).select('id').single();if(n.error)return err(n.error);
