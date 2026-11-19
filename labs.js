@@ -43,7 +43,7 @@ async function flush(){
 window.addEventListener('online',()=>{try{flush()}catch(_){}});
 
 async function load(){
-  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=4');
+  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=5');
   const [x,c]=await Promise.all([sb.from('lab_experiencias').select('*').order('created_at',{ascending:false}),
     isProf()?sb.from('courses').select('id,grade,name').eq('teacher_id',M.id).order('grade').order('name'):Promise.resolve({data:[]})]);
   Z.exps=x.data||[];Z.cursos=c.data||[];

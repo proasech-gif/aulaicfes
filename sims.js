@@ -210,4 +210,104 @@ clasif('capacidades1','edfisica','Capacidades físicas','Relaciona cada ejercici
  [['Hacer sentadillas con el peso del cuerpo','Fuerza'],['Trotar 20 minutos sin parar','Resistencia'],['Correr 50 metros lo más rápido posible','Velocidad'],['Estirar el tronco hasta tocar la punta de los pies','Flexibilidad']],'Información general; consulta a tu docente si tienes alguna limitación de salud.');
 orden('calentamiento1','edfisica','Cómo estructurar una sesión de ejercicio','Ordena las partes de una sesión segura.',
  ['Movilidad de articulaciones','Trote suave para subir la temperatura','Estiramiento dinámico','Ejercicio o juego principal','Vuelta a la calma y estiramiento final'],'Orientación general; ajústala con tu docente.');
+/* ===== Laboratorio de Química: titulación ácido–base (reemplaza al simulador básico 'ph'; respaldo: sims.js.pre_lab) ===== */
+(function(){
+const i0=L.findIndex(s=>s.id==='ph');if(i0<0)return;
+const U=['#dc2626','#ef4444','#ea580c','#f97316','#f59e0b','#facc15','#a3e635','#22c55e','#10b981','#14b8a6','#3b82f6','#6366f1','#7c3aed','#9333ea','#581c87'];
+const hx=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));const mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));const rgb=c=>`rgb(${c[0]},${c[1]},${c[2]})`;
+const IND={
+ fen:{n:'Fenolftaleína',lo:8.2,hi:10,c1:[236,246,250],c2:[236,72,153],n1:'incoloro',n2:'rosa intenso'},
+ azb:{n:'Azul de bromotimol',lo:6,hi:7.6,c1:[250,204,21],c2:[37,99,235],n1:'amarillo',n2:'azul'},
+ nmt:{n:'Naranja de metilo',lo:3.1,hi:4.4,c1:[220,38,38],c2:[250,204,21],n1:'rojo',n2:'amarillo'},
+ uni:{n:'Indicador universal'}};
+const colorOf=(k,pH)=>{const I=IND[k];if(k==='uni'){const p=Math.max(0,Math.min(14,pH)),a=Math.floor(p),b=Math.min(14,a+1);return mix(hx(U[a]),hx(U[b]),p-a)}
+ const t=Math.max(0,Math.min(1,(pH-I.lo)/(I.hi-I.lo)));return mix(I.c1,I.c2,t)};
+const nameOf=(k,pH)=>{if(k==='uni')return pH<3?'rojo':pH<5?'naranja':pH<6.5?'amarillo':pH<7.5?'verde':pH<10?'azul':'violeta';const I=IND[k];return pH<I.lo?I.n1:pH>I.hi?I.n2:'en transición'};
+const KA=1.8e-5,KW=1e-14;
+function phAt(P,vb){const Va=P.Va/1000,Vb=vb/1000,V=Va+Vb,ca=P.Ca*Va/V,na=P.Cb*Vb/V;
+ const g=p=>{const H=Math.pow(10,-p);return H+na-KW/H-(P.weak?ca*KA/(KA+H):ca)};let lo=-1,hi=15;for(let i=0;i<60;i++){const m=(lo+hi)/2;g(m)>0?lo=m:hi=m}return(lo+hi)/2}
+const f2=(v,d)=>(+v).toFixed(d==null?2:d).replace('.',',');
+const QZ=[['En la titulación de un ácido fuerte con una base fuerte, el pH en el punto de equivalencia es…',['menor que 7','igual a 7','mayor que 7'],1,'Se forma una sal neutra (NaCl) y agua: pH ≈ 7.'],
+ ['Para titular ácido acético (débil) con NaOH, el indicador más adecuado es…',['Naranja de metilo (cambia en pH 3–4)','Fenolftaleína (cambia en pH 8–10)'],1,'La sal formada es básica (pH ≈ 8,7 en el equivalente); la fenolftaleína cambia justo en esa zona.'],
+ ['Si duplicas la concentración del ácido, el volumen de base necesario para neutralizarlo…',['se reduce a la mitad','no cambia','se duplica'],2,'Ca·Va = Cb·Vb: si Ca se duplica y lo demás igual, Vb se duplica.']];
+const NEW={id:'ph',lab:'quimica',t:'Titulación ácido–base y escala de pH',d:'Mesa de laboratorio con bureta, matraz, indicador y pH-metro. Añade base gota a gota, observa el color y construye la curva de titulación.',
+ mount(el){
+  const S={vb:0,run:false,drop:0,log:[],mode:'libre',hid:0.1,tries:0,key:'',cur:null};
+  const rnd=()=>{S.hid=Math.round((0.05+Math.random()*0.10)*100)/100;S.tries=0};rnd();
+  const sel=(id,opts)=>`<select id="${id}" style="width:100%;padding:7px;border:1.5px solid #cbd5e1;border-radius:9px;font-weight:700;margin-top:3px">${opts.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('')}</select>`;
+  const lb=t=>`<label style="display:block;font-size:12px;font-weight:800;margin-top:8px">${t}</label>`;
+  shell(el,
+   lb('Modo')+sel('q_mode',[['libre','Libre: explora y observa'],['reto','Reto: ¿cuál es la concentración del ácido?']])+
+   lb('Sustancia en el matraz')+sel('q_sus',[['f','HCl — ácido fuerte'],['d','CH₃COOH — ácido débil (vinagre)']])+
+   lb('Indicador')+sel('q_ind',[['fen','Fenolftaleína'],['azb','Azul de bromotimol'],['nmt','Naranja de metilo'],['uni','Indicador universal']])+
+   '<div id="q_cawrap">'+sl('q_ca','Concentración del ácido (mol/L)',0.05,0.15,0.1,0.01)+'</div>'+
+   sl('q_va','Volumen de ácido en el matraz (mL)',10,30,25,1)+
+   sl('q_vb','Base NaOH 0,1 mol/L añadida (mL)',0,50,0,0.1)+
+   '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"><button class="sim-btn" id="q_p1">+1 mL</button><button class="sim-btn" id="q_p01" style="background:#0d9488">+0,1 mL</button><button class="sim-btn" id="q_run" style="background:#16a34a">▶ Goteo continuo</button><button class="sim-btn" id="q_rs" style="background:#64748b">⟲ Reiniciar</button></div>'+
+   '<button class="sim-btn" id="q_reg" style="background:#7c3aed;margin-top:8px">📝 Registrar observación</button>'+
+   '<div id="q_reto" style="display:none;margin-top:10px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:10px"><div style="font-size:12px;font-weight:800;color:#92400e">🎯 Reto</div><div style="font-size:12px;margin:4px 0">Titula hasta que el indicador cambie de color y calcula la concentración del ácido con <b>C·Va = 0,1·Vb</b>.</div><input id="q_ans" type="number" step="0.001" placeholder="Concentración (mol/L)" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:9px"><div style="display:flex;gap:6px;margin-top:6px"><button class="sim-btn" id="q_chk">Comprobar</button><button class="sim-btn" id="q_new" style="background:#64748b">Nuevo reto</button></div><div id="q_res" style="font-size:13px;font-weight:700;margin-top:6px"></div></div>'+
+   nota('Modelo con disoluciones diluidas a 25 °C; Ka del ácido acético = 1,8×10⁻⁵.'),
+   `<div class="sim-panel"><div class="sim-h">🧪 Mesa de laboratorio</div><div id="q_bench" style="max-width:380px;margin:auto"></div><div id="q_state" style="text-align:center;font-weight:800;margin-top:4px"></div><div id="q_scale" style="margin-top:12px"></div></div>`+
+   gph('q_cv','📈 Curva de titulación: pH según el volumen de NaOH añadido')+
+   `<div class="sim-panel"><div class="sim-h">📋 Registro de observaciones</div><div id="q_log" style="overflow:auto"></div></div>`+
+   `<div class="sim-panel"><div class="sim-h">🎯 Objetivos y procedimiento</div><div style="font-size:13px;line-height:1.5"><b>Objetivos:</b> relacionar pH con la concentración de H⁺; reconocer el punto de equivalencia; elegir un indicador adecuado.<br><b>Procedimiento:</b> 1) Elige el ácido y el indicador. 2) Añade base poco a poco (usa gotas de 0,1 mL cerca del cambio de color). 3) Registra volumen, pH y color. 4) Identifica el volumen donde el pH sube bruscamente. 5) Responde el cuestionario.</div></div>`+
+   `<div class="sim-panel"><div class="sim-h">❓ Preguntas de comprensión</div><div id="q_quiz"></div><button class="sim-btn" id="q_qc" style="margin-top:8px">Comprobar respuestas</button><div id="q_qr" style="font-size:13px;margin-top:8px"></div></div>`);
+  const P=()=>({Ca:S.mode==='reto'?S.hid:val(el,'q_ca'),Va:val(el,'q_va'),Cb:0.1,weak:$(el,'#q_sus').value==='d'});
+  const setVb=v=>{S.vb=Math.max(0,Math.min(50,Math.round(v*100)/100));const r=$(el,'#q_vb');r.value=S.vb;$(el,'#q_vbv').textContent=f2(S.vb,1)};
+  const bench=(p,pH,ik)=>{const c=colorOf(ik,pH),W=3,top=40,vb=S.vb,tot=p.Va+vb,yl=300-(18+tot/80*50),ly=top+vb*W;
+   let t='';for(let m=0;m<=50;m+=10)t+=`<line x1="118" x2="${m%50===0?146:142}" y1="${top+m*W}" y2="${top+m*W}" stroke="#475569"/><text x="150" y="${top+m*W+4}" font-size="10" fill="#475569">${m}</text>`;
+   for(let m=5;m<50;m+=10)t+=`<line x1="118" x2="130" y1="${top+m*W}" y2="${top+m*W}" stroke="#94a3b8"/>`;
+   const dr=S.run&&vb<50?`<circle cx="128" cy="${214+(S.drop%4)*7}" r="3.2" fill="#7dd3fc"/>`:'';
+   return`<svg viewBox="0 0 340 330" style="width:100%;height:auto"><defs><clipPath id="q_fc"><path d="M115 228 L115 250 L88 300 L168 300 L141 250 L141 228 Z"/></clipPath><linearGradient id="q_gl" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".5"/></linearGradient></defs>
+   <rect x="25" y="316" width="175" height="9" rx="3" fill="#334155"/><rect x="42" y="20" width="7" height="298" fill="#64748b"/><rect x="42" y="72" width="76" height="7" rx="2" fill="#475569"/><rect x="112" y="66" width="30" height="19" rx="4" fill="#334155"/>
+   <rect x="118" y="${top}" width="20" height="150" rx="3" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/><rect x="119.5" y="${ly}" width="17" height="${150-vb*W}" fill="#bae6fd"/>${t}
+   <rect x="120" y="190" width="16" height="9" rx="2" fill="#f97316"/><rect x="127" y="199" width="2" height="14" fill="#94a3b8"/>${dr}
+   <rect x="70" y="302" width="116" height="14" rx="4" fill="#475569"/><circle cx="170" cy="309" r="3" fill="#22c55e"/>
+   <g clip-path="url(#q_fc)"><rect x="80" y="${yl}" width="96" height="${300-yl}" fill="${rgb(c)}"/><rect x="80" y="${yl}" width="96" height="3" fill="#fff" opacity=".45"/></g>
+   <path d="M115 228 L115 250 L88 300 L168 300 L141 250 L141 228 Z" fill="url(#q_gl)" stroke="#64748b" stroke-width="2" stroke-linejoin="round"/><rect x="111" y="224" width="34" height="6" rx="2" fill="#cbd5e1" stroke="#64748b"/>
+   <ellipse cx="128" cy="297" rx="9" ry="2.6" fill="#fff" stroke="#94a3b8"/>
+   <path d="M215 170 C190 190 175 230 148 276" fill="none" stroke="#475569" stroke-width="3"/><rect x="144" y="270" width="8" height="26" rx="3" fill="#94a3b8"/>
+   <rect x="215" y="120" width="118" height="96" rx="10" fill="#1e293b"/><rect x="224" y="130" width="100" height="44" rx="6" fill="#052e16"/><text x="274" y="161" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="26" font-weight="700" fill="#4ade80">${f2(Math.max(0,Math.min(14,pH)))}</text><text x="230" y="143" font-size="9" fill="#86efac">pH</text>
+   <text x="274" y="197" text-anchor="middle" font-size="10" fill="#cbd5e1" font-weight="700">pH-metro</text><circle cx="236" cy="205" r="3" fill="#ef4444"/><circle cx="248" cy="205" r="3" fill="#facc15"/></svg>`};
+  const scale=pH=>{const x=Math.max(0,Math.min(14,pH))/14*100;return`<div style="position:relative;height:18px;border-radius:9px;background:linear-gradient(90deg,${U.join(',')});box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)"><div style="position:absolute;left:${x}%;top:-6px;transform:translateX(-50%);font-size:14px">▼</div></div><div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:#475569;margin-top:2px"><span>0 ácido</span><span>7 neutro</span><span>14 básico</span></div><div style="font-size:11px;color:#64748b;margin-top:4px">🍋 Limón ≈ 2 · 🥛 Leche ≈ 6,5 · 💧 Agua = 7 · 🧼 Jabón ≈ 10 · 🧴 Lejía ≈ 13</div>`};
+  const curve=p=>{const k=[p.Ca,p.Va,p.weak].join();if(S.key!==k){const pts=[];for(let i=0;i<=250;i++){const v=i/5;pts.push([v,phAt(p,v)])}S.cur=pts;S.key=k}return S.cur};
+  const draw=()=>{const p=P(),ik=$(el,'#q_ind').value,pH=phAt(p,S.vb),Ve=p.Ca*p.Va/p.Cb,reto=S.mode==='reto',I=IND[ik];
+   $(el,'#q_bench').innerHTML=bench(p,pH,ik);
+   $(el,'#q_state').innerHTML=`<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${rgb(colorOf(ik,pH))};border:1px solid #94a3b8;vertical-align:-2px"></span> ${I.n}: <b>${nameOf(ik,pH)}</b> · ${pH<6.9?'solución ácida':pH>7.1?'solución básica':'solución neutra'}`;
+   $(el,'#q_scale').innerHTML=scale(pH);
+   const ser=[],pts=[],hl=[],vl=[];const lg=S.log.slice().sort((a,b)=>a.v-b.v);
+   if(!reto){ser.push({pts:curve(p),color:'#2563eb',name:'pH calculado'});vl.push({x:Ve,color:'#16a34a',label:'Equivalencia: '+f2(Ve,1)+' mL'});const pe=phAt(p,Ve);
+     pts.push({x:0,y:phAt(p,0),label:'Inicio pH '+f2(phAt(p,0)),color:'#7c3aed'},{x:Ve,y:pe,label:'Punto de equivalencia pH '+f2(pe),color:'#16a34a',below:1});
+     if(p.weak)pts.push({x:Ve/2,y:phAt(p,Ve/2),label:'Semi-equivalencia pH = pKa ≈ 4,74',color:'#f59e0b'})}
+   else if(lg.length)ser.push({pts:lg.map(o=>[o.v,o.pH]),color:'#2563eb',name:'Tus observaciones'});
+   if(ik!=='uni'){hl.push({y:I.lo,color:'#f472b6',label:I.n+' cambia en pH '+I.lo+'–'+I.hi},{y:I.hi,color:'#f472b6'})}
+   pts.push({x:S.vb,y:pH,r:7,fill:'#f59e0b',color:'#b45309',label:'V = '+f2(S.vb,1)+' mL · pH '+f2(pH)});
+   lg.forEach(o=>pts.push({x:o.v,y:o.pH,r:4,fill:'#fff',color:'#7c3aed'}));
+   plot($(el,'#q_cv'),{h:320,xmin:0,xmax:50,ymin:0,ymax:14,xl:'Volumen de NaOH añadido (mL)',yl:'pH',series:ser,vlines:vl,hlines:hl,pts});
+   const H=Math.pow(10,-pH);
+   $(el,'#tl').innerHTML=tile('pH actual',f2(pH),'#2563eb')+tile('[H⁺] (mol/L)',H.toExponential(1).replace('.',','),'#7c3aed')+tile('Base añadida',f2(S.vb,1)+' mL','#0d9488')+tile('Volumen de equivalencia',reto?'¿?':f2(Ve,1)+' mL','#16a34a')+tile('Avance de la neutralización',reto?'—':Math.min(100,S.vb/Ve*100).toFixed(0)+' %','#f59e0b')+tile('Estado',pH<6.9?'Ácido':pH>7.1?'Básico':'Neutro',pH<6.9?'#dc2626':pH>7.1?'#6366f1':'#16a34a');
+   $(el,'#eq').textContent=(p.weak?'CH₃COOH + NaOH → CH₃COONa + H₂O\nKa = 1,8×10⁻⁵ → pKa = 4,74\n':'HCl + NaOH → NaCl + H₂O\n')+'pH = −log[H⁺]\nEquivalencia: Cₐ·Vₐ = C_b·V_b'+(reto?'\n(el volumen de equivalencia es lo que debes encontrar)':'\nV_b,eq = '+f2(p.Ca,2)+'·'+p.Va+' / 0,1 = '+f2(Ve,1)+' mL')+(p.weak?'\nEn la equivalencia la sal es básica: pH > 7':'\nEn la equivalencia: pH = 7');
+   $(el,'#q_log').innerHTML=S.log.length?`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#f1f5f9"><th style="padding:5px;text-align:left">NaOH (mL)</th><th>pH</th><th style="text-align:left">Color del indicador</th></tr>${lg.map(o=>`<tr style="border-top:1px solid #e2e8f0"><td style="padding:5px">${f2(o.v,1)}</td><td style="text-align:center">${f2(o.pH)}</td><td>${esc(o.c)}</td></tr>`).join('')}</table><button class="sim-btn" id="q_clr" style="background:#64748b;margin-top:6px">Borrar registro</button>`:'<div style="font-size:13px;color:#64748b">Aún no hay observaciones. Pulsa «Registrar observación» en distintos volúmenes para armar tu tabla y tu curva.</div>';
+   const cl=$(el,'#q_clr');if(cl)cl.onclick=()=>{S.log=[];draw()}};
+  const stop=()=>{S.run=false;const b=$(el,'#q_run');if(b)b.textContent='▶ Goteo continuo'};
+  const tick=()=>{if(!el.isConnected){S.run=false;return}if(!S.run)return;const p=P(),Ve=p.Ca*p.Va/p.Cb;S.drop++;const near=Math.abs(S.vb-Ve)<2;setVb(S.vb+(near?0.05:0.2));if(S.vb>=50)stop();draw();if(S.run)setTimeout(tick,100)};
+  const reset=()=>{stop();setVb(0);draw()};
+  bind(el,['q_ca','q_va'],()=>{stop();draw()});
+  const rv=$(el,'#q_vb');rv.oninput=()=>{stop();setVb(+rv.value);draw()};
+  $(el,'#q_p1').onclick=()=>{stop();setVb(S.vb+1);draw()};$(el,'#q_p01').onclick=()=>{stop();setVb(S.vb+0.1);draw()};
+  $(el,'#q_run').onclick=()=>{if(S.run){stop();return}if(S.vb>=50)setVb(0);S.run=true;$(el,'#q_run').textContent='⏸ Pausar';tick()};
+  $(el,'#q_rs').onclick=reset;
+  $(el,'#q_sus').onchange=()=>{rnd();$(el,'#q_res').textContent='';reset()};$(el,'#q_ind').onchange=draw;
+  $(el,'#q_mode').onchange=()=>{S.mode=$(el,'#q_mode').value;rnd();S.log=[];$(el,'#q_res').textContent='';$(el,'#q_ans').value='';$(el,'#q_reto').style.display=S.mode==='reto'?'block':'none';$(el,'#q_cawrap').style.display=S.mode==='reto'?'none':'block';reset()};
+  $(el,'#q_new').onclick=()=>{rnd();S.log=[];$(el,'#q_res').textContent='';$(el,'#q_ans').value='';reset()};
+  $(el,'#q_reg').onclick=()=>{const p=P(),ik=$(el,'#q_ind').value,pH=phAt(p,S.vb);if(S.log.length>=40)S.log.shift();S.log.push({v:S.vb,pH,c:nameOf(ik,pH)});draw()};
+  $(el,'#q_chk').onclick=()=>{const a=parseFloat($(el,'#q_ans').value),r=$(el,'#q_res');if(!(a>0)){r.style.color='#b45309';r.textContent='Escribe tu cálculo en mol/L.';return}S.tries++;
+   if(Math.abs(a-S.hid)/S.hid<=0.05){r.style.color='#16a34a';r.textContent='✅ ¡Correcto! La concentración era '+f2(S.hid,3)+' mol/L. Usaste C·Va = Cb·Vb.'}
+   else{r.style.color='#dc2626';r.textContent=S.tries>=3?'❌ Aún no. La concentración era '+f2(S.hid,3)+' mol/L. Revisa en qué volumen cambió el color y usa C = 0,1·Vb / Va.':'❌ Aún no. Busca el volumen donde el indicador cambia y usa C = 0,1·Vb / Va.'}};
+  $(el,'#q_quiz').innerHTML=QZ.map((q,i)=>`<div style="margin-bottom:10px"><div style="font-weight:700;font-size:13px">${i+1}. ${esc(q[0])}</div>${q[1].map((o,j)=>`<label style="display:block;font-size:13px;padding:3px 0"><input type="radio" name="q_q${i}" value="${j}"> ${esc(o)}</label>`).join('')}</div>`).join('');
+  $(el,'#q_qc').onclick=()=>{let ok=0;const out=QZ.map((q,i)=>{const s=el.querySelector(`input[name=q_q${i}]:checked`);const good=s&&+s.value===q[2];if(good)ok++;return`<div style="margin-bottom:4px">${s?(good?'✅':'❌'):'⚪'} <b>${i+1}.</b> ${good?'Correcto. ':s?'Revisa: ':'Sin responder. '}${esc(q[3])}</div>`}).join('');$(el,'#q_qr').innerHTML=`<b>${ok} de ${QZ.length} correctas</b><br>`+out};
+  draw()}};
+L[i0]=NEW;
+})();
+
 return{list:lab=>L.filter(s=>s.lab===lab),get:id=>L.find(s=>s.id===id),all:L};})();

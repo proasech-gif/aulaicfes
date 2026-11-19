@@ -58,3 +58,10 @@ Tablas: lab_experiencias, lab_claves (respuestas correctas ocultas al estudiante
 - Sin internet no se pueden subir archivos/audio; solo texto y respuestas. No se implementó un motor de sincronización nuevo: se usa una cola simple local.
 - Costo: el tutor usa la API de Anthropic ya configurada (se descuenta de tu crédito); límite por estudiante/día controlable.
 - Educación Física (diario de práctica) y Arte (portafolio) se manejan hoy con experiencias de tipo audio/archivo/abierta.
+
+## Etapa 8 — Laboratorio de Química profesional (titulación ácido–base)
+- Reemplaza al simulador básico `ph` (mismo identificador, así las experiencias ya creadas siguen funcionando).
+- Mesa de laboratorio dibujada (bureta, matraz, agitador, pH-metro), 4 indicadores, ácido fuerte y débil, curva de titulación con puntos clave, registro de observaciones, modo Reto, objetivos, procedimiento y preguntas de comprensión.
+- Archivos modificados: `sims.js` (bloque nuevo al final; el viejo se reemplaza en memoria), `labs.js` (versión de sims 4→5), `index.html` (labs.js v7→v8), `sw.js` (v51→v52).
+- Recuperar la versión anterior: usar `BACKUP_original/sims.js.pre_lab` como `sims.js`.
+- Pruebas: cálculos verificados (pH 7,00 en equivalencia fuerte; pH 4,75 a medio camino del ácido débil; pH 8,72 en equivalencia débil), controles, goteo, modo reto, registro, cuestionario, vista móvil y suite de laboratorios (27 simuladores abren) sin errores.
