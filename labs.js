@@ -379,11 +379,29 @@ function vIng(){const n=Z.nivel,w=VOC[n],S=Z.ing||(Z.ing={tab:'voc',i:0,q:null,r
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('ingles')" style="font-weight:700;color:#1e63e9">← English Lab</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">🗣️ Practicar inglés</h2>
   <label style="font-size:12px;font-weight:800">Nivel </label><select onchange="LAB.nv(this.value)" style="padding:6px;border-radius:8px;border:1.5px solid #cbd5e1">${['Pre-A1','A1','A2','B1'].map(x=>`<option ${x===n?'selected':''}>${x}</option>`).join('')}</select>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${tabs}</div>${c}</div>`}
-function vSimDes(){const d=Z.ed;return`<div class="aic-card" style="padding:18px"><button onclick="LAB.sdA('cancel')" style="font-weight:700;color:#1e63e9">← Volver sin guardar</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">✏️ Diseñar mi laboratorio · ${e(LN[d.lab][2])}</h2><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">${B('#0ea5e9','👁️ Probar como estudiante','onclick="LAB.sdA(\'prev\')"')}${B('#16a34a','✅ Usar este laboratorio','onclick="LAB.sdA(\'done\')"')}</div>${SIM.dHtml(Z.sd,d.lab)}
+function vGen(){const g=Z.gen||{tema:'',grado:'9',det:''};
+  return`<div style="background:linear-gradient(135deg,#faf5ff,#eff6ff);border:1.5px solid #c4b5fd;border-radius:14px;padding:12px;margin:8px 0"><div style="font-weight:800">✨ Generar con IA</div><div style="font-size:12px;color:#475569;margin:2px 0 8px">Escribe el tema y la IA arma un borrador completo (variables, fórmulas, gráfica, teoría y procedimiento). Tú lo revisas y lo ajustas.</div>
+  <div style="display:grid;grid-template-columns:1fr 110px;gap:8px"><input id="sg_tema" style="${inp}" placeholder="Tema. Ej.: Celdas galvánicas y electrólisis" value="${e(g.tema)}"><select id="sg_grado" style="${inp}">${[6,7,8,9,10,11].map(n=>`<option value="${n}" ${String(g.grado)===String(n)?'selected':''}>Grado ${n}°</option>`).join('')}</select></div>
+  <textarea id="sg_det" rows="2" style="${inp};margin-top:8px" placeholder="Indicaciones opcionales (qué quieres que explore el estudiante, qué variables incluir…)">${e(g.det)}</textarea>
+  <div style="margin-top:8px">${B('#7c3aed','✨ Generar borrador','onclick="LAB.sdA(\'gen\')" id="sg_btn"')}<span id="sg_msg" style="font-size:12px;color:#64748b;margin-left:8px"></span></div></div>`}
+async function sdGen(){const v=i=>(document.getElementById(i)||{}).value||'';Z.gen={tema:v('sg_tema').trim(),grado:v('sg_grado')||'9',det:v('sg_det')};
+  if(Z.gen.tema.length<3)return toast('Escribe el tema del laboratorio');
+  const btn=document.getElementById('sg_btn'),msg=document.getElementById('sg_msg');if(btn)btn.disabled=true;if(msg)msg.textContent='Generando… puede tardar unos 20 segundos.';
+  try{sdLee();const {data,error}=await sb.functions.invoke('lab-generar',{body:{lab:Z.ed.lab,tema:Z.gen.tema,grado:+Z.gen.grado,detalle:Z.gen.det}});
+    if(error){let m=error.message;try{const b=await error.context.json();if(b&&b.error)m=b.error}catch(_){}throw new Error(m)}
+    if(data&&data.sin_clave)throw new Error('La IA aún no está activada en el servidor.');if(data&&data.error)throw new Error(data.error);
+    if(data.no_modelable){Z.sdIA=false;render();toast('Ese tema no se puede modelar con fórmulas: '+data.motivo+(data.sugerencia?' Prueba con: '+data.sugerencia:''));return}
+    const n=SIM.norm(data.spec);n.lab=Z.ed.lab;Z.sd=n;Z.sdIA=true;render();
+    const m2=SIM.dCheck(n),er=document.getElementById('sd_err');
+    if(m2&&er)er.innerHTML='<div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:10px;font-weight:700">⚠️ El borrador necesita un ajuste: '+e(m2)+'</div>';
+    toast(m2?'Borrador generado, pero necesita un ajuste':'✨ Borrador generado. Revísalo y pruébalo como estudiante.')}
+  catch(er){render();toast(er.message)}}
+function vSimDes(){const d=Z.ed;return`<div class="aic-card" style="padding:18px"><button onclick="LAB.sdA('cancel')" style="font-weight:700;color:#1e63e9">← Volver sin guardar</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">✏️ Diseñar mi laboratorio · ${e(LN[d.lab][2])}</h2><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">${B('#0ea5e9','👁️ Probar como estudiante','onclick="LAB.sdA(\'prev\')"')}${B('#16a34a','✅ Usar este laboratorio','onclick="LAB.sdA(\'done\')"')}</div>${vGen()}${Z.sdIA?'<div style="background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px;font-size:13px;font-weight:700;margin:8px 0">⚠️ Borrador generado con IA. Revisa fórmulas, valores y textos antes de usarlo: la IA puede equivocarse.</div>':''}${SIM.dHtml(Z.sd,d.lab)}
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${B('#0ea5e9','👁️ Probar como estudiante','onclick="LAB.sdA(\'prev\')"')}${B('#16a34a','✅ Usar este laboratorio','onclick="LAB.sdA(\'done\')"')}</div>
   <div id="sd_prev" style="margin-top:14px"></div></div>`}
 function sdLee(){const r=document.getElementById('app')||document;Z.sd=SIM.dRead(r,SIM.norm(Z.sd))}
-function sdA(a,x){if(a==='cancel'){Z.v='build';return render()}
+function sdA(a,x){if(a==='cancel'){Z.v='build';Z.sdIA=false;return render()}
+  if(a==='gen')return sdGen();
   sdLee();const sp=Z.sd;
   if(a==='tpl'){if(x===''||x==null)return;const t=SIM.plantillas[+x];if(t)Z.sd=JSON.parse(JSON.stringify(t));return render()}
   if(a==='addv'){sp.vars.push({k:'v'+(sp.vars.length+1),l:'',u:'',min:0,max:10,v:5,st:1});return render()}
@@ -394,7 +412,7 @@ function sdA(a,x){if(a==='cancel'){Z.v='build';return render()}
   if(msg){if(er)er.innerHTML='<div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:10px;font-weight:700">⚠️ '+e(msg)+'</div>';return}
   if(er)er.innerHTML='';
   if(a==='prev'){const b=document.getElementById('sd_prev');b.innerHTML='<div style="font-weight:800;margin-bottom:6px">Así lo verá el estudiante:</div><div id="sd_pb"></div>';SIM.custom(Z.sd).mount(document.getElementById('sd_pb'));b.scrollIntoView({behavior:'smooth'})}
-  if(a==='done'){const d=Z.ed,n=SIM.norm(Z.sd);n.lab=d.lab;d.sim='c:'+JSON.stringify(n);if(!d.titulo)d.titulo=n.t;if(!d.descripcion)d.descripcion=n.d;if(!d.bloques.intro&&n.te)d.bloques.intro=n.te;Z.v='build';render();toast('✅ Laboratorio listo. Guarda o publica la experiencia para que lo vean tus estudiantes.')}}
+  if(a==='done'){const d=Z.ed,n=SIM.norm(Z.sd);n.lab=d.lab;d.sim='c:'+JSON.stringify(n);if(!d.titulo)d.titulo=n.t;if(!d.descripcion)d.descripcion=n.d;if(!d.bloques.intro&&n.te)d.bloques.intro=n.te;Z.v='build';Z.sdIA=false;render();toast('✅ Laboratorio listo. Guarda o publica la experiencia para que lo vean tus estudiantes.')}}
 function sdAbrir(){sync();const d=Z.ed;try{Z.sd=(d.sim&&d.sim.slice(0,2)==='c:')?JSON.parse(d.sim.slice(2)):SIM.blank(d.lab)}catch(_){Z.sd=SIM.blank(d.lab)}Z.v='simdes';render()}
 function sdQuitar(){sync();Z.ed.sim='';render()}
 function vSim(){const s=SIM.get(Z.simId);return`<div class="aic-card" style="padding:18px"><button onclick="LAB.${Z.cur&&Z.back==='exp'?'abrir(\''+Z.cur.id+'\')':'open(\''+Z.lab+'\')'}" style="font-weight:700;color:#1e63e9">← Volver</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">🧰 ${e(s.t)}</h2><p style="color:#64748b;margin-bottom:8px">${e(s.d)}</p><div id="simbox"></div></div>`}
@@ -416,7 +434,7 @@ return{load,view:()=>vistaActual(),
   home(){stopLive();Z.v='home';render()},
   async open(l){stopLive();Z.lab=l;if(isEst()&&!(await asistio(l))){Z.v='gate';render();return}if(isEst()||isProf()||isDir())await cargaSalas();Z.v='lab';render()},
   asiste:registrarAsis,verAsis,nuevaSala,salaCrear,sala:entrarSala,msgSend,msgIA,msgDel,msgRef(){refrescaSala();refrescaMsgs().then(()=>toast('Actualizado'))},salaEstado,auEntrar,auMic,auMano,auPermiso,auSalir,mod:salaMod,silen,hablarV,notasView,notasGuardar,tipo(k){Z.tipo=k;reSala()},resp(id){Z.resp=id;if(id&&Z.tipo==='aporte'&&isEst())Z.tipo='refutacion';reSala()},leerM(id){const m=Z.msgs.find(x=>x.id===id);if(m){try{speechSynthesis.cancel()}catch(_){}habla(m.texto,langSala())}},togEscucha(v){Z.escucha=v;if(v)habla('Escucha activada',langSala());else try{speechSynthesis.cancel()}catch(_){}},togAuto(v){Z.autoVoz=v},
-  nueva(){Z.ed=nuevaEd();Z.v='build';render()},nuevoProp(){Z.ed=nuevaEd();Z.sd=SIM.blank(Z.lab);Z.v='simdes';render()},sdA,sdAbrir,sdQuitar,simExp(){if(Z.cur&&Z.cur.sim)sim(Z.cur.sim,'exp')},editar,
+  nueva(){Z.ed=nuevaEd();Z.v='build';render()},nuevoProp(){Z.ed=nuevaEd();Z.sd=SIM.blank(Z.lab);Z.sdIA=false;Z.v='simdes';render()},sdA,sdAbrir,sdQuitar,simExp(){if(Z.cur&&Z.cur.sim)sim(Z.cur.sim,'exp')},editar,
   async dup(id){const x=Z.exps.find(a=>a.id===id);const {id:_,created_at,updated_at,...r}=x;const k=await sb.from('lab_claves').select('claves').eq('experiencia_id',id).maybeSingle();
     const n=await sb.from('lab_experiencias').insert({...r,titulo:x.titulo+' (copia)',estado:'borrador'}).select('id').single();if(n.error)return err(n.error);
     if(k.data)await sb.from('lab_claves').insert({experiencia_id:n.data.id,claves:k.data.claves});toast('📄 Duplicada como borrador');await load();render()},

@@ -75,3 +75,10 @@ Tablas: lab_experiencias, lab_claves (respuestas correctas ocultas al estudiante
 - Recuperar versión anterior: `BACKUP_original/sims.js.pre_constructor` y `labs.js.pre_constructor`.
 - Pruebas: 13 plantillas calculan valores correctos (p. ej. celda Zn/Cu E°=1,10 V; gases P=1,099 atm); fórmulas inválidas muestran error claro (variable inexistente, función desconocida, paréntesis, símbolo raro); flujo docente completo (plantilla → editar → probar → usar → guardar) y suites anteriores (27 simuladores, salas, audio) sin errores.
 - Límite: modelos numéricos y gráficas, no escenas realistas; plantillas de humanidades (casos, línea de tiempo, mapas) quedan para la siguiente etapa.
+
+## Etapa 10 — Generar laboratorios con IA (el docente decide el tema)
+- En la pantalla de diseño (✏️ Crear mi propio laboratorio) hay un panel «✨ Generar con IA»: tema + grado + indicaciones opcionales → la IA devuelve un borrador (variables, fórmulas, gráfica, teoría, procedimiento) que se carga en el formulario; el docente lo revisa, lo prueba como estudiante y lo usa. El constructor manual y las plantillas siguen disponibles.
+- La IA NO ejecuta código: solo propone datos y fórmulas; las calcula el mismo evaluador seguro del constructor. Si la fórmula es inválida, se muestra el error y el docente la corrige. Se muestra siempre el aviso «Borrador generado con IA: revísalo».
+- Edge function nueva `lab-generar` (JWT; solo docentes aprobados; límite 10 generaciones/día por docente en `ia_uso` tipo `lab_generar`; modelo claude-sonnet-5-5; usa ANTHROPIC_API_KEY ya existente). Temas no modelables devuelven un mensaje con sugerencia. Sin cambios de tablas.
+- Archivos: `labs.js` (v11), `index.html`, `sw.js` (v55); respaldo `labs.js.pre_ia`.
+- Pruebas (con respuestas simuladas de la IA): carga del borrador, vista previa con gráfica, fórmula inválida, tema no modelable, límite diario, sin clave y flujo completo hasta «Usar este laboratorio» sin errores. NO probado con la IA real (requiere crédito en Anthropic).
