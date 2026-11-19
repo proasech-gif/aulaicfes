@@ -65,3 +65,13 @@ Tablas: lab_experiencias, lab_claves (respuestas correctas ocultas al estudiante
 - Archivos modificados: `sims.js` (bloque nuevo al final; el viejo se reemplaza en memoria), `labs.js` (versión de sims 4→5), `index.html` (labs.js v7→v8), `sw.js` (v51→v52).
 - Recuperar la versión anterior: usar `BACKUP_original/sims.js.pre_lab` como `sims.js`.
 - Pruebas: cálculos verificados (pH 7,00 en equivalencia fuerte; pH 4,75 a medio camino del ácido débil; pH 8,72 en equivalencia débil), controles, goteo, modo reto, registro, cuestionario, vista móvil y suite de laboratorios (27 simuladores abren) sin errores.
+
+## Etapa 9 — Constructor de laboratorios propios (sin IA)
+- El docente crea un laboratorio sobre cualquier tema: define variables (mín, máx, valor inicial, paso), resultados con fórmula, gráfica (eje X/Y), fundamento teórico y procedimiento; puede partir de una de 13 plantillas (Química: celda galvánica/Nernst, gases, dilución, cinética; Física: caída libre, resorte, péndulo, energía; Matemáticas: exponencial, seno; Biología: logístico, Hardy–Weinberg; Educación Física: frecuencia cardíaca).
+- Dónde: tarjeta «✏️ Crear mi propio laboratorio» en cada laboratorio (solo docentes) y botón «Diseñar un laboratorio propio» dentro de «Nueva experiencia». Incluye «Probar como estudiante».
+- Seguridad: las fórmulas las calcula un evaluador propio (no usa eval ni ejecuta código); solo permite números, operaciones + − * / ^, paréntesis y funciones matemáticas (sqrt, sin, cos, tan, ln, log, exp, abs, min, max, pow, floor, ceil, round, pi). Todo el texto se escapa antes de mostrarse. Máx. 8 variables y 8 resultados.
+- Almacenamiento: dentro de la experiencia ya existente (columna `sim` con prefijo `c:` + JSON). SIN cambios en la base de datos.
+- Archivos modificados: `sims.js` (bloque nuevo + API), `labs.js` (tarjeta, botón, vista de diseño, apertura del simulador propio), `index.html` (labs v9), `sw.js` (v53).
+- Recuperar versión anterior: `BACKUP_original/sims.js.pre_constructor` y `labs.js.pre_constructor`.
+- Pruebas: 13 plantillas calculan valores correctos (p. ej. celda Zn/Cu E°=1,10 V; gases P=1,099 atm); fórmulas inválidas muestran error claro (variable inexistente, función desconocida, paréntesis, símbolo raro); flujo docente completo (plantilla → editar → probar → usar → guardar) y suites anteriores (27 simuladores, salas, audio) sin errores.
+- Límite: modelos numéricos y gráficas, no escenas realistas; plantillas de humanidades (casos, línea de tiempo, mapas) quedan para la siguiente etapa.

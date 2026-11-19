@@ -43,7 +43,7 @@ async function flush(){
 window.addEventListener('online',()=>{try{flush()}catch(_){}});
 
 async function load(){
-  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=5');
+  Z.ok=false;if(!window.SIM)await loadScript('sims.js?v=6');
   const [x,c]=await Promise.all([sb.from('lab_experiencias').select('*').order('created_at',{ascending:false}),
     isProf()?sb.from('courses').select('id,grade,name').eq('teacher_id',M.id).order('grade').order('name'):Promise.resolve({data:[]})]);
   Z.exps=x.data||[];Z.cursos=c.data||[];
@@ -218,7 +218,7 @@ function labPage(){
     <div style="display:flex;gap:6px;flex-wrap:wrap">${isEst()?B('#1e63e9',en?'Abrir':'Empezar',`onclick="LAB.abrir('${x.id}')"`):''}${isProf()?B('#475569','Editar',`onclick="LAB.editar('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`)+B('#64748b','Duplicar',`onclick="LAB.dup('${x.id}')"`):''}${isDir()?B('#1e63e9','Ver',`onclick="LAB.abrir('${x.id}')"`)+B('#1e63e9','Entregas',`onclick="LAB.entregas('${x.id}')"`):''}</div></div>`}).join(''):`<p style="color:#64748b">${isEst()?'Tu docente aún no ha publicado experiencias en este laboratorio.':'Todavía no hay experiencias aquí.'}</p>`;
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.home()" style="font-weight:700;color:#1e63e9">← Todos los laboratorios</button><div style="margin:10px 0;padding:18px;border-radius:16px;color:#fff;background:linear-gradient(135deg,${lcol(Z.lab)},${lcol(Z.lab)}aa);box-shadow:0 6px 18px ${lcol(Z.lab)}55"><div style="font-size:36px">${l[1]}</div><h2 style="font-weight:800;font-size:22px">${e(l[2])}</h2><p style="opacity:.92">${e(l[3])}</p></div>${tools}
   
-  ${(window.SIM&&SIM.list(Z.lab).length)?`<h3 style="font-weight:800;margin:6px 0">🧰 Simuladores</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px">${SIM.list(Z.lab).map(s=>`<div onclick="LAB.sim('${s.id}')" style="${card};cursor:pointer"><b>${e(s.t)}</b><div style="font-size:12px;color:#64748b;margin-top:4px">${e(s.d)}</div></div>`).join('')}</div><h3 style="font-weight:800;margin:6px 0">📋 Experiencias</h3>`:''}
+  ${(window.SIM&&(SIM.list(Z.lab).length||isProf()))?`<h3 style="font-weight:800;margin:6px 0">🧰 Simuladores</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px">${isProf()?`<div onclick="LAB.nuevoProp()" style="${card};cursor:pointer;border:2px dashed #7c3aed;background:#faf5ff"><b>✏️ Crear mi propio laboratorio</b><div style="font-size:12px;color:#64748b;margin-top:4px">Elige tu tema: define variables, fórmulas y gráfica, o parte de una plantilla.</div></div>`:''}${SIM.list(Z.lab).map(s=>`<div onclick="LAB.sim('${s.id}')" style="${card};cursor:pointer"><b>${e(s.t)}</b><div style="font-size:12px;color:#64748b;margin-top:4px">${e(s.d)}</div></div>`).join('')}</div><h3 style="font-weight:800;margin:6px 0">📋 Experiencias</h3>`:''}
   ${salasH}<div style="display:grid;gap:10px">${lista}</div></div>`;
 }
 
@@ -238,7 +238,7 @@ const loc=d=>d?new Date(d).toISOString().slice(0,16):'';
 async function editar(id){const x=Z.exps.find(a=>a.id===id);const k=await sb.from('lab_claves').select('claves').eq('experiencia_id',id).maybeSingle();
   Z.ed={...x,abre:loc(x.abre),cierra:loc(x.cierra),claves:(k.data&&k.data.claves)||{},rubrica:(x.rubrica||[]).map(r=>r.c).join('\n'),bloques:x.bloques||{},preguntas:x.preguntas||[]};Z.v='build';render()}
 function sync(){const g=i=>document.getElementById(i);if(!Z.ed||!g('lb_t'))return;const d=Z.ed;
-  d.titulo=g('lb_t').value;d.descripcion=g('lb_d').value;d.objetivos=g('lb_o').value;d.competencias=g('lb_c').value;if(g('lb_n'))d.nivel=g('lb_n').value;if(g('lb_s'))d.sim=g('lb_s').value;
+  d.titulo=g('lb_t').value;d.descripcion=g('lb_d').value;d.objetivos=g('lb_o').value;d.competencias=g('lb_c').value;if(g('lb_n'))d.nivel=g('lb_n').value;if(g('lb_s')&&g('lb_s').value!=='__keep')d.sim=g('lb_s').value;
   d.cursos=[...document.querySelectorAll('.lb_cu:checked')].map(c=>c.value);BL.forEach(([k])=>d.bloques[k]=g('lb_b_'+k).value);
   d.rubrica=g('lb_r').value;d.abre=g('lb_ab').value;d.cierra=g('lb_ci').value;d.intentos=Math.max(1,+g('lb_in').value||1);d.tutor_activo=g('lb_tu').checked;d.evaluable=g('lb_ev').checked;
   d.preguntas.forEach((q,i)=>{q.tipo=g('lq_t'+i).value;q.texto=g('lq_x'+i).value;if(q.tipo==='opcion'){q.opciones=g('lq_o'+i).value.split('\n').map(s=>s.trim()).filter(Boolean);const c=document.querySelector('input[name=lq_c'+i+']:checked');d.claves[q.id]=c?c.value:(d.claves[q.id]||'0')}})}
@@ -247,7 +247,8 @@ function builder(){const d=Z.ed;if(!d)return'';const ing=d.lab==='ingles';
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${d.lab}')" style="font-weight:700;color:#1e63e9">← Volver</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">${LN[d.lab][1]} ${d.id?'Editar':'Nueva'} experiencia · ${e(LN[d.lab][2])}</h2>
   ${lab('Título','<input id="lb_t" style="'+inp+'" value="'+e(d.titulo)+'">')}${lab('Descripción corta','<input id="lb_d" style="'+inp+'" value="'+e(d.descripcion)+'">')}
   ${lab('Objetivos de aprendizaje','<textarea id="lb_o" rows="2" style="'+inp+'">'+e(d.objetivos)+'</textarea>')}${lab('Competencias / DBA (los que tú indiques)','<input id="lb_c" style="'+inp+'" value="'+e(d.competencias)+'">')}
-  ${(window.SIM&&SIM.list(d.lab).length)?lab('Simulador para esta experiencia (opcional)','<select id="lb_s" style="'+inp+'"><option value="">Ninguno</option>'+SIM.list(d.lab).map(s=>`<option value="${s.id}" ${d.sim===s.id?'selected':''}>${e(s.t)}</option>`).join('')+'</select>'):''}
+  ${(window.SIM&&SIM.list(d.lab).length)?lab('Simulador para esta experiencia (opcional)','<select id="lb_s" style="'+inp+'"><option value="">Ninguno</option>'+(d.sim&&d.sim.slice(0,2)==='c:'?'<option value="__keep" selected>✏️ Mi laboratorio propio: '+e((SIM.get(d.sim)||{}).t||'')+'</option>':'')+SIM.list(d.lab).map(s=>`<option value="${s.id}" ${d.sim===s.id?'selected':''}>${e(s.t)}</option>`).join('')+'</select>'):''}
+  ${window.SIM?`<div style="margin-top:6px">${B('#7c3aed',(d.sim&&d.sim.slice(0,2)==='c:')?'✏️ Editar mi laboratorio propio':'✏️ Diseñar un laboratorio propio','onclick="LAB.sdAbrir()"')}${(d.sim&&d.sim.slice(0,2)==='c:')?' '+B('#64748b','Quitar','onclick="LAB.sdQuitar()"'):''}</div>`:''}
   ${ing?lab('Nivel','<select id="lb_n" style="'+inp+'">'+['Pre-A1','A1','A2','B1'].map(n=>`<option ${n===d.nivel?'selected':''}>${n}</option>`).join('')+'</select>'):''}
   ${lab('Cursos a los que se asigna',Z.cursos.length?Z.cursos.map(c=>`<label style="margin-right:12px;font-size:14px"><input type="checkbox" class="lb_cu" value="${c.id}" ${d.cursos.includes(c.id)?'checked':''}> ${c.grade}° ${e(c.name)}</label>`).join(''):'<span style="color:#b91c1c">No tienes cursos creados todavía.</span>')}
   ${BL.map(([k,t])=>lab(t,'<textarea id="lb_b_'+k+'" rows="3" style="'+inp+'">'+e(d.bloques[k]||'')+'</textarea>')).join('')}
@@ -279,7 +280,7 @@ function exp(){const x=Z.cur,en=Z.ents[x.id]||{},bl=x.bloques||{};const cerr=en.
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('${x.lab}')" style="font-weight:700;color:#1e63e9">← ${e(LN[x.lab][2])}</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">${e(x.titulo)}</h2>
   ${x.objetivos?`<p><b>Objetivos:</b> ${e(x.objetivos)}</p>`:''}${x.competencias?`<p style="font-size:12px;color:#64748b">Competencias: ${e(x.competencias)}</p>`:''}
   ${BL.filter(([k])=>bl[k]).map(([k,t])=>`<div style="${card};margin:8px 0"><b>${t}</b><div style="white-space:pre-wrap;margin-top:4px">${e(bl[k])}</div></div>`).join('')}
-  ${x.sim&&window.SIM&&SIM.get(x.sim)?`<div style="margin:8px 0">${B('#7c3aed','🧰 Abrir simulador: '+e(SIM.get(x.sim).t),'onclick="LAB.sim(\''+x.sim+'\',\'exp\')"')}</div>`:''}
+  ${x.sim&&window.SIM&&SIM.get(x.sim)?`<div style="margin:8px 0">${B('#7c3aed','🧰 Abrir simulador: '+e(SIM.get(x.sim).t),'onclick="LAB.simExp()"')}</div>`:''}
   ${(x.preguntas||[]).map((q,i)=>`<div style="${card};margin:8px 0"><b>${i+1}. ${e(q.texto)}</b>${q.tipo==='opcion'?(q.opciones||[]).map((o,k)=>`<label style="display:block;margin:5px 0"><input type="radio" data-q="${q.id}" name="r_${q.id}" value="${k}" ${String(R[q.id])===String(k)?'checked':''} ${ro?'disabled':''}> ${e(o)}</label>`).join('')
    :q.tipo==='abierta'?`<textarea data-q="${q.id}" rows="3" style="${inp};margin-top:6px" ${ro?'disabled':''}>${e(R[q.id]||'')}</textarea>`
    :`<div style="margin-top:6px">${(en.evidencias||[]).filter(v=>v.q===q.id).map(v=>`<div style="font-size:12px">📎 ${e(v.nombre)}</div>`).join('')}${ro||isDir()?'':q.tipo==='audio'?B('#dc2626','🎙️ Grabar','onclick="LAB.grabar(\''+q.id+'\')"')+' <span id="rec_'+q.id+'" style="font-size:12px"></span>':`<input type="file" onchange="LAB.sube('${q.id}',this)" accept="image/*,application/pdf,audio/*">`}</div>`}</div>`).join('')}
@@ -378,6 +379,24 @@ function vIng(){const n=Z.nivel,w=VOC[n],S=Z.ing||(Z.ing={tab:'voc',i:0,q:null,r
   return`<div class="aic-card" style="padding:18px"><button onclick="LAB.open('ingles')" style="font-weight:700;color:#1e63e9">← English Lab</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">🗣️ Practicar inglés</h2>
   <label style="font-size:12px;font-weight:800">Nivel </label><select onchange="LAB.nv(this.value)" style="padding:6px;border-radius:8px;border:1.5px solid #cbd5e1">${['Pre-A1','A1','A2','B1'].map(x=>`<option ${x===n?'selected':''}>${x}</option>`).join('')}</select>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${tabs}</div>${c}</div>`}
+function vSimDes(){const d=Z.ed;return`<div class="aic-card" style="padding:18px"><button onclick="LAB.sdA('cancel')" style="font-weight:700;color:#1e63e9">← Volver sin guardar</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">✏️ Diseñar mi laboratorio · ${e(LN[d.lab][2])}</h2>${SIM.dHtml(Z.sd,d.lab)}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${B('#0ea5e9','👁️ Probar como estudiante','onclick="LAB.sdA(\'prev\')"')}${B('#16a34a','✅ Usar este laboratorio','onclick="LAB.sdA(\'done\')"')}</div>
+  <div id="sd_prev" style="margin-top:14px"></div></div>`}
+function sdLee(){const r=document.getElementById('app')||document;Z.sd=SIM.dRead(r,SIM.norm(Z.sd))}
+function sdA(a,x){if(a==='cancel'){Z.v='build';return render()}
+  sdLee();const sp=Z.sd;
+  if(a==='tpl'){if(x===''||x==null)return;const t=SIM.plantillas[+x];if(t)Z.sd=JSON.parse(JSON.stringify(t));return render()}
+  if(a==='addv'){sp.vars.push({k:'v'+(sp.vars.length+1),l:'',u:'',min:0,max:10,v:5,st:1});return render()}
+  if(a==='delv'){sp.vars.splice(+x,1);return render()}
+  if(a==='addo'){sp.outs.push({k:'r'+(sp.outs.length+1),l:'',u:'',f:'',dec:2});return render()}
+  if(a==='delo'){sp.outs.splice(+x,1);return render()}
+  const msg=SIM.dCheck(sp),er=document.getElementById('sd_err');
+  if(msg){if(er)er.innerHTML='<div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:10px;font-weight:700">⚠️ '+e(msg)+'</div>';return}
+  if(er)er.innerHTML='';
+  if(a==='prev'){const b=document.getElementById('sd_prev');b.innerHTML='<div style="font-weight:800;margin-bottom:6px">Así lo verá el estudiante:</div><div id="sd_pb"></div>';SIM.custom(Z.sd).mount(document.getElementById('sd_pb'));b.scrollIntoView({behavior:'smooth'})}
+  if(a==='done'){const d=Z.ed,n=SIM.norm(Z.sd);n.lab=d.lab;d.sim='c:'+JSON.stringify(n);if(!d.titulo)d.titulo=n.t;if(!d.descripcion)d.descripcion=n.d;if(!d.bloques.intro&&n.te)d.bloques.intro=n.te;Z.v='build';render();toast('✅ Laboratorio listo. Guarda o publica la experiencia para que lo vean tus estudiantes.')}}
+function sdAbrir(){sync();const d=Z.ed;try{Z.sd=(d.sim&&d.sim.slice(0,2)==='c:')?JSON.parse(d.sim.slice(2)):SIM.blank(d.lab)}catch(_){Z.sd=SIM.blank(d.lab)}Z.v='simdes';render()}
+function sdQuitar(){sync();Z.ed.sim='';render()}
 function vSim(){const s=SIM.get(Z.simId);return`<div class="aic-card" style="padding:18px"><button onclick="LAB.${Z.cur&&Z.back==='exp'?'abrir(\''+Z.cur.id+'\')':'open(\''+Z.lab+'\')'}" style="font-weight:700;color:#1e63e9">← Volver</button><h2 style="font-weight:800;font-size:19px;margin:6px 0">🧰 ${e(s.t)}</h2><p style="color:#64748b;margin-bottom:8px">${e(s.d)}</p><div id="simbox"></div></div>`}
 async function cargaDash(){const r=await sb.from('lab_entregas').select('experiencia_id,estado,nota,auto_correctas,auto_total');Z.dEnt=r.data||[];
   const p=await sb.from('lab_practica').select('skill,puntaje,total,nivel');Z.dPr=p.data||[];Z.dOk=true;Z.v='dash';render()}
@@ -391,13 +410,13 @@ function vDash(){const fl=Z.fLab||'',fc=Z.fCur||'';const xs=Z.exps.filter(x=>(!f
   ${fila?`<div class="aic-table-wrap"><table style="min-width:560px"><thead><tr><th>LABORATORIO</th><th>EXPERIENCIA</th><th>ENVIADAS</th><th>CALIFICADAS</th><th>PROMEDIO</th><th>ACIERTO AUTO</th></tr></thead><tbody>${fila}</tbody></table></div>`:'<p style="color:#64748b">Aún no hay experiencias publicadas con estos filtros.</p>'}
   ${Object.keys(by).length?`<h3 style="font-weight:800;margin:14px 0 4px">English Lab · práctica libre por habilidad</h3>${Object.entries(by).map(([k,v])=>`<div>${k}: ${v.p}/${v.t} aciertos (${v.n} intentos)</div>`).join('')}`:''}</div>`}
 function vistaActual(){if(!Z.ok)return'<div class="aic-card" style="padding:18px">Cargando laboratorios…</div>';
-  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim,dash:vDash,gate:vGate,alista:vAlista,salaNew:vSalaNew,sala:vSala,salaNotas:vNotas})[Z.v]()}
+  return({home,lab:labPage,build:builder,exp,entregas:vEntregas,calif:vCalif,cfg:vCfg,tutor:vTutor,ing:vIng,sim:vSim,simdes:vSimDes,dash:vDash,gate:vGate,alista:vAlista,salaNew:vSalaNew,sala:vSala,salaNotas:vNotas})[Z.v]()}
 
 return{load,view:()=>vistaActual(),
   home(){stopLive();Z.v='home';render()},
   async open(l){stopLive();Z.lab=l;if(isEst()&&!(await asistio(l))){Z.v='gate';render();return}if(isEst()||isProf()||isDir())await cargaSalas();Z.v='lab';render()},
   asiste:registrarAsis,verAsis,nuevaSala,salaCrear,sala:entrarSala,msgSend,msgIA,msgDel,msgRef(){refrescaSala();refrescaMsgs().then(()=>toast('Actualizado'))},salaEstado,auEntrar,auMic,auMano,auPermiso,auSalir,mod:salaMod,silen,hablarV,notasView,notasGuardar,tipo(k){Z.tipo=k;reSala()},resp(id){Z.resp=id;if(id&&Z.tipo==='aporte'&&isEst())Z.tipo='refutacion';reSala()},leerM(id){const m=Z.msgs.find(x=>x.id===id);if(m){try{speechSynthesis.cancel()}catch(_){}habla(m.texto,langSala())}},togEscucha(v){Z.escucha=v;if(v)habla('Escucha activada',langSala());else try{speechSynthesis.cancel()}catch(_){}},togAuto(v){Z.autoVoz=v},
-  nueva(){Z.ed=nuevaEd();Z.v='build';render()},editar,
+  nueva(){Z.ed=nuevaEd();Z.v='build';render()},nuevoProp(){Z.ed=nuevaEd();Z.sd=SIM.blank(Z.lab);Z.v='simdes';render()},sdA,sdAbrir,sdQuitar,simExp(){if(Z.cur&&Z.cur.sim)sim(Z.cur.sim,'exp')},editar,
   async dup(id){const x=Z.exps.find(a=>a.id===id);const {id:_,created_at,updated_at,...r}=x;const k=await sb.from('lab_claves').select('claves').eq('experiencia_id',id).maybeSingle();
     const n=await sb.from('lab_experiencias').insert({...r,titulo:x.titulo+' (copia)',estado:'borrador'}).select('id').single();if(n.error)return err(n.error);
     if(k.data)await sb.from('lab_claves').insert({experiencia_id:n.data.id,claves:k.data.claves});toast('📄 Duplicada como borrador');await load();render()},
