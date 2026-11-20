@@ -64,7 +64,9 @@ function analizar(r,o){
   if(A.muestra==='insuficiente')A.adv.push('En '+ult+' solo hubo '+u.n+' estudiantes evaluados: con menos de 10 evaluados las cifras son apenas indicativas y no deben usarse para decisiones.');
   else if(A.muestra==='pequeña')A.adv.push('En '+ult+' hubo '+u.n+' estudiantes evaluados (menos de 30): los promedios varían mucho de un año a otro por azar; interprete las tendencias con cautela.');
   const chicos=pri.filter(x=>x.n!=null&&x.n<10).map(x=>x.anio);if(chicos.length&&A.muestra!=='insuficiente')A.adv.push('Los años '+chicos.join(', ')+' tienen menos de 10 evaluados y su resultado es solo indicativo.');
-  if(r.propios&&r.propios.length)A.adv.push('Los años '+r.propios.join(', ')+' salen de los resultados individuales cargados por la propia institución: el ICFES aún no publica los agregados oficiales, por eso no tienen comparativo con municipio, departamento ni país ni puesto en el ranking.');
+  const pm=r.manuales||[],pp=(r.propios||[]).filter(a=>!pm.includes(a));
+  if(pp.length)A.adv.push('Los años '+pp.join(', ')+' salen de los resultados individuales cargados por la propia institución: el ICFES aún no publica los agregados oficiales, por eso no tienen comparativo con municipio, departamento ni país ni puesto en el ranking.');
+  if(pm.length)A.adv.push('Los años '+pm.join(', ')+' fueron subidos manualmente. Cuando la plataforma suba los resultados desde las páginas oficiales, este informe se actualizará; mientras tanto no tienen comparativo con municipio, departamento ni país ni puesto en el ranking.');
   if(A.faltan.length)A.adv.push('No hay resultados publicados para '+A.faltan.join(', ')+'; el cálculo de variaciones usa los años reales entre observaciones, no años consecutivos.');
   // global
   const gp=pri.map(x=>[x.anio,x.global]).filter(x=>x[1]!=null);

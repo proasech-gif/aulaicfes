@@ -97,3 +97,6 @@ En Auditor → «📥 Datos Saber 11»: elegir año, elegir Excel (formato ICFES
 
 ## Auditor · Informe de un colegio
 Pestaña «📄 Informe de un colegio» del auditor: reutiliza el análisis Saber (analisis.js) eligiendo departamento, municipio y colegio; el membrete usa el nombre del colegio elegido. Respaldo: BACKUP_zip/analisis.js.pre_auditor.
+
+## Saber: años subidos manualmente
+saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y saber-sync lo ponen en false al cargar datos oficiales, así se actualiza solo). RPC saber_manual(dane). El análisis muestra el año como «✍️ subido manualmente», incluye ese año en el informe y avisa que se actualizará. Respaldos: BACKUP_zip/*.pre_manual.

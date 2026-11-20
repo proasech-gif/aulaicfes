@@ -9,7 +9,7 @@ async function cargar(){
   if(Z.sub==='panel'||!Z.r){const r=await sb.rpc('auditor_resumen');if(r.error)throw r.error;Z.r=r.data}
   if(Z.sub==='salud'){const r=await sb.rpc('auditor_salud');if(r.error)throw r.error;Z.salud=r.data||[]}
   if(Z.sub==='icfes'){try{const r=await sb.rpc('saber_periodos');Z.ic.lista=r.error?null:(r.data||[])}catch(_){Z.ic.lista=null}}
-  if(Z.sub==='informecol'){await loadScript('analisis.js?v=6');await ANA.load()}
+  if(Z.sub==='informecol'){await loadScript('analisis.js?v=7');await ANA.load()}
   if(Z.sub==='susc'){await loadScript('suscripcion_admin.js?v=2');await SUBA.load()}
   if(Z.sub==='errores'){const r=await sb.from('errores_cliente').select('*').order('created_at',{ascending:false}).limit(200);if(r.error)throw r.error;Z.errs=r.data||[]}
   if(Z.sub==='informe'||Z.sub==='panel'){const r=await sb.from('soporte_reportes').select('*').order('created_at',{ascending:false}).limit(300);if(!r.error)Z.rep=r.data||[]}
@@ -109,8 +109,8 @@ function vInforme(){
 const PERS=['20214','20231','20234','20241','20243','20251','20253'];
 Z.ic={log:[],busy:false};
 const logI=t=>{Z.ic.log.push(t);render()};
-async function enviarPeriodo(per,rows){
-  const r=await sb.functions.invoke('saber-ingest',{body:{periodo:per,rows}});
+async function enviarPeriodo(per,rows,manual){
+  const r=await sb.functions.invoke('saber-ingest',{body:{periodo:per,rows,manual:manual===true}});
   if(r.error){let m=r.error.message;try{const j=await r.error.context.json();m=j.error||m}catch(x){}throw new Error(m)}
   return r.data}
 async function cargarIncluidos(){
@@ -156,7 +156,7 @@ async function mGuardar(){
   const pr=[n(m.lec),n(m.mat),n(m.soc),n(m.nat),n(m.ing)];
   if(pr.some(x=>x==null||x<0||x>100))return toast('⚠️','Revisa los promedios','Son 5 números entre 0 y 100.');
   const per=String(m.anio)+(m.cal==='B'?'1':'3');
-  try{const d=await enviarPeriodo(per,[['',dane,m.nom||('Institución '+dane),m.mun,m.dep,'',ev,...pr]]);
+  try{const d=await enviarPeriodo(per,[['',dane,m.nom||('Institución '+dane),m.mun,m.dep,'',ev,...pr]],true);
     toast('✅','Guardado',(m.nom||dane)+' · '+m.anio+' calendario '+m.cal);Z.ic.log=['✅ '+(m.nom||dane)+' · '+m.anio+' · calendario '+m.cal+' guardado']}catch(x){err(x)}render()}
 function vUna(){const m=M0();if(!m.deptos){mInit();return''}
   const sel=(lab,opts,val,fn)=>`<label style="font-size:12px;font-weight:700;display:block">${lab}<select onchange="AUD.${fn}(this.value)" style="display:block;width:100%;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;font-weight:400;background:#fff"><option value="">Elige…</option>${opts.map(o=>`<option value="${e(o[0])}" ${o[0]===val?'selected':''}>${e(o[1])}</option>`).join('')}</select></label>`;
