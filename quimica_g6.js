@@ -1,0 +1,199 @@
+/* AULA360 — Catálogo de Química · SEXTO (laboratorios 1–16). Datos de referencia redondeados; cada laboratorio declara sus límites.
+   DBA y estándares: solo se citan cuando están verificados contra el MEN; mientras tanto se marcan «por verificar». */
+(function(){
+const C1='Uso comprensivo del conocimiento científico',C2='Explicación de fenómenos',C3='Indagación',PV='Por verificar con el documento oficial del MEN antes de citarlo',
+ EST='Estándares básicos de competencias en Ciencias Naturales (entorno físico, grupos 6°–7°): enunciado exacto por verificar';
+const L=[];const add=o=>{o.g=6;o.dba=PV;o.est=EST;o.area='Química';L.push(o)};
+const MC=(q,o,ok,fb)=>({q,o,ok,fb});
+
+add({c:'Q06-001',n:'Medir masa con la balanza',tema:'Materia · medición',dif:1,mot:'medir',
+ obj:'Medir la masa de objetos con una balanza, usar la tara y expresar la medida con su resolución.',comp:[C1,C3],
+ evid:['Usa la tara correctamente.','Expresa la masa con las cifras que permite la balanza.','Explica por qué cambia la lectura al cambiar la resolución.'],
+ teo:'La <b>masa</b> es la cantidad de materia de un cuerpo; se mide en gramos (g) con una balanza. Cada balanza tiene una <b>resolución</b>: el cambio mínimo que puede mostrar (1 g, 0,1 g, 0,01 g). Si pesas dentro de un recipiente, la balanza marca la masa del recipiente más la del objeto; la <b>tara</b> pone el display en cero para leer solo el objeto.',
+ mat:['Balanza (3 resoluciones)','Vaso de 50 g','Cuatro objetos de masa distinta'],
+ proc:[{t:'Elige un objeto y pésalo SIN tarar (deja el vaso).',a:'pesar'},{t:'Activa «Tarar el vaso» y vuelve a pesar el mismo objeto.',a:'pesar'},{t:'Registra la medición en la tabla.',a:'registrar'},{t:'Cambia la resolución de la balanza y compara la lectura del mismo objeto.',a:'registrar',n:2},{t:'Registra al menos 3 objetos distintos.',a:'registrar',n:4}],
+ cfg:{balanza:1,vaso:50,res:0.1,objs:[{n:'Llave metálica',m:12.34,c:'#94a3b8'},{n:'Tuerca de acero',m:6.52,c:'#64748b'},{n:'Piedra',m:38.27,c:'#a8a29e'},{n:'Manzana',m:182.4,c:'#ef4444'}]},
+ ana:['¿Qué diferencia hay entre la lectura sin tarar y con tarar? ¿A qué corresponde?','¿Con qué balanza expresarías mejor la masa de la tuerca? ¿Por qué?'],
+ ev:[MC('Si pesas un objeto dentro de un vaso sin tarar, la balanza marca…',['Solo la masa del objeto','La masa del vaso más la del objeto','Cero','El volumen del objeto'],1,'Sin tarar se suma la masa del recipiente.'),MC('La resolución de 0,01 g significa que la balanza…',['Pesa hasta 0,01 g','Distingue cambios de 0,01 g','Solo mide objetos livianos','Siempre es exacta'],1,'Es el cambio mínimo que puede mostrar; no garantiza exactitud.'),MC('La tara sirve para…',['Aumentar la resolución','Descontar la masa del recipiente','Medir volumen','Calibrar el gramo'],1,'Pone el cero con el recipiente encima.')],
+ conc:'Escribe cómo se mide correctamente una masa y por qué importa la resolución.',lim:'Modelo de balanza ideal: no incluye deriva térmica, corrientes de aire ni errores de calibración.'});
+
+add({c:'Q06-002',n:'Medir volumen con la probeta',tema:'Materia · medición',dif:1,mot:'medir',
+ obj:'Medir el volumen de líquidos y de sólidos irregulares (por desplazamiento de agua) leyendo el menisco.',comp:[C1,C3],
+ evid:['Elige la probeta adecuada.','Calcula el volumen de un sólido por diferencia de lecturas.','Reporta el volumen con la división de la probeta.'],
+ teo:'El <b>volumen</b> es el espacio que ocupa la materia; se mide en mililitros (mL = cm³). Un sólido irregular se sumerge en agua: su volumen es la <b>diferencia</b> entre la lectura final y la inicial. La lectura se hace a la altura de los ojos, en la parte baja del menisco. Una probeta más angosta lee con más precisión.',
+ mat:['Probetas de 25, 100 y 250 mL','Agua','Canica de vidrio, tuerca, piedra, jugo'],
+ proc:[{t:'Elige la probeta de 100 mL y pon unos 40 mL de agua.'},{t:'Mide el volumen del objeto sólido (se sumerge y se resta).',a:'volumen'},{t:'Cambia a la probeta de 25 mL y repite con la canica.',a:'volumen',n:2},{t:'Mide el volumen del jugo (líquido).',a:'volumen',n:3},{t:'Registra tus medidas.',a:'registrar',n:2}],
+ cfg:{probeta:1,cyl:100,objs:[{n:'Canica de vidrio',rho:2.5,v:4.2,c:'#38bdf8'},{n:'Tuerca de acero',rho:7.85,v:0.83,c:'#64748b'},{n:'Piedra',rho:2.65,v:14.6,c:'#a8a29e'},{n:'Jugo (líquido)',liq:23.7,m:24.5}]},
+ ana:['¿Por qué se resta la lectura inicial de la final?','¿Qué probeta da una medida más precisa para la canica y por qué?'],
+ ev:[MC('El volumen de un sólido irregular se obtiene…',['Pesándolo','Por la diferencia de lecturas del agua','Con la tara','Multiplicando masa por densidad'],1,'Desplazamiento de agua.'),MC('1 mL equivale a…',['1 g','1 cm³','1 L','10 cm³'],1,'1 mL = 1 cm³.'),MC('Para leer el menisco debes…',['Mirar desde arriba','Poner el ojo a la altura del líquido','Inclinar la probeta','Leer la parte alta del borde'],1,'Evita el error de paralaje.')],
+ conc:'Resume cómo medir el volumen de un sólido y de un líquido.',lim:'No se simula el error de paralaje ni la tensión superficial; el menisco se asume leído correctamente.'});
+
+add({c:'Q06-003',n:'Densidad de sólidos',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
+ obj:'Calcular la densidad de sólidos a partir de su masa y su volumen y reconocer que depende del material, no del tamaño.',comp:[C1,C3],
+ evid:['Calcula ρ = m/V.','Reporta la densidad con su incertidumbre.','Compara densidades de materiales distintos.'],
+ teo:'La <b>densidad</b> es la masa por unidad de volumen: ρ = m / V (g/mL). Es una propiedad característica: un trozo grande y uno pequeño del mismo material tienen la misma densidad. Valores de referencia a ~20 °C: aluminio 2,70; vidrio ≈2,5; acero 7,85; cobre 8,96; plomo 11,34 g/cm³. La incertidumbre sale de la resolución de la balanza y de la probeta.',
+ mat:['Balanza','Probeta','Cuerpos de aluminio, acero, cobre, plomo y vidrio'],
+ proc:[{t:'Pesa el objeto (con tara).',a:'pesar'},{t:'Mide su volumen por desplazamiento.',a:'volumen'},{t:'Pulsa «Calcular densidad».',a:'densidad'},{t:'Registra el resultado.',a:'registrar'},{t:'Repite con 3 materiales distintos.',a:'registrar',n:3}],
+ cfg:{balanza:1,probeta:1,densidad:1,res:0.01,cyl:100,objs:[{n:'Aluminio (cubo)',mat:'Aluminio',rho:2.70,v:15,c:'#cbd5e1'},{n:'Acero (cilindro)',mat:'Acero',rho:7.85,v:10,c:'#64748b'},{n:'Cobre (barra)',mat:'Cobre',rho:8.96,v:8,c:'#d97706'},{n:'Plomo (pesa)',mat:'Plomo',rho:11.34,v:6,c:'#475569'},{n:'Vidrio (canica grande)',mat:'Vidrio',rho:2.5,v:12,c:'#38bdf8'}]},
+ ana:['¿Qué material es más denso? ¿Cómo lo sabes con tus datos?','Si cortas el cubo de aluminio por la mitad, ¿cambia su densidad? Explica.'],
+ ev:[MC('La densidad se calcula como…',['V / m','m / V','m × V','m − V'],1,'ρ = m/V.'),MC('Un trozo grande y uno pequeño de cobre tienen…',['Distinta densidad','Igual densidad','La del trozo grande mayor','Densidad cero'],1,'Es propiedad del material.'),MC('Un objeto de 27 g y 10 mL tiene densidad…',['0,37 g/mL','2,7 g/mL','27 g/mL','37 g/mL'],1,'27/10 = 2,7.')],
+ conc:'Explica por qué la densidad sirve para caracterizar un material.',lim:'Materiales ideales y homogéneos a 20 °C; no se simulan huecos, impurezas ni dilatación térmica.'});
+
+add({c:'Q06-004',n:'Densidad de líquidos',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
+ obj:'Determinar la densidad de líquidos pesando un volumen conocido y usando la tara del vaso.',comp:[C1,C3],
+ evid:['Tara el vaso antes de pesar el líquido.','Calcula la densidad de cada líquido.','Ordena los líquidos por densidad.'],
+ teo:'Para un líquido se mide un volumen con la probeta y su masa con la balanza (restando el vaso). Referencias a ~20 °C: etanol 0,79; aceite vegetal ≈0,92; agua 1,00; glicerina 1,26 g/mL. La densidad del agua cambia con la temperatura (máxima cerca de 4 °C).',
+ mat:['Vaso de 40 g','Balanza','Probeta','Agua, etanol, aceite y glicerina (50 mL de cada uno)'],
+ proc:[{t:'Tara el vaso y pesa 50 mL del líquido.',a:'pesar'},{t:'Mide su volumen en la probeta.',a:'volumen'},{t:'Calcula la densidad.',a:'densidad'},{t:'Registra y repite con los otros líquidos.',a:'registrar',n:4}],
+ cfg:{balanza:1,probeta:1,densidad:1,vaso:40,res:0.01,cyl:100,objs:[{n:'Agua',mat:'Agua',liq:50,m:49.91,c:'#7dd3fc'},{n:'Etanol',mat:'Etanol',liq:50,m:39.45,c:'#e0f2fe'},{n:'Aceite vegetal',mat:'Aceite',liq:50,m:46.0,c:'#fde047'},{n:'Glicerina',mat:'Glicerina',liq:50,m:63.0,c:'#bae6fd'}]},
+ ana:['Ordena los cuatro líquidos de menor a mayor densidad.','Si mezclas aceite y agua, ¿cuál queda arriba? ¿Por qué?'],
+ ev:[MC('Un líquido con 50 mL y 39,5 g tiene densidad…',['0,79 g/mL','1,27 g/mL','1,00 g/mL','2,0 g/mL'],0,'39,5/50 = 0,79.'),MC('Si no taras el vaso, la densidad calculada sale…',['Menor','Mayor','Igual','No se puede calcular'],1,'Se suma masa del vaso.'),MC('El aceite flota sobre el agua porque…',['Es más viscoso','Es menos denso','Es más pesado','Está más caliente'],1,'0,92 < 1,00 g/mL.')],
+ conc:'Escribe cómo determinaste la densidad de un líquido paso a paso.',lim:'Líquidos a 20 °C, sin burbujas; la masa de la película de líquido que queda en el vaso no se considera.'});
+
+add({c:'Q06-005',n:'Gráfica masa–volumen',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
+ obj:'Construir la gráfica masa–volumen de un material e interpretar su pendiente como la densidad.',comp:[C1,C2,C3],
+ evid:['Registra varios puntos del mismo material.','Interpreta la pendiente.','Distingue materiales por su pendiente.'],
+ teo:'Para un mismo material, la masa es <b>directamente proporcional</b> al volumen: la gráfica m–V es una recta que pasa por el origen y su <b>pendiente es la densidad</b>. Materiales distintos dan rectas con pendientes distintas.',
+ mat:['Balanza','Probeta','Cuerpos de aluminio y de hierro de 4 tamaños cada uno'],
+ proc:[{t:'Elige un cuerpo de aluminio, pésalo y mide su volumen.',a:'volumen'},{t:'Pulsa «Calcular densidad» y registra.',a:'registrar'},{t:'Registra los 4 tamaños de aluminio (la gráfica aparece abajo).',a:'registrar',n:4},{t:'Repite con hierro y compara las pendientes.',a:'registrar',n:8}],
+ cfg:{balanza:1,probeta:1,densidad:1,grafica:1,res:0.01,cyl:100,objs:[{n:'Aluminio 8 mL',mat:'Aluminio',rho:2.70,v:8,c:'#cbd5e1'},{n:'Aluminio 15 mL',mat:'Aluminio',rho:2.70,v:15,c:'#cbd5e1'},{n:'Aluminio 25 mL',mat:'Aluminio',rho:2.70,v:25,c:'#cbd5e1'},{n:'Aluminio 40 mL',mat:'Aluminio',rho:2.70,v:40,c:'#cbd5e1'},{n:'Hierro 5 mL',mat:'Hierro',rho:7.87,v:5,c:'#64748b'},{n:'Hierro 10 mL',mat:'Hierro',rho:7.87,v:10,c:'#64748b'},{n:'Hierro 15 mL',mat:'Hierro',rho:7.87,v:15,c:'#64748b'},{n:'Hierro 20 mL',mat:'Hierro',rho:7.87,v:20,c:'#64748b'}]},
+ ana:['¿Qué forma tiene la gráfica de cada material y qué significa?','¿Cuál recta tiene mayor pendiente? ¿Qué material es más denso?'],
+ ev:[MC('En una gráfica masa–volumen, la pendiente representa…',['La masa','El volumen','La densidad','La temperatura'],2,'Δm/ΔV = ρ.'),MC('Si el volumen se duplica, la masa del mismo material…',['Se duplica','Se reduce a la mitad','Igual','Se triplica'],0,'Proporcionalidad directa.'),MC('Una recta más inclinada indica…',['Menor densidad','Mayor densidad','Menor masa','Mayor volumen'],1,'Más masa por cada mL.')],
+ conc:'Explica qué muestra la gráfica y cómo se obtiene la densidad de ella.',lim:'La pendiente se calcula por mínimos cuadrados con recta por el origen; con pocos puntos es solo una estimación.'});
+
+add({c:'Q06-006',n:'Reto: ¿qué material es?',tema:'Propiedades de la materia · identificación',dif:3,mot:'medir',
+ obj:'Identificar un material desconocido comparando su densidad medida con una tabla de referencia.',comp:[C1,C2,C3],
+ evid:['Mide masa y volumen con rigor.','Calcula la densidad con incertidumbre.','Justifica la identificación con datos.'],
+ teo:'La densidad es una propiedad característica y permite identificar materiales. Al comparar tu medida (con su incertidumbre) con una tabla: aluminio 2,70; hierro 7,87; cobre 8,96; plomo 11,34 g/cm³. Dos materiales con densidad parecida exigen medir con más precisión.',
+ mat:['Balanza analítica','Probeta de 25 mL','Muestra X','Tabla de densidades'],
+ proc:[{t:'Pesa la Muestra X con la resolución que elijas.',a:'pesar'},{t:'Mide su volumen con la probeta más precisa.',a:'volumen'},{t:'Calcula la densidad y regístrala.',a:'densidad'},{t:'Elige el material que coincide y pulsa «Comprobar».',a:'reto'}],
+ cfg:{balanza:1,probeta:1,densidad:1,res:0.01,cyl:25,objs:[{n:'Muestra X',mat:'Muestra X',rho:8.96,v:6.5,c:'#d97706'}],reto:{opts:['Aluminio (2,70)','Hierro (7,87)','Cobre (8,96)','Plomo (11,34)'],ok:'Cobre (8,96)',rho:8.96}},
+ ana:['¿Qué incertidumbre tuvo tu densidad y cómo afecta tu decisión?','¿Qué otra medida adicional confirmaría tu identificación?'],
+ ev:[MC('Si tu densidad es 8,9 ± 0,3 g/mL, el material más probable es…',['Aluminio','Hierro','Cobre','Plomo'],2,'8,96 está dentro del intervalo.'),MC('Usar una probeta más angosta…',['Aumenta el error','Mejora la precisión','No cambia nada','Cambia la densidad'],1,'Divisiones más finas.'),MC('Identificar un material por densidad es posible porque…',['Todos tienen igual densidad','Es una propiedad característica','Depende del tamaño','Solo cambia con el color'],1,'Es propia de cada material.')],
+ conc:'Escribe cómo identificaste el material y qué tan seguro estás.',lim:'Tabla limitada a 4 metales puros; en la vida real hay aleaciones e impurezas.'});
+
+add({c:'Q06-007',n:'Estados de la materia y partículas',tema:'Materia · estados',dif:1,mot:'particulas',
+ obj:'Relacionar el estado de una sustancia con la temperatura y el movimiento de sus partículas (modelo cinético).',comp:[C1,C2],
+ evid:['Identifica el estado según el punto de fusión y ebullición.','Describe el movimiento de las partículas en cada estado.','Explica por qué cambia el estado al variar la temperatura.'],
+ teo:'Según el <b>modelo cinético de partículas</b>, en un sólido las partículas vibran en posiciones fijas; en un líquido se desplazan unas sobre otras sin separarse; en un gas se mueven libres y muy separadas. Al aumentar la temperatura aumenta la energía cinética media. El estado depende de la temperatura frente a los puntos de fusión y de ebullición (a 1 atm).',
+ mat:['Agua, etanol, nitrógeno y mercurio','Termómetro virtual'],
+ proc:[{t:'Elige una sustancia y observa su estado inicial.'},{t:'Sube la temperatura hasta ver los tres estados.',a:'visto_3'},{t:'Repite con otra sustancia y compara los puntos de fusión y ebullición.'}],
+ cfg:{T0:20,subs:[{n:'Agua',mp:0,bp:100,c:'#38bdf8'},{n:'Etanol',mp:-114.1,bp:78.4,c:'#a5b4fc'},{n:'Nitrógeno',mp:-210,bp:-195.8,c:'#c4b5fd'},{n:'Mercurio',mp:-38.8,bp:356.7,c:'#94a3b8'}]},
+ ana:['Describe cómo se mueven las partículas del agua en cada estado.','¿Por qué el nitrógeno es gas a temperatura ambiente y el agua no?'],
+ ev:[MC('Las partículas de un gas…',['Vibran en posición fija','Se mueven libres y separadas','Están juntas y ordenadas','No se mueven'],1,'Modelo cinético.'),MC('A 20 °C el etanol es…',['Sólido','Líquido','Gas','Plasma'],1,'Entre −114 y 78 °C.'),MC('Al subir la temperatura, la energía cinética de las partículas…',['Disminuye','Aumenta','No cambia','Se anula'],1,'T mide la energía cinética media.')],
+ conc:'Explica con tus palabras cómo el calor cambia el estado de la materia.',lim:'Las partículas se dibujan como esferas planas (48 en 2D); no representa las fuerzas ni la estructura real de cada sustancia.'});
+
+add({c:'Q06-008',n:'Curva de calentamiento del agua',tema:'Materia · cambios de estado',dif:2,mot:'curva',
+ obj:'Interpretar la curva de calentamiento: tramos de aumento de temperatura y mesetas durante los cambios de estado.',comp:[C1,C2,C3],
+ evid:['Reconoce las mesetas de fusión y ebullición.','Relaciona energía, masa y tiempo.','Predice cómo cambia la curva al variar masa o potencia.'],
+ teo:'Al calentar, la temperatura sube mientras la sustancia está en un solo estado (Q = m·c·ΔT). Durante un cambio de estado la temperatura <b>no cambia</b> (meseta): la energía rompe fuerzas entre partículas (Q = m·L). Para el agua: c(hielo) ≈ 2,09; c(líquida) ≈ 4,18; c(vapor) ≈ 2,01 J/g·K; L fusión ≈ 334 J/g; L vaporización ≈ 2257 J/g. Mayor potencia → menor tiempo.',
+ mat:['Calentador de potencia ajustable','Termómetro','Muestra de agua o etanol'],
+ proc:[{t:'Elige agua, 100 g y 300 W. Pulsa ▶ y observa.',a:'calentar'},{t:'Identifica las mesetas en la gráfica.',a:'meseta'},{t:'Duplica la masa y repite: ¿cambia la temperatura de las mesetas?',a:'calentar',n:2},{t:'Cambia a etanol y compara.',a:'calentar',n:3}],
+ cfg:{subs:[{n:'Agua',mp:0,bp:100,cs:2.09,Lf:334,cl:4.18,Lv:2257,cg:2.01,nota:'Valores de referencia redondeados a 1 atm.'},{n:'Etanol',mp:-114.1,bp:78.4,cs:1.9,Lf:108,cl:2.44,Lv:846,cg:1.43,nota:'Valores aproximados de referencia; el calor específico del sólido es una estimación.'}]},
+ ana:['¿Por qué la temperatura no cambia durante la meseta aunque sigas calentando?','¿Qué meseta es más larga en el agua y por qué?'],
+ ev:[MC('Durante la ebullición del agua a 1 atm la temperatura…',['Sube sin parar','Se mantiene en 100 °C','Baja','Llega a 0 °C'],1,'Meseta de ebullición.'),MC('Si duplicas la masa, el tiempo del mismo tramo…',['Se reduce a la mitad','Se duplica','Igual','Se triplica'],1,'Q = m·c·ΔT.'),MC('La energía de la meseta se usa para…',['Subir la temperatura','Romper fuerzas entre partículas','Enfriar','Cambiar la masa'],1,'Calor latente.')],
+ conc:'Explica por qué hay mesetas en la curva de calentamiento.',lim:'Sin pérdidas de calor al ambiente; calor específico constante en cada estado; presión de 1 atm.'});
+
+add({c:'Q06-009',n:'Flotación y densidad',tema:'Propiedades de la materia · densidad',dif:2,mot:'flota',
+ obj:'Predecir si un objeto flota o se hunde comparando su densidad con la del líquido.',comp:[C1,C2],
+ evid:['Compara densidades para predecir.','Relaciona la parte sumergida con la razón de densidades.','Explica con el empuje y el peso.'],
+ teo:'Un objeto flota si su densidad es menor o igual que la del líquido. El <b>empuje</b> (principio de Arquímedes) es igual al peso del líquido desplazado. Flota con una fracción sumergida ρobjeto/ρlíquido. Si ρobjeto > ρlíquido, el empuje máximo no alcanza a igualar el peso y se hunde.',
+ mat:['Siete objetos de 100 cm³','Agua, aceite, etanol y glicerina'],
+ proc:[{t:'Predice antes de probar (anótalo en tus observaciones).'},{t:'Elige un objeto y un líquido y pulsa «Probar».',a:'probar'},{t:'Prueba 5 combinaciones distintas.',a:'probar',n:5},{t:'Compara el % sumergido con las densidades.'}],
+ cfg:{objs:[{n:'Corcho',rho:0.24,c:'#a16207'},{n:'Madera de pino',rho:0.52,c:'#d6a15a'},{n:'Hielo',rho:0.917,c:'#bfdbfe'},{n:'Huevo',rho:1.03,c:'#fde68a'},{n:'Plástico PET',rho:1.38,c:'#93c5fd'},{n:'Aluminio',rho:2.70,c:'#cbd5e1'},{n:'Hierro',rho:7.87,c:'#64748b'}],liqs:[{n:'Agua dulce',rho:0.9982,c:'#7dd3fc',agua:1},{n:'Aceite vegetal',rho:0.92,c:'#fde047'},{n:'Etanol',rho:0.789,c:'#e0f2fe'},{n:'Glicerina',rho:1.26,c:'#bae6fd'}]},
+ ana:['¿Qué regla de densidades permite predecir si flota?','¿Por qué el hielo flota en agua pero se hunde en etanol?'],
+ ev:[MC('Un objeto flota si…',['Es grande','Su densidad ≤ la del líquido','Es liviano en la mano','Es redondo'],1,'Comparación de densidades.'),MC('El hielo (0,917) en agua queda sumergido aproximadamente…',['9 %','92 %','50 %','100 %'],1,'ρo/ρl ≈ 0,92.'),MC('El empuje es igual al…',['Peso del objeto siempre','Peso del líquido desplazado','Volumen del líquido','Calor aplicado'],1,'Arquímedes.')],
+ conc:'Redacta una regla para predecir la flotación y pruébala con un ejemplo.',lim:'Objetos de 100 cm³ totalmente rígidos y homogéneos; no se simula la forma (por ejemplo, los barcos de acero).'});
+
+add({c:'Q06-010',n:'El huevo y el agua salada',tema:'Propiedades de la materia · densidad de disoluciones',dif:2,mot:'flota',
+ obj:'Descubrir cómo la sal disuelta aumenta la densidad del agua y hace flotar al huevo.',comp:[C2,C3],
+ evid:['Varía una sola variable (la sal).','Identifica la concentración en la que el huevo flota.','Explica el cambio con la densidad de la disolución.'],
+ teo:'Al disolver sal en agua aumenta la masa por unidad de volumen: la densidad de la disolución crece (aprox. ρ ≈ 0,998 + 0,00068·s, con s en g/L, en el intervalo del laboratorio). Un huevo (≈1,03 g/mL) se hunde en agua dulce, pero flota cuando la disolución supera su densidad.',
+ mat:['Huevo','Agua dulce','Sal (0–250 g/L)'],
+ proc:[{t:'Prueba el huevo en agua dulce (0 g/L).',a:'probar'},{t:'Sube la sal poco a poco y vuelve a probar.',a:'probar',n:4},{t:'Encuentra la concentración mínima en la que flota.',a:'huevo_flota'}],
+ cfg:{objs:[{n:'Huevo',rho:1.03,c:'#fde68a',huevo:1}],liqs:[{n:'Agua con sal',rho:0.9982,c:'#7dd3fc',agua:1}]},
+ ana:['¿A partir de cuántos g/L flotó el huevo?','¿Qué pasaría con el huevo si agregas agua dulce encima de la salada?'],
+ ev:[MC('Al disolver sal, la densidad del agua…',['Disminuye','Aumenta','Igual','Se anula'],1,'Más masa en el mismo volumen.'),MC('El huevo flota cuando…',['La disolución es menos densa','La disolución es más densa que el huevo','Se calienta','Se agita'],1,'ρl ≥ ρhuevo.'),MC('Variar solo la sal y mantener lo demás es…',['Un error','Controlar variables','Una trampa','Innecesario'],1,'Diseño experimental.')],
+ conc:'Explica con datos por qué el huevo flotó en el agua salada.',lim:'Relación lineal aproximada (válida hasta ≈250 g/L a 20 °C); no simula el huevo real (no es homogéneo).'});
+
+add({c:'Q06-011',n:'Sustancias puras y mezclas',tema:'Materia · clasificación',dif:2,mot:'clasif',
+ obj:'Clasificar muestras como sustancias puras, mezclas homogéneas o heterogéneas con base en pruebas.',comp:[C1,C3],
+ evid:['Elige pruebas pertinentes.','Justifica la clasificación con resultados.','Distingue mezcla homogénea de sustancia pura.'],
+ teo:'Una <b>sustancia pura</b> tiene composición fija y propiedades constantes (hierve a temperatura constante). Una <b>mezcla</b> tiene varias sustancias: es <b>homogénea</b> si se ve una sola fase (disolución) y <b>heterogénea</b> si se distinguen fases. Una mezcla homogénea no se distingue a simple vista de una sustancia pura: se necesitan pruebas (evaporar, hervir, filtrar).',
+ mat:['8 muestras','5 pruebas: simple vista, lupa, filtrar, evaporar, hervir'],
+ proc:[{t:'Elige una muestra y haz al menos dos pruebas.',a:'prueba',n:2},{t:'Clasifícala y lee la retroalimentación.',a:'clasifica_ok'},{t:'Clasifica bien las 8 muestras.',a:'todo_ok'}],
+ cfg:{tituloItems:'Muestras',pregunta:'¿Cómo clasificas la muestra?',
+  items:[{k:'ag',n:'Agua destilada',e:'💧'},{k:'sal',n:'Sal de mesa',e:'🧂'},{k:'aire',n:'Aire',e:'🌬️'},{k:'as',n:'Agua con sal',e:'🥣'},{k:'ar',n:'Arena con agua',e:'🏖️'},{k:'ac',n:'Aceite con agua',e:'🫗'},{k:'ace',n:'Acero',e:'🔩'},{k:'ju',n:'Jugo con pulpa',e:'🧃'}],
+  tests:[{k:'sv',n:'Mirar a simple vista'},{k:'lu',n:'Mirar con lupa'},{k:'fi',n:'Filtrar'},{k:'ev',n:'Evaporar'},{k:'he',n:'Hervir'}],
+  cats:[{k:'p',n:'Sustancia pura'},{k:'h',n:'Mezcla homogénea'},{k:'e',n:'Mezcla heterogénea'}],
+  ans:{ag:'p',sal:'p',aire:'h',as:'h',ar:'e',ac:'e',ace:'h',ju:'e'},
+  res:{ag:{sv:'Transparente, una sola fase.',lu:'Sin partículas.',fi:'Nada queda en el filtro.',ev:'No deja residuo.',he:'Hierve a 100 °C constante.'},
+   sal:{sv:'Cristales blancos iguales.',lu:'Cristales cúbicos uniformes.',fi:'No aplica (sólido seco).',ev:'No aplica.',he:'Se funde a 801 °C (muy alto); un solo tipo de cristal.'},
+   aire:{sv:'Invisible, una sola fase.',lu:'Nada se distingue.',fi:'Nada queda en el filtro (sin polvo).',ev:'No aplica.',he:'Gases con distintos puntos de ebullición (N₂, O₂…): se pueden separar licuando.'},
+   as:{sv:'Transparente, una sola fase.',lu:'Sin partículas.',fi:'Nada queda en el filtro.',ev:'Al evaporar queda un residuo blanco.',he:'La temperatura sube poco a poco al hervir (no es constante).'},
+   ar:{sv:'La arena se ve y se asienta.',lu:'Granos visibles.',fi:'La arena queda en el filtro.',ev:'Queda arena.',he:'Hierve el agua; la arena se queda.'},
+   ac:{sv:'Dos capas visibles.',lu:'Gotas de aceite.',fi:'Pasa todo (el aceite no queda retenido).',ev:'El agua se evapora, queda aceite.',he:'Hierve el agua; el aceite se queda.'},
+   ace:{sv:'Metal uniforme.',lu:'Aspecto uniforme.',fi:'No aplica.',ev:'No aplica.',he:'Aleación de hierro y carbono, una sola fase sólida (mezcla homogénea).'},
+   ju:{sv:'Líquido con trozos.',lu:'Fibras y pulpa.',fi:'La pulpa queda en el filtro.',ev:'Queda un residuo de azúcares y pulpa.',he:'Se separan agua y sólidos.'}},
+  why:{ag:'Una sola sustancia; hierve a temperatura constante y no deja residuo.',sal:'Un solo compuesto (NaCl) con propiedades constantes.',aire:'Varias sustancias en una sola fase.',as:'Una fase, pero al evaporar deja residuo: hay sal disuelta.',ar:'Se distinguen dos fases.',ac:'Dos fases visibles.',ace:'Aleación: varios elementos en una sola fase.',ju:'Se distinguen fases (líquido y pulpa).'}},
+ ana:['¿Por qué el agua con sal y el agua destilada se ven iguales pero no son lo mismo?','¿Qué prueba te ayudó más para distinguirlas?'],
+ ev:[MC('Una mezcla homogénea tiene…',['Varias fases visibles','Una sola fase','Una sola sustancia','Siempre dos líquidos'],1,'Disolución.'),MC('Para distinguir agua pura de agua con sal conviene…',['Mirarla','Evaporarla','Moverla','Medir su color'],1,'La sal deja residuo.'),MC('El aceite con agua es…',['Mezcla homogénea','Mezcla heterogénea','Sustancia pura','Compuesto'],1,'Dos fases.')],
+ conc:'Explica cómo decides si una muestra es pura o mezcla.',lim:'Resultados escritos a partir de propiedades reales conocidas; no simula muestras comerciales con impurezas.'});
+
+add({c:'Q06-012',n:'Separar por filtración',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
+ obj:'Elegir el filtro adecuado según el tamaño de las partículas y explicar qué no puede separar la filtración.',comp:[C1,C2,C3],
+ evid:['Relaciona tamaño de partícula y poro del filtro.','Identifica qué queda en el filtro y qué pasa.','Reconoce que la sal disuelta atraviesa el filtro.'],
+ teo:'La <b>filtración</b> separa un sólido insoluble de un líquido: el filtro retiene las partículas más grandes que sus poros. Un sólido <b>disuelto</b> (como la sal) tiene partículas de tamaño atómico y atraviesa el filtro. Para separarla se usa evaporación o destilación.',
+ mat:['Colador (≈500 µm)','Papel de filtro (≈11 µm)','Papel fino (≈2,5 µm)','Mezcla de arena, limo, arcilla y sal'],
+ proc:[{t:'Elige el colador y vierte la mezcla.',a:'filtrar'},{t:'Observa qué pasa y cambia al papel de filtro.',a:'filtrar',n:2},{t:'Usa el papel fino y logra un filtrado sin sólidos visibles.',a:'filtro_bueno'}],
+ cfg:{modo:'filtro',comps:[{n:'Arena (≈200 µm)',m:20,tam:200,dis:0,c:'#d6b370'},{n:'Limo (≈20 µm)',m:10,tam:20,dis:0,c:'#a8956b'},{n:'Arcilla (≈5 µm)',m:6,tam:5,dis:0,c:'#a16f4a'},{n:'Sal disuelta',m:8,tam:0.001,dis:1,c:'#fff'}],filtros:[{n:'Colador',p:500},{n:'Papel de filtro',p:11},{n:'Papel fino',p:2.5}]},
+ ana:['¿Qué filtro retiene todo el sólido no disuelto?','¿Por qué el agua filtrada aún sabe salada?'],
+ ev:[MC('El filtro retiene…',['Todo lo que hay en la mezcla','Partículas mayores que sus poros','Solo líquidos','Las sales disueltas'],1,'Tamaño de poro.'),MC('La sal disuelta…',['Queda en el filtro','Atraviesa el filtro','Se destruye','Se vuelve arena'],1,'Partículas muy pequeñas.'),MC('Para separar la sal del agua usarías…',['Un colador','Evaporación','Una cuchara','Decantación'],1,'Se evapora el agua.')],
+ conc:'Escribe cuándo sirve la filtración y cuándo no.',lim:'Modelo por tamaño de partícula frente a poro; no simula colmatación ni filtros reales con distribución de poros.'});
+
+add({c:'Q06-013',n:'Decantación y sedimentación',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
+ obj:'Separar líquidos inmiscibles con embudo de decantación y analizar la sedimentación de sólidos (ley de Stokes).',comp:[C1,C2,C3],
+ evid:['Cierra la llave en el momento correcto.','Explica la separación por diferencia de densidad.','Predice cómo cambia el tiempo de sedimentación con el tamaño y la temperatura.'],
+ teo:'Los líquidos inmiscibles se separan por <b>decantación</b>: el más denso queda abajo (agua 1,00 g/mL; aceite 0,92). Un sólido en agua <b>sedimenta</b> más rápido cuanto mayor es la partícula (Stokes: v = 2(ρs−ρl)g r² / 9μ, válida si Re &lt; 0,1). El agua caliente es menos viscosa y acelera la sedimentación.',
+ mat:['Embudo de decantación','Probeta','Aceite, agua y arena'],
+ proc:[{t:'Con aceite + agua, drena el agua por la llave.',a:'drenar'},{t:'Detén justo al llegar a la interfaz (pureza ≈100 %).',a:'corte_exacto'},{t:'Cambia a «Arena en agua», ajusta el radio y pulsa ▶.',a:'reposar'},{t:'Sube la temperatura y compara el tiempo.',a:'reposar',n:2}],
+ cfg:{modo:'decanta'},
+ ana:['¿Qué ocurre con la pureza si drenas de más?','¿Por qué las partículas más pequeñas tardan mucho más en sedimentar?'],
+ ev:[MC('En el embudo de decantación el agua queda…',['Arriba','Abajo','Mezclada','Desaparece'],1,'Es más densa que el aceite.'),MC('Si duplicas el radio de la partícula, la velocidad de sedimentación…',['Se duplica','Se cuadruplica','Igual','Se reduce'],1,'v ∝ r².'),MC('La decantación sirve para…',['Mezclas homogéneas','Líquidos inmiscibles','Gases','Aleaciones'],1,'Dos fases líquidas.')],
+ conc:'Explica la diferencia entre decantar un líquido y sedimentar un sólido.',lim:'Stokes solo para partículas esféricas pequeñas (Re < 0,1); el embudo es ideal y no simula la interfaz difusa.'});
+
+add({c:'Q06-014',n:'Evaporación y cristalización',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
+ obj:'Recuperar una sal disuelta evaporando el agua y analizar qué factores aceleran la evaporación.',comp:[C1,C2,C3],
+ evid:['Relaciona temperatura, área y rapidez.','Identifica cuándo empieza a cristalizar.','Calcula la masa de sal recuperada.'],
+ teo:'Al <b>evaporar</b> una disolución, el agua sale y la sal permanece; cuando la concentración supera la <b>solubilidad</b> (NaCl ≈ 360 g/L a 20 °C) la sal <b>cristaliza</b>. La evaporación es más rápida con mayor temperatura y mayor superficie expuesta.',
+ mat:['Cápsula de evaporación','Calentador','Disolución de sal'],
+ proc:[{t:'Elige volumen y concentración y pulsa ▶.',a:'evaporar'},{t:'Observa el instante en que empieza la cristalización.'},{t:'Repite con más área o mayor temperatura.',a:'evaporar',n:2},{t:'Espera hasta que se seque.',a:'seco'}],
+ cfg:{modo:'evapora'},
+ ana:['¿Qué masa de sal recuperaste y coincide con la inicial?','¿Qué cambia si aumentas el área expuesta?'],
+ ev:[MC('Al evaporar agua salada queda…',['Agua','Sal','Nada','Aire'],1,'La sal no se evapora.'),MC('La rapidez de evaporación aumenta con…',['Menos área','Mayor temperatura','Más sal','Menos calor'],1,'Mayor energía.'),MC('La sal cristaliza cuando…',['Hay poca sal','La concentración supera la solubilidad','Se enfría el aire','Se agita'],1,'Sobresaturación.')],
+ conc:'Resume cómo se recupera una sal de una disolución.',lim:'Rapidez modelada con una ley empírica (aumenta ≈5 % por °C); no incluye humedad ambiental ni viento.'});
+
+add({c:'Q06-015',n:'Destilación',tema:'Mezclas · métodos de separación',dif:3,mot:'separa',
+ obj:'Separar líquidos miscibles por diferencia de punto de ebullición y evaluar la pureza del destilado.',comp:[C1,C2,C3],
+ evid:['Relaciona puntos de ebullición y orden de destilación.','Elige la temperatura de corte para obtener un destilado puro.','Interpreta la curva de temperatura.'],
+ teo:'En la <b>destilación</b> se calienta la mezcla; el componente más volátil (menor punto de ebullición) se evapora primero, se condensa y se recoge. Referencias: acetona 56 °C; metanol 64,7 °C; etanol 78,4 °C; agua 100 °C. Cuanto más separados estén los puntos de ebullición, más puro el destilado.',
+ mat:['Matraz','Condensador','Termómetro','Mezclas agua–etanol, agua–metanol, agua–acetona y agua salada'],
+ proc:[{t:'Elige la mezcla agua–etanol y la temperatura de corte.'},{t:'Pulsa ▶ Destilar y mira la curva de temperatura.',a:'calentar'},{t:'Ajusta el corte para que el recolector 1 salga puro.',a:'destilado'},{t:'Logra pureza ≥ 99 % en el recolector 1.',a:'corte_bueno'}],
+ cfg:{modo:'destila',mezclas:[{n:'Agua – etanol',n1:'Etanol',n2:'Agua',b1:78.4,b2:100,d1:0.789,d2:0.998,c1:2.44,c2:4.18,L1:846,L2:2257,nota:'En la realidad agua y etanol forman un azeótropo (≈95,6 % etanol): no se puede pasar de ahí por destilación simple. Este modelo ideal lo ignora.'},{n:'Agua – metanol',n1:'Metanol',n2:'Agua',b1:64.7,b2:100,d1:0.792,d2:0.998,c1:2.53,c2:4.18,L1:1100,L2:2257,nota:'Modelo ideal: sin azeótropo. El metanol es tóxico; en el laboratorio real se manipula con extremo cuidado.'},{n:'Agua – acetona',n1:'Acetona',n2:'Agua',b1:56,b2:100,d1:0.79,d2:0.998,c1:2.17,c2:4.18,L1:501,L2:2257,nota:'Gran diferencia de puntos de ebullición: separación fácil en el modelo.'},{n:'Agua salada (3,5 %)',n1:'Agua',n2:'Sal',b1:100,b2:100,d1:0.998,d2:2.16,c1:4.18,c2:0.85,L1:2257,L2:0,nv:1,nota:'La sal no destila: queda en el matraz y el destilado es agua casi pura.'}]},
+ ana:['¿Por qué sale primero el componente de menor punto de ebullición?','¿Qué pasa con la pureza si el corte es muy alto?'],
+ ev:[MC('Sale primero el líquido con…',['Mayor punto de ebullición','Menor punto de ebullición','Mayor densidad','Mayor color'],1,'Es más volátil.'),MC('Con agua salada, el destilado es…',['Salado','Agua casi pura','Sal','Vapor de sal'],1,'La sal no se evapora.'),MC('Una temperatura de corte demasiado alta…',['Mejora la pureza','Arrastra el otro líquido','No cambia','Detiene el proceso'],1,'Se mezcla el segundo componente.')],
+ conc:'Explica cómo se elige el corte en una destilación.',lim:'Modelo ideal de dos líquidos sin azeótropo y con calor específico constante; la destilación real exige columna de fraccionamiento para mezclas cercanas.'});
+
+add({c:'Q06-016',n:'Conservación de la materia',tema:'Materia · cambios químicos',dif:2,mot:'conserva',
+ obj:'Comprobar que la masa total se conserva en una reacción dentro de un sistema cerrado y explicar la «pérdida» en uno abierto.',comp:[C1,C2,C3],
+ evid:['Compara masas antes y después en sistema cerrado y abierto.','Identifica el gas como producto.','Identifica el reactivo limitante.'],
+ teo:'En una reacción química la masa total se conserva (Lavoisier). NaHCO₃ + CH₃COOH → CH₃COONa + H₂O + CO₂. Si el CO₂ escapa (sistema abierto) la balanza marca menos, pero la masa no «desaparece»: salió como gas. En un sistema cerrado la masa no cambia.',
+ mat:['Matraz','Globo','Bicarbonato de sodio','Vinagre (≈5 % de ácido acético)','Balanza'],
+ proc:[{t:'Elige 5 g de bicarbonato y 60 mL de vinagre en sistema CERRADO y pulsa «Mezclar y pesar».',a:'cerrado'},{t:'Repite en sistema ABIERTO.',a:'abierto'},{t:'Compara las diferencias de masa de ambos ensayos.',a:'comparado'}],
+ cfg:{},
+ ana:['¿A dónde fue la masa que «faltó» en el sistema abierto?','¿Qué reactivo se acabó primero y cómo lo sabes?'],
+ ev:[MC('En el sistema cerrado, la masa total…',['Disminuye','Aumenta','Se conserva','Se duplica'],2,'No entra ni sale materia.'),MC('En el sistema abierto la balanza baja porque…',['La masa se destruye','Escapa CO₂','Se evapora el matraz','Se enfría'],1,'Gas que sale.'),MC('La ley de conservación de la masa es de…',['Newton','Lavoisier','Dalton','Mendeleiev'],1,'Antoine Lavoisier.')],
+ conc:'Explica la conservación de la masa con tus datos.',lim:'No se simula el empuje del aire sobre el globo (error real de centésimas de gramo) ni la solubilidad parcial del CO₂.'});
+
+window.QUI_G6=L;
+})();

@@ -1,0 +1,88 @@
+/* AULA360 — Catálogo profesional de laboratorios de Química (100 laboratorios en 6 etapas).
+   Es parte del laboratorio de Química existente: no crea otro. Guarda el avance en la tabla ya existente lab_practica. */
+window.QUI=(function(){
+const e=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const NOMG={6:'Sexto',7:'Séptimo',8:'Octavo',9:'Noveno',10:'Décimo',11:'Undécimo'},TOT={6:16,7:16,8:17,9:17,10:17,11:17};
+const DIF=['','Básico','Intermedio','Avanzado'],DCOL=['','#16a34a','#f59e0b','#dc2626'];
+const card='background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(15,23,42,.06)';
+let ENV=null,LB=[],ST={g:'6',q:'',tema:'',dif:'',code:null,back:null},PR={},LS=null;
+const MOT={medir:'📏 Medición',particulas:'⚛️ Partículas',curva:'📈 Curva',flota:'🛟 Flotación',clasif:'🧩 Clasificación',separa:'🧪 Separación',conserva:'⚖️ Reacción'};
+const B=(c,t,x='')=>`<button ${x} style="background:${c};color:#fff;padding:8px 13px;border-radius:10px;font-weight:800;font-size:13px">${t}</button>`;
+const lab=c=>LB.find(x=>x.c===c);
+function init(env){ENV=env}
+async function load(){
+  if(!window.QMOT)await loadScript('quimica_motor.js?v=1');
+  if(!LB.length){if(!window.QUI_G6)await loadScript('quimica_g6.js?v=1');LB=[].concat(window.QUI_G6||[])}
+  await progreso()}
+async function progreso(){PR={};try{const r=await ENV.sb.from('lab_practica').select('skill,puntaje,total').eq('user_id',ENV.M.id).eq('lab','quimica');
+  (r.data||[]).forEach(x=>{const p=PR[x.skill]||(PR[x.skill]={best:0,total:x.total,n:0});p.n++;if(x.total&&x.puntaje/x.total>=p.best/(p.total||1)){p.best=x.puntaje;p.total=x.total}})}catch(_){}}
+const estado=c=>{const p=PR[c];if(!p)return LS&&LS.code===c?['En progreso','#2563eb']:['Nuevo','#64748b'];return p.best/p.total>=0.6?['Completado ✅','#16a34a']:['En práctica','#f59e0b']};
+function view(){return ST.code?labView():catView()}
+/* ---------- catálogo ---------- */
+function catView(){const hechos=Object.keys(PR).filter(c=>PR[c].best/PR[c].total>=0.6).length,disp=LB.length;
+  const tabs=Object.keys(TOT).map(g=>{const n=LB.filter(x=>x.g==g).length;return`<button onclick="QUI.g('${g}')" id="qg${g}" style="padding:8px 12px;border-radius:10px;font-weight:800;font-size:13px;border:2px solid ${ST.g==g?'#0d9488':'#e2e8f0'};background:${ST.g==g?'#0d9488':'#fff'};color:${ST.g==g?'#fff':'#334155'}">${NOMG[g]} · ${n}/${TOT[g]}</button>`}).join('');
+  const temas=[...new Set(LB.filter(x=>x.g==ST.g).map(x=>x.tema))];
+  return`<div class="aic-card" style="padding:18px"><button onclick="QUI.volver()" style="font-weight:700;color:#1e63e9">← Laboratorio de Química</button>
+  <div style="margin:10px 0;padding:16px;border-radius:16px;color:#fff;background:linear-gradient(135deg,#0d9488,#0f766e)"><div style="font-size:30px">🧪</div><h2 style="font-weight:800;font-size:21px">Catálogo de 100 laboratorios de Química</h2><p style="opacity:.92;font-size:13px">Sexto a Undécimo · ${disp} disponibles de 100 · Completados por ti: ${hechos}</p><div style="height:8px;background:#ffffff44;border-radius:6px;margin-top:8px"><div style="height:8px;width:${Math.round(hechos)}%;background:#fff;border-radius:6px"></div></div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">${tabs}</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><input id="qs_q" placeholder="🔎 Buscar por nombre, tema o código" value="${e(ST.q)}" oninput="QUI.f()" style="flex:1;min-width:200px;padding:9px;border:1.5px solid #cbd5e1;border-radius:10px"><select id="qs_t" onchange="QUI.f()" style="padding:9px;border:1.5px solid #cbd5e1;border-radius:10px"><option value="">Todos los temas</option>${temas.map(t=>`<option ${ST.tema===t?'selected':''}>${e(t)}</option>`).join('')}</select><select id="qs_d" onchange="QUI.f()" style="padding:9px;border:1.5px solid #cbd5e1;border-radius:10px"><option value="">Toda dificultad</option>${[1,2,3].map(d=>`<option value="${d}" ${ST.dif==d?'selected':''}>${DIF[d]}</option>`).join('')}</select></div>
+  <div id="qc_grid">${grid()}</div></div>`}
+function grid(){const q=ST.q.toLowerCase().trim();const xs=LB.filter(x=>x.g==ST.g&&(!ST.tema||x.tema===ST.tema)&&(!ST.dif||x.dif==ST.dif)&&(!q||(x.n+' '+x.tema+' '+x.c).toLowerCase().includes(q)));
+  const falta=TOT[ST.g]-LB.filter(x=>x.g==ST.g).length;
+  return(xs.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px">${xs.map(x=>{const s=estado(x.c);return`<div style="${card};cursor:pointer;border-top:5px solid ${DCOL[x.dif]}" onclick="QUI.abrir('${x.c}')"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#64748b"><span>${x.c}</span><span style="color:${s[1]}">${s[0]}</span></div><div style="font-weight:800;margin:6px 0 2px">${e(x.n)}</div><div style="font-size:12px;color:#64748b">${e(x.tema)}</div><div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px"><span style="font-weight:800;color:${DCOL[x.dif]}">● ${DIF[x.dif]}</span><span>${MOT[x.mot]||''}</span></div></div>`}).join('')}</div>`:'<p style="color:#64748b">No hay laboratorios con esos filtros.</p>')+(falta>0&&!q&&!ST.tema&&!ST.dif?`<p style="font-size:12px;color:#64748b;margin-top:12px">🔜 Faltan ${falta} laboratorios de ${NOMG[ST.g]}; se publican en las etapas siguientes del proyecto.</p>`:'')}
+/* ---------- laboratorio ---------- */
+function abrir(c,back){ST.code=c;ST.back=back||ST.back;const L=lab(c);LS={code:c,modo:'guiado',tab:'exp',acts:{},manual:{},obs:[],started:false,h:null,ev:null,notas:{}};try{LS.notas=JSON.parse(localStorage.getItem('qn_'+c)||'{}')}catch(_){}ENV.render();setTimeout(()=>{if(document.getElementById('qu_box'))paneShow('exp')},0)}
+function labView(){const L=lab(ST.code);if(!L)return'<div class="aic-card" style="padding:18px">Laboratorio no encontrado.</div>';
+  const s=estado(L.c),tb=(k,t)=>`<button id="qt_${k}" onclick="QUI.tab('${k}')" style="padding:8px 12px;border-radius:10px 10px 0 0;font-weight:800;font-size:13px;background:#f1f5f9;color:#334155">${t}</button>`;
+  return`<div class="aic-card" style="padding:18px"><button onclick="QUI.cerrar()" style="font-weight:700;color:#1e63e9">← ${ST.back==='exp'?'Volver a la experiencia':'Catálogo de Química'}</button>
+  <div style="margin:10px 0;padding:14px;border-radius:16px;color:#fff;background:linear-gradient(135deg,#0d9488,#0f766e)"><div style="font-size:12px;font-weight:800;opacity:.9">${L.c} · ${NOMG[L.g]} · ${e(L.tema)} · ${DIF[L.dif]}</div><h2 style="font-weight:800;font-size:21px">${e(L.n)}</h2><p style="font-size:13px;opacity:.95">${e(L.obj)}</p><div style="font-size:12px;font-weight:800;margin-top:4px">Estado: ${s[0]}</div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${B(LS.modo==='guiado'?'#0d9488':'#64748b','🧭 Modo guiado','onclick="QUI.modo(\'guiado\')" id="qm_g"')}${B(LS.modo==='libre'?'#0d9488':'#64748b','🧪 Modo libre','onclick="QUI.modo(\'libre\')" id="qm_l"')}${ENV.isProf()?B('#16a34a','📌 Asignar a mis cursos','onclick="QUI.asignar()"'):''}</div>
+  <div style="display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid #e2e8f0">${tb('exp','🔬 Experimento')}${tb('teo','📖 Teoría')}${tb('ev','📝 Evaluación')}${tb('fic','📋 Ficha')}</div>
+  <div id="qp_exp" style="padding-top:12px">${expPane(L)}</div><div id="qp_teo" style="display:none;padding-top:12px">${teoPane(L)}</div><div id="qp_ev" style="display:none;padding-top:12px">${evPane(L)}</div><div id="qp_fic" style="display:none;padding-top:12px">${ficPane(L)}</div></div>`}
+function expPane(L){return`<div style="${card};background:#f0fdfa;margin-bottom:12px"><b>🎬 Escenario.</b> ${e(L.obj)} <span style="color:#64748b">Instrumentos y materiales: ${L.mat.map(e).join(' · ')}.</span></div>
+  <div id="qu_steps"></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${B('#16a34a','▶ Iniciar experimento','onclick="QUI.inicia()" id="qb_i"')}${B('#f59e0b','⏸ Pausar','onclick="QUI.pausa()"')}${B('#64748b','⟲ Reiniciar','onclick="QUI.reinicia()"')}</div>
+  <div id="qu_box" style="min-height:60px"><p style="color:#64748b;font-size:13px">Pulsa «Iniciar experimento» para abrir la mesa de trabajo.</p></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px"><div style="${card}"><b>👁️ Observaciones (tú escribes)</b><textarea id="qu_obs" rows="4" oninput="QUI.nota('obs',this.value)" placeholder="¿Qué ves? ¿Qué cambió? ¿Qué esperabas?" style="width:100%;margin-top:6px;padding:8px;border:1.5px solid #cbd5e1;border-radius:10px">${e(LS.notas.obs||'')}</textarea></div>
+  <div style="${card}"><b>📊 Resultados (se registran solos)</b><div id="qu_res" style="font-size:13px;margin-top:6px;max-height:190px;overflow:auto"></div></div></div>`}
+function stepsHtml(L){if(LS.modo==='libre')return`<div style="${card};background:#faf5ff;font-size:13px">🧪 <b>Modo libre:</b> explora sin pasos. Al terminar, haz la evaluación.</div>`;
+  return`<div style="${card}"><b>🧭 Procedimiento guiado</b><ol style="margin:8px 0 0;padding-left:0;list-style:none">${L.proc.map((p,i)=>{const ok=pasoOk(p,i);return`<li style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13px;color:${ok?'#16a34a':'#334155'}"><span style="font-weight:800">${ok?'✅':'⬜'}</span><span>${i+1}. ${e(p.t)}${p.a?'':` <a href="javascript:void(0)" onclick="QUI.manual(${i})" style="color:#1e63e9;font-weight:700">[${LS.manual[i]?'desmarcar':'marcar hecho'}]</a>`}</span></li>`}).join('')}</ol></div>`}
+const pasoOk=(p,i)=>p.a?(LS.acts[p.a]||0)>=(p.n||1):!!LS.manual[i];
+function pintaPasos(){const b=document.getElementById('qu_steps');if(b)b.innerHTML=stepsHtml(lab(LS.code))}
+function pintaRes(){const b=document.getElementById('qu_res');if(!b)return;b.innerHTML=LS.obs.length?LS.obs.slice(-30).map((o,i)=>`<div style="padding:3px 0;border-top:${i?'1px solid #e2e8f0':'0'}">• ${e(o)}</div>`).join(''):'<span style="color:#64748b">Aún sin resultados. Haz el experimento.</span>'}
+const ctx=()=>({act(n){if(!LS)return;const first=!(LS.acts[n]);LS.acts[n]=(LS.acts[n]||0)+1;const L=lab(LS.code);if(L&&L.proc.some(p=>p.a===n))pintaPasos()},obs(t){if(!LS)return;if(LS.obs[LS.obs.length-1]!==t)LS.obs.push(t);pintaRes()}});
+function inicia(){const L=lab(LS.code),box=document.getElementById('qu_box');if(!box||!window.QMOT)return;box.innerHTML='';LS.started=true;LS.h=null;
+  try{LS.h=QMOT[L.mot==='separa'?'separa':L.mot](box,L.cfg,ctx())}catch(er){box.innerHTML='<p style="color:#b91c1c">No se pudo abrir el experimento: '+e(er.message)+'</p>'}
+  pintaPasos();pintaRes();const b=document.getElementById('qb_i');if(b)b.textContent='▶ Reabrir'}
+function pausa(){try{LS.h&&LS.h.pause&&LS.h.pause()}catch(_){}}
+function reinicia(){LS.acts={};LS.manual={};LS.obs=[];try{LS.h&&LS.h.reset&&LS.h.reset()}catch(_){}pintaPasos();pintaRes()}
+function paneShow(k){LS.tab=k;['exp','teo','ev','fic'].forEach(t=>{const p=document.getElementById('qp_'+t),b=document.getElementById('qt_'+t);if(p)p.style.display=t===k?'block':'none';if(b){b.style.background=t===k?'#0d9488':'#f1f5f9';b.style.color=t===k?'#fff':'#334155'}});if(k==='exp'){pintaPasos();pintaRes()}}
+function modo(m){LS.modo=m;const g=document.getElementById('qm_g'),l=document.getElementById('qm_l');if(g)g.style.background=m==='guiado'?'#0d9488':'#64748b';if(l)l.style.background=m==='libre'?'#0d9488':'#64748b';pintaPasos()}
+function nota(k,v){LS.notas[k]=v;try{localStorage.setItem('qn_'+LS.code,JSON.stringify(LS.notas))}catch(_){}}
+/* ---------- teoría y ficha ---------- */
+const lst=a=>'<ul style="margin:4px 0 0 18px;font-size:13px">'+a.map(x=>`<li>${e(x)}</li>`).join('')+'</ul>';
+function teoPane(L){return`<div style="${card}"><h3 style="font-weight:800">📖 Teoría</h3><div style="font-size:14px;line-height:1.55;margin-top:6px">${L.teo}</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:12px"><div style="${card}"><b>🎯 Competencias científicas</b>${lst(L.comp)}<b style="display:block;margin-top:8px">✅ Evidencias de aprendizaje</b>${lst(L.evid)}</div><div style="${card}"><b>🧰 Materiales</b>${lst(L.mat)}<b style="display:block;margin-top:8px">⚠️ Límites del modelo</b><p style="font-size:13px;margin-top:4px">${e(L.lim)}</p></div></div>`}
+function ficPane(L){const R=[['Código',L.c],['Nombre',L.n],['Grado',NOMG[L.g]],['Área','Ciencias Naturales · Química'],['Tema',L.tema],['Dificultad',DIF[L.dif]],['Objetivo',L.obj],['Competencias científicas',L.comp.join('; ')],['DBA',L.dba],['Estándar',L.est],['Evidencias de aprendizaje',L.evid.join(' · ')],['Teoría','(pestaña Teoría)'],['Materiales',L.mat.join(', ')],['Procedimiento',L.proc.map((p,i)=>(i+1)+'. '+p.t).join(' ')],['Experimento interactivo','Motor «'+L.mot+'» (pestaña Experimento)'],['Registro de observaciones','Cuadro de observaciones (pestaña Experimento)'],['Resultados','Se registran automáticamente al experimentar'],['Análisis',L.ana.join(' · ')],['Preguntas de interpretación',L.ev.length+' preguntas (pestaña Evaluación)'],['Conclusión',L.conc],['Evaluación','Evaluación automática con retroalimentación'],['Retroalimentación','Por pregunta y global']];
+  return`<div style="${card}"><table style="width:100%;border-collapse:collapse;font-size:13px">${R.map((r,i)=>`<tr style="border-top:${i?'1px solid #e2e8f0':'0'}"><td style="padding:6px;font-weight:800;width:30%;vertical-align:top">${i+1}. ${e(r[0])}</td><td style="padding:6px">${e(r[1])}</td></tr>`).join('')}</table></div>`}
+/* ---------- evaluación ---------- */
+function evPane(L){return`<div style="${card}"><h3 style="font-weight:800">📝 Preguntas de interpretación</h3>${L.ev.map((q,i)=>`<div style="margin-top:12px"><b>${i+1}. ${e(q.q)}</b>${q.o.map((o,j)=>`<label style="display:block;padding:4px 0;font-size:14px"><input type="radio" name="qe${i}" value="${j}"> ${e(o)}</label>`).join('')}<div id="qf${i}" style="font-size:13px;font-weight:700"></div></div>`).join('')}
+  <div style="margin-top:12px">${B('#16a34a','✔ Calificar mi evaluación','onclick="QUI.califica()"')}</div><div id="qe_res" style="margin-top:10px;font-weight:800"></div></div>
+  <div style="${card};margin-top:12px"><h3 style="font-weight:800">🧠 Análisis y conclusión</h3>${L.ana.map((a,i)=>`<label style="display:block;font-size:13px;font-weight:700;margin-top:8px">${e(a)}</label><textarea rows="2" oninput="QUI.nota('a${i}',this.value)" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:10px">${e(LS.notas['a'+i]||'')}</textarea>`).join('')}
+  <label style="display:block;font-size:13px;font-weight:800;margin-top:8px">Conclusión: ${e(L.conc)}</label><textarea rows="3" oninput="QUI.nota('conc',this.value)" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:10px">${e(LS.notas.conc||'')}</textarea><div style="margin-top:8px">${B('#475569','📄 Descargar mi informe','onclick="QUI.informe()"')}</div></div>`}
+async function califica(){const L=lab(LS.code);let ok=0,fal=0;L.ev.forEach((q,i)=>{const r=document.querySelector('input[name="qe'+i+'"]:checked'),f=document.getElementById('qf'+i);if(!r){fal++;f.style.color='#b45309';f.textContent='Falta responder.';return}const c=+r.value===q.ok;if(c)ok++;f.style.color=c?'#16a34a':'#dc2626';f.textContent=(c?'✅ Correcto. ':'❌ La respuesta correcta es «'+q.o[q.ok]+'». ')+q.fb});
+  const R=document.getElementById('qe_res');if(fal){R.style.color='#b45309';R.textContent='Responde todas las preguntas para calificar.';return}
+  const p=ok/L.ev.length,msg=p>=0.8?'🌟 Excelente: dominas el tema.':p>=0.6?'👍 Bien. Repasa las preguntas falladas en la teoría.':'📚 Aún no: relee la teoría, repite el experimento y vuelve a intentarlo.';
+  R.style.color=p>=0.6?'#16a34a':'#dc2626';R.textContent='Resultado: '+ok+' de '+L.ev.length+' ('+Math.round(p*100)+' %). '+msg;
+  try{await ENV.sb.from('lab_practica').insert({colegio_id:ENV.M.colegio_id,lab:'quimica',skill:L.c,nivel:'Q'+('0'+L.g).slice(-2),puntaje:ok,total:L.ev.length});await progreso()}catch(_){}}
+function informe(){const L=lab(LS.code),n=LS.notas;const t=[L.c+' · '+L.n,NOMG[L.g]+' · '+L.tema,'','OBJETIVO: '+L.obj,'','OBSERVACIONES:',n.obs||'(sin escribir)','','RESULTADOS REGISTRADOS:',LS.obs.join('\n')||'(ninguno)','','ANÁLISIS:'].concat(L.ana.map((a,i)=>a+'\n'+(n['a'+i]||'(sin responder)'))).concat(['','CONCLUSIÓN:',n.conc||'(sin escribir)']).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain;charset=utf-8'}));a.download=L.c+'_informe.txt';document.body.appendChild(a);a.click();a.remove()}
+function filt(){ST.q=document.getElementById('qs_q').value;ST.tema=document.getElementById('qs_t').value;ST.dif=document.getElementById('qs_d').value;document.getElementById('qc_grid').innerHTML=grid()}
+return{init,load,view,abrir,
+  g(g){ST.g=g;ST.tema='';ST.dif='';ST.q='';ST.code=null;ENV.render()},f:filt,tab:paneShow,modo,nota,inicia,pausa,reinicia,califica,informe,
+  manual(i){LS.manual[i]=!LS.manual[i];pintaPasos()},
+  cerrar(){ST.code=null;if(LS&&LS.h&&LS.h.pause)try{LS.h.pause()}catch(_){}LS=null;if(ST.back==='exp'){ST.back=null;ENV.volver(true)}else ENV.render()},
+  volver(){ST.code=null;ST.back=null;ENV.volver(false)},
+  asignar(){ENV.assign(ST.code)},
+  info:c=>{const L=lab(c);return L?{t:L.n,d:L.obj,comp:L.comp.join('; ')}:null},
+  has:c=>!!lab(c)};
+})();
