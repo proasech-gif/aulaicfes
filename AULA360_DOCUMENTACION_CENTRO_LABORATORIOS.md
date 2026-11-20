@@ -91,3 +91,6 @@ Respaldo: BACKUP_zip/labs.js.pre_q100.
 
 ## Acceso gratis por zona (auditor)
 Tabla `zonas_gratis`; funciones `colegio_gratis`, `hay_zona_gratis`; `_acceso_email` y `acceso_vigente` actualizadas. Panel: Auditor → Suscripciones → «🎁 Acceso gratis por zona». Respaldo: BACKUP_zip/suscripcion_admin.js.pre_zonas.
+
+## Auditor · Datos Saber 11 · «Subir resultados Saber de un año»
+En Auditor → «📥 Datos Saber 11»: elegir año, elegir Excel (formato ICFES «Resultados agregados»), vista previa y guardar; lista de años cargados con botón ✕ para borrar un periodo; botón de plantilla Excel. Funciones nuevas en la base: saber_periodos(), saber_borrar_periodo(). Respaldo: BACKUP_zip/auditor.js.pre_anio.

@@ -8,6 +8,7 @@ const fh=d=>d?new Date(d).toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'
 async function cargar(){
   if(Z.sub==='panel'||!Z.r){const r=await sb.rpc('auditor_resumen');if(r.error)throw r.error;Z.r=r.data}
   if(Z.sub==='salud'){const r=await sb.rpc('auditor_salud');if(r.error)throw r.error;Z.salud=r.data||[]}
+  if(Z.sub==='icfes'){try{const r=await sb.rpc('saber_periodos');Z.ic.lista=r.error?null:(r.data||[])}catch(_){Z.ic.lista=null}}
   if(Z.sub==='susc'){await loadScript('suscripcion_admin.js?v=2');await SUBA.load()}
   if(Z.sub==='errores'){const r=await sb.from('errores_cliente').select('*').order('created_at',{ascending:false}).limit(200);if(r.error)throw r.error;Z.errs=r.data||[]}
   if(Z.sub==='informe'||Z.sub==='panel'){const r=await sb.from('soporte_reportes').select('*').order('created_at',{ascending:false}).limit(300);if(!r.error)Z.rep=r.data||[]}
@@ -185,9 +186,45 @@ async function cargarZonas(files){
     Z.ic.log=['✅ '+f.name+': '+ok+' colegios con zona guardada']
   }catch(x){Z.ic.log=['⚠️ '+(x.message||x)]}
   Z.ic.busy=false;render()}
+/* ---- Subir resultados de un año (con vista previa) ---- */
+const NEED=['CODINST','NOMBREINSTITUCION','NOMBREMUNICIPIO','DEPARTAMENTO','NATURALEZA','EVALUADO','PROMLECTURACRITICA','PROMMATEMATICA','PROMSOCIALESYCIUDADANAS','PROMCIENCIASNATURALES','PROMINGLES'];
+async function anioLeer(files){const f=files&&files[0];if(!f||Z.ic.busy)return;Z.ic.anio=+(document.getElementById('an_a')||{}).value||new Date().getFullYear();Z.ic.ap=(document.getElementById('an_c')||{}).value||'3';Z.ic.busy=true;Z.ic.prev=null;Z.ic.log=['⏳ '+f.name+': leyendo…'];render();
+  try{if(typeof XLSX==='undefined')await loadScript(LIB.xlsx);
+    const anio=Z.ic.anio,ap=Z.ic.ap;
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const A=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const hi=A.findIndex(r=>String(r[0]).trim()==='CODINST');if(hi<0)throw new Error('No encontré la columna CODINST en la primera hoja. Usa el Excel «Resultados agregados Saber 11» del ICFES o descarga la plantilla.');
+    const H=A[hi].map(c=>String(c).trim()),ix=n=>H.indexOf(n),falta=NEED.filter(n=>ix(n)<0);if(falta.length)throw new Error('Faltan columnas: '+falta.join(', '));
+    const por={},ver={};let sinPer=0;
+    for(const r of A.slice(hi+1)){if(!r[0])continue;let per=ix('PERIODO')>=0?String(r[ix('PERIODO')]).trim():'';
+      if(!/^\d{5}$/.test(per)){per=anio+ap;sinPer++}
+      ver[per]=(ver[per]||0)+1;if(String(per).slice(0,4)!==String(anio))continue;
+      (por[per]=por[per]||[]).push([String(r[0]),ix('CODIGODANE_SEDE')>=0?String(r[ix('CODIGODANE_SEDE')]):'',r[ix('NOMBREINSTITUCION')],r[ix('NOMBREMUNICIPIO')],r[ix('DEPARTAMENTO')],r[ix('NATURALEZA')],r[ix('EVALUADO')],r[ix('PROMLECTURACRITICA')],r[ix('PROMMATEMATICA')],r[ix('PROMSOCIALESYCIUDADANAS')],r[ix('PROMCIENCIASNATURALES')],r[ix('PROMINGLES')]])}
+    if(!Object.keys(por).length)throw new Error('El archivo no trae datos del año '+anio+'. Trae: '+(Object.keys(ver).map(p=>p+' ('+ver[p]+' filas)').join(', ')||'ninguna fila válida')+'.');
+    Z.ic.prev={archivo:f.name,por,sinPer};Z.ic.log=[]}
+  catch(x){Z.ic.log=['⚠️ '+(x.message||x)]}
+  Z.ic.busy=false;render()}
+async function anioGuardar(){const pv=Z.ic.prev;if(!pv||Z.ic.busy)return;Z.ic.busy=true;Z.ic.log=[];render();
+  try{for(const p of Object.keys(pv.por)){logI('⏳ Guardando '+p+'…');const d=await enviarPeriodo(p,pv.por[p]);Z.ic.log[Z.ic.log.length-1]='✅ '+p+': '+d.colegios+' colegios guardados'+(d.sinMapa?' ('+d.sinMapa+' sin código conocido)':'')}
+    Z.ic.prev=null;const r=await sb.rpc('saber_periodos');Z.ic.lista=r.error?null:(r.data||[])}
+  catch(x){Z.ic.log.push('⚠️ '+(x.message||x))}
+  Z.ic.busy=false;render()}
+async function anioBorrar(p){if(!confirm('¿Borrar todos los datos del periodo '+p+'? Podrás volver a subirlos.'))return;
+  try{const r=await sb.rpc('saber_borrar_periodo',{p_periodo:p});if(r.error)throw r.error;toast('🗑','Periodo borrado',p+': '+r.data+' colegios');const l=await sb.rpc('saber_periodos');Z.ic.lista=l.error?null:(l.data||[]);render()}catch(x){err(x)}}
+async function anioPlantilla(){try{if(typeof XLSX==='undefined')await loadScript(LIB.xlsx);const hd=NEED.concat(['PERIODO']);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hd,['000000','COLEGIO EJEMPLO','BOGOTA D.C.','BOGOTA D.C.','OFICIAL',50,55,56,52,54,50,'20263']]),'Resultados');XLSX.writeFile(wb,'plantilla_saber_por_anio.xlsx')}catch(x){err(x)}}
+function vAnio(){const ic=Z.ic,yr=new Date().getFullYear(),anios=[];for(let a=yr+1;a>=2014;a--)anios.push(a);const pv=ic.prev;
+  return`<div style="border:2px solid #1e63e9;border-radius:12px;padding:14px;background:#f0f6ff"><b style="font-size:15px">📅 Subir resultados Saber de un año (Excel)</b>
+   <p style="font-size:12px;color:#64748b;margin:4px 0 8px">1) Elige el año. 2) Elige el Excel. 3) Revisa la vista previa y pulsa «Guardar». Si el año ya estaba cargado, se reemplaza.</p>
+   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+    <label style="font-size:12px;font-weight:700">Año<select id="an_a" style="display:block;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;background:#fff">${anios.map(a=>`<option ${a===(ic.anio||yr)?'selected':''}>${a}</option>`).join('')}</select></label>
+    <label style="font-size:12px;font-weight:700">Aplicación (si el Excel no trae PERIODO)<select id="an_c" style="display:block;margin-top:3px;border:1.5px solid #cbd5e1;border-radius:9px;padding:8px;background:#fff">${['1','2','3','4'].map(a=>`<option ${a===(ic.ap||'3')?'selected':''}>${a}</option>`).join('')}</select></label>
+    <label style="background:#1e63e9;color:#fff;padding:10px 16px;border-radius:10px;font-weight:800;cursor:pointer">📤 Elegir Excel<input type="file" accept=".xlsx,.xls" ${ic.busy?'disabled':''} onchange="AUD.anioLeer(this.files)" style="display:none"></label>
+    <button onclick="AUD.anioPlantilla()" style="background:#475569;color:#fff;padding:10px 14px;border-radius:10px;font-weight:800">⬇️ Plantilla</button></div>
+   ${pv?`<div style="margin-top:10px;background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:10px;font-size:13px"><b>Vista previa de «${e(pv.archivo)}»</b>${Object.keys(pv.por).map(p=>`<div>• Periodo <b>${p}</b>: ${pv.por[p].length} filas</div>`).join('')}${pv.sinPer?`<div style="color:#92400e">${pv.sinPer} filas no traían periodo; se usó ${ic.anio}${ic.ap}.</div>`:''}<button onclick="AUD.anioGuardar()" ${ic.busy?'disabled':''} style="margin-top:8px;background:#16a34a;color:#fff;padding:9px 16px;border-radius:10px;font-weight:800">💾 Guardar estos datos</button></div>`:''}
+   <div style="margin-top:12px"><b style="font-size:13px">Años ya cargados</b>${ic.lista?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${ic.lista.length?ic.lista.map(x=>`<span style="background:#fff;border:1px solid #cbd5e1;border-radius:999px;padding:4px 10px;font-size:12px"><b>${e(x.periodo)}</b> · ${x.colegios} colegios <button onclick="AUD.anioBorrar('${e(x.periodo)}')" title="Borrar este periodo" style="color:#dc2626">✕</button></span>`).join(''):'<span style="font-size:12px;color:#64748b">Aún no hay años cargados.</span>'}</div>`:'<div style="font-size:12px;color:#64748b">No se pudo leer la lista.</div>'}</div></div>`}
 function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="font-weight:800;font-size:17px">📥 Datos Saber 11 del ICFES</h3>
   <p style="font-size:13px;color:#64748b;margin:4px 0 12px">Estos datos alimentan «Crear análisis de mi institución» para todos los colegios. Se cargan una sola vez por año.</p>
   <div style="display:grid;gap:14px">
+   ${vAnio()}
    <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px"><b>1) Cargar los años que ya vienen incluidos (2021, 2023, 2024 y 2025)</b>
     <div style="margin-top:8px"><button onclick="AUD.cargarIncluidos()" ${Z.ic.busy?'disabled':''} style="background:#1e63e9;color:#fff;padding:10px 16px;border-radius:10px;font-weight:800">${Z.ic.busy?'⏳ Cargando…':'📥 Cargar ahora'}</button></div></div>
    <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px"><b>2) Cargar un año nuevo (por ejemplo 2026)</b>
@@ -200,7 +237,7 @@ function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="f
   </div>
   ${Z.ic.log.length?`<div style="margin-top:12px;font-size:13px;line-height:1.7">${Z.ic.log.map(l=>'<div>'+e(l)+'</div>').join('')}</div>`:''}</div>`}
 function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='colegios'?vColegios():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):Z.sub==='icfes'?vIcfes():vSalud())}
-const api={mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,cargarZonas,load,view,revisar,
+const api={anioLeer,anioGuardar,anioBorrar,anioPlantilla,mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,cargarZonas,load,view,revisar,
   filtro(v){Z.filtro=v;render()},
   async estado(id,est){const rsp=(document.getElementById('rsp_'+id)||{}).value||null;const r=await sb.from('soporte_reportes').update({estado:est,respuesta:rsp,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)return err(r.error);toast('✅','Reporte actualizado','');await cargar();render()},
   async entrarRep(id,nom,rol){const m={Docente:'prof',Rector:'rector',Coordinador:'coordinador'};await loadScript('vercomo.js?v=6');return VC.entrar(id,nom,m[rol]||'prof','aud')},
