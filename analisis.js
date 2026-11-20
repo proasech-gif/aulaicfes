@@ -133,7 +133,7 @@ async function prep(){if(!window.INF)await loadScript('informes.js?v=2');if(!win
 const by=(arr,a)=>arr.find(x=>x.anio===a)||{};
 function slope(vs,an){const p=an.map((a,i)=>[a,vs[i]]).filter(x=>x[1]!=null);if(p.length<2)return null;const n=p.length,sx=p.reduce((s,x)=>s+x[0],0),sy=p.reduce((s,x)=>s+x[1],0),sxy=p.reduce((s,x)=>s+x[0]*x[1],0),sxx=p.reduce((s,x)=>s+x[0]*x[0],0);const d=n*sxx-sx*sx;if(!d)return null;const m=(n*sxy-sx*sy)/d;return{m,b:(sy-m*sx)/n}}
 function ctxDoc(){const L=(typeof LH==='function')?LH():{l1:'',l2:'',l3:'',logo:''};
-  return{emit:new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}),membrete:{l1:L.l1||M.school_name||'',l2:L.l2||'',l3:L.l3||'',logo:L.logo&&typeof LOGO!=='undefined'?LOGO+encodeURI(L.logo):''},acc:n=>{try{return INF._u.acc(n)}catch(x){return[]}},sec:Z.sec,obs:Z.obs,horizontes:Z.hor}}
+  return{emit:new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}),membrete:{l1:L.l1||(M.is_admin&&Z.colNombre?Z.colNombre:M.school_name)||'',l2:L.l2||'',l3:L.l3||'',logo:L.logo&&typeof LOGO!=='undefined'?LOGO+encodeURI(L.logo):''},acc:n=>{try{return INF._u.acc(n)}catch(x){return[]}},sec:Z.sec,obs:Z.obs,horizontes:Z.hor}}
 function informe(r){Z.out=ANAM.build(r,ctxDoc());return Z.out.doc}
 function rehacer(){if(!Z.rep)return;Z.html=informe(Z.rep);const f=document.getElementById('ana-if');if(f)f.srcdoc=Z.html;R()}
 function setSec(k,on){Z.sec[k]=on;Z.html=informe(Z.rep)}

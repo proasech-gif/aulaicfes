@@ -9,6 +9,7 @@ async function cargar(){
   if(Z.sub==='panel'||!Z.r){const r=await sb.rpc('auditor_resumen');if(r.error)throw r.error;Z.r=r.data}
   if(Z.sub==='salud'){const r=await sb.rpc('auditor_salud');if(r.error)throw r.error;Z.salud=r.data||[]}
   if(Z.sub==='icfes'){try{const r=await sb.rpc('saber_periodos');Z.ic.lista=r.error?null:(r.data||[])}catch(_){Z.ic.lista=null}}
+  if(Z.sub==='informecol'){await loadScript('analisis.js?v=6');await ANA.load()}
   if(Z.sub==='susc'){await loadScript('suscripcion_admin.js?v=2');await SUBA.load()}
   if(Z.sub==='errores'){const r=await sb.from('errores_cliente').select('*').order('created_at',{ascending:false}).limit(200);if(r.error)throw r.error;Z.errs=r.data||[]}
   if(Z.sub==='informe'||Z.sub==='panel'){const r=await sb.from('soporte_reportes').select('*').order('created_at',{ascending:false}).limit(300);if(!r.error)Z.rep=r.data||[]}
@@ -21,7 +22,7 @@ async function cargar(){
 async function load(){await cargar()}
 const kpi=(t,v,c,sub)=>`<div class="aic-kpi"><div><small>${t}</small><strong>${v}</strong>${sub?`<span>${sub}</span>`:''}</div></div>`;
 function tabs(){
-  const T=[['panel','📊 Panel general'],['colegios','🏫 Colegios y accesos'],['cuentas','👥 Cuentas'],['salud','🩺 Salud de la plataforma'],['revision','🧰 Revisión de funcionamiento'],['errores','🐞 Errores detectados'],['susc','💳 Suscripciones'],['icfes','📥 Datos Saber 11'],['informe','📨 Informe cliente'+((Z.rep||[]).filter(x=>x.estado==='nuevo').length?' ('+(Z.rep||[]).filter(x=>x.estado==='nuevo').length+')':'')]];
+  const T=[['panel','📊 Panel general'],['colegios','🏫 Colegios y accesos'],['cuentas','👥 Cuentas'],['salud','🩺 Salud de la plataforma'],['revision','🧰 Revisión de funcionamiento'],['errores','🐞 Errores detectados'],['susc','💳 Suscripciones'],['icfes','📥 Datos Saber 11'],['informecol','📄 Informe de un colegio'],['informe','📨 Informe cliente'+((Z.rep||[]).filter(x=>x.estado==='nuevo').length?' ('+(Z.rep||[]).filter(x=>x.estado==='nuevo').length+')':'')]];
   return`<nav class="aic-tabs" style="margin-bottom:14px">${T.map(([k,l])=>`<button onclick="AUD.ir('${k}')" class="${Z.sub===k?'on':''}">${l}</button>`).join('')}</nav>`}
 function vPanel(){
   const d=Z.r;if(!d)return'<div class="aic-card" style="padding:16px">Cargando…</div>';
@@ -236,7 +237,8 @@ function vIcfes(){return`<div class="aic-card" style="padding:18px"><h3 style="f
    ${vUna()}
   </div>
   ${Z.ic.log.length?`<div style="margin-top:12px;font-size:13px;line-height:1.7">${Z.ic.log.map(l=>'<div>'+e(l)+'</div>').join('')}</div>`:''}</div>`}
-function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='colegios'?vColegios():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):Z.sub==='icfes'?vIcfes():vSalud())}
+function vInfCol(){return`<div class="aic-card" style="padding:14px;margin-bottom:12px"><b>📄 Informe de un colegio</b><p style="font-size:12px;color:#64748b;margin-top:4px">Como auditor puedes crear el informe de cualquier colegio del país: elige el departamento, el municipio y el colegio, y genera el análisis con los datos Saber 11 cargados.</p></div>${window.ANA?ANA.view():'<p>Cargando…</p>'}`}
+function view(){return tabs()+(Z.sub==='panel'?vPanel():Z.sub==='colegios'?vColegios():Z.sub==='cuentas'?vCuentas():Z.sub==='revision'?vRevision():Z.sub==='errores'?vErrores():Z.sub==='informe'?vInforme():Z.sub==='susc'?(window.SUBA?SUBA.view():''):Z.sub==='icfes'?vIcfes():Z.sub==='informecol'?vInfCol():vSalud())}
 const api={anioLeer,anioGuardar,anioBorrar,anioPlantilla,mDep,mMun,mCol,mSet,mGuardar,cargarIncluidos,cargarExcel,cargarZonas,load,view,revisar,
   filtro(v){Z.filtro=v;render()},
   async estado(id,est){const rsp=(document.getElementById('rsp_'+id)||{}).value||null;const r=await sb.from('soporte_reportes').update({estado:est,respuesta:rsp,updated_at:new Date().toISOString()}).eq('id',id);if(r.error)return err(r.error);toast('✅','Reporte actualizado','');await cargar();render()},

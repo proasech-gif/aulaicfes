@@ -94,3 +94,6 @@ Tabla `zonas_gratis`; funciones `colegio_gratis`, `hay_zona_gratis`; `_acceso_em
 
 ## Auditor · Datos Saber 11 · «Subir resultados Saber de un año»
 En Auditor → «📥 Datos Saber 11»: elegir año, elegir Excel (formato ICFES «Resultados agregados»), vista previa y guardar; lista de años cargados con botón ✕ para borrar un periodo; botón de plantilla Excel. Funciones nuevas en la base: saber_periodos(), saber_borrar_periodo(). Respaldo: BACKUP_zip/auditor.js.pre_anio.
+
+## Auditor · Informe de un colegio
+Pestaña «📄 Informe de un colegio» del auditor: reutiliza el análisis Saber (analisis.js) eligiendo departamento, municipio y colegio; el membrete usa el nombre del colegio elegido. Respaldo: BACKUP_zip/analisis.js.pre_auditor.
