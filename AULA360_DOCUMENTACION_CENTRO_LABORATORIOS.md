@@ -113,3 +113,8 @@ saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y 
 - Docente: «Centro de evaluación» → «Crear examen con IA» (pantalla de inicio con diagnóstico, examen de clase, periodo, simulacro, recuperación, taller con IA).
 - Datos de prueba en I.E. Prueba (id 2084, marcada permanente): 20 docentes (docente01..20.prueba@aula360.test), estudiantes est{grado}-{grupo}-{n}@aula360.test, cursos 6° a 11° (grupos 01 y 02), listado 5° a 11°, asistencia, notas y datos de horario sin generar. Clave Prueba2026*.
 - Limitación de la plataforma: cursos y cuentas de estudiante solo existen de 6° a 11° (restricción de la base de datos).
+
+## 21-nov (2): colegio de prueba completo y auditoría por «Ver lo que ha hecho»
+- Rector/coordinador: en Personal, Coordinadores y Estudiantes el botón «Ver lo que ha hecho» abre Auditoría (revision.js v4) con la persona elegida; ya no entra a su entorno. Modo Estudiantes con RPC rev_estudiantes / rev_actividad_est (notas, asistencia, trabajos, laboratorios, observador).
+- I.E. Prueba (id 2084): 20 docentes con planeadores, observador, ficha, plan de área, simulacros, tareas, exámenes de clase y recuperación, trabajos, talleres, clases preparadas, laboratorios, impresiones, asistencia y reuniones; coordinador y rector con reuniones, simulacros Saber, documentos y mensajes; estudiantes con resultados.
+- Horario 2026 publicado: 160 de 160 horas, sin choques de docente ni de grupo (generado con un script de la base de datos, no con el botón de la plataforma).

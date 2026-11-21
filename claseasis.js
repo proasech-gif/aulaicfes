@@ -2,7 +2,7 @@
    y queda guardada la fecha y la hora. El docente ve quién asistió, acumulado por clase. */
 window.ACL=(function(){
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const REVF=async(m,...a)=>{if(!window.REV)await loadScript('revision.js?v=3');return REV[m](...a)};
+const REVF=async(m,...a)=>{if(!window.REV)await loadScript('revision.js?v=4');return REV[m](...a)};
 const isDoc=()=>M&&M.role==='prof';
 const isDir=()=>M&&(M.role==='rector'||M.role==='coordinador');
 const d30=()=>{const d=new Date();d.setDate(d.getDate()-30);return d.toLocaleDateString('en-CA',{timeZone:'America/Bogota'})};

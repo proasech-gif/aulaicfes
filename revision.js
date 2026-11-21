@@ -8,28 +8,30 @@ const mas=(f,n)=>{const d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);retur
 const fF=d=>d?new Date(String(d).slice(0,10)+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}):'';
 const TABS0=[['planeador','📒 Planeadores'],['observador','📘 Observador'],['ficha','📑 Ficha de seguimiento'],['plan','🗂️ Plan de área'],['asist','✋ Asistencias'],['guardados','💾 Guardados en mi entorno']];
 const ACT=[['cursos','📚 Cursos'],['evaluacion','📝 Evaluación'],['labs','🧪 Laboratorios'],['imprimir','🖨️ Impresiones'],['trabajos','📤 Trabajos'],['talleres','🛠️ Talleres'],['claseia','🤖 Clase con IA'],['aula','🎓 Clases en aula'],['reuniones','📹 Reuniones'],['registro','🗃️ Registro de documentos']];
-const AN={};ACT.forEach(x=>AN[x[0]]=x[1]);
+const EST=[['notas','📊 Notas y resultados'],['asistencia','✋ Asistencia'],['trabajos','📤 Trabajos entregados'],['labs','🧪 Laboratorios'],['observador','📘 Observador y seguimiento']];
+const AN={};ACT.forEach(x=>AN[x[0]]=x[1]);EST.forEach(x=>{AN[x[0]]=x[1]});
 const NOM={planeador:'Planeador',observador:'Observador del estudiante',ficha:'Ficha de seguimiento',plan:'Plan de área',asistencia:'Asistencia'};
 const COD={planeador:'PLA',observador:'OBS',ficha:'FIC',plan:'PLA',asistencia:'ASI'};
-const TABS=()=>TABS0.slice(0,5).concat([['horario','🗓 Horario']],ACT,[TABS0[5]]);
-let Z={docs:[],doc:'',tab:'planeador',d:mas(hoy(),-30),h:hoy(),rows:[],gu:[],busy:false,ok:false};
+const TABS=()=>Z.modo==='est'?EST:TABS0.slice(0,5).concat([['horario','🗓 Horario']],ACT,[TABS0[5]]);
+let Z={modo:'per',ests:[],docs:[],doc:'',tab:'planeador',d:mas(hoy(),-30),h:hoy(),rows:[],gu:[],busy:false,ok:false};
 const R=()=>render();
 const btn=c=>`style="background:${c};color:#fff;padding:7px 11px;border-radius:9px;font-weight:700;font-size:13px"`;
+async function cargaEsts(){const r=await sb.rpc('rev_estudiantes');if(r.error)throw r.error;Z.ests=r.data||[]}
 async function cargaDocs(){let r=await sb.rpc('rev_personas');if(r.error)r=await sb.rpc('asistencia_docentes');if(r.error)throw r.error;Z.docs=r.data||[]}
 const ROL=x=>x.role==='coordinador'?' (Coordinador)':'';
 async function load(){
-  await cargaDocs();await cargaGu();
+  await cargaDocs();await cargaGu();if(Z.modo==='est'&&!Z.ests.length)await cargaEsts();
   if(Z.doc)await buscar(true);
   Z.ok=true;
 }
 async function cargaGu(){const r=await sb.from('doc_guardados').select('id,docente_nombre,tipo,titulo,fecha,ref_path,created_at').order('created_at',{ascending:false}).limit(300);Z.gu=r.data||[]}
-const nomDoc=()=>((Z.docs.find(x=>x.id===Z.doc)||{}).full_name)||'';
+const nomDoc=()=>(((Z.modo==='est'?Z.ests:Z.docs).find(x=>x.id===Z.doc))||{}).full_name||'';
 async function buscar(quiet){
   Z.rows=[];if(!Z.doc||['asist','guardados'].includes(Z.tab)){if(!quiet)R();return}
   if(Z.tab==='horario'){Z.busy=true;R();try{await loadScript('horarios.js?v=5');await HZUI.cargaAud()}catch(x){err(x)}Z.busy=false;R();return}
   Z.busy=true;R();
   try{
-    if(AN[Z.tab]){const r=await sb.rpc('rev_actividad',{p_persona:Z.doc,p_seccion:Z.tab,p_desde:Z.d,p_hasta:Z.h});if(r.error)throw r.error;Z.rows=r.data||[]}else
+    if(AN[Z.tab]){const r=Z.modo==='est'?await sb.rpc('rev_actividad_est',{p_est:Z.doc,p_seccion:Z.tab,p_desde:Z.d,p_hasta:Z.h}):await sb.rpc('rev_actividad',{p_persona:Z.doc,p_seccion:Z.tab,p_desde:Z.d,p_hasta:Z.h});if(r.error)throw r.error;Z.rows=r.data||[]}else
     if(Z.tab==='planeador'){const r=await sb.from('planeador_diario').select('*').eq('docente_id',Z.doc).gte('fecha',Z.d).lte('fecha',Z.h).order('fecha',{ascending:false}).limit(300);if(r.error)throw r.error;Z.rows=r.data||[]}
     else if(Z.tab==='observador'||Z.tab==='ficha'){const r=await sb.from('obs_registros').select('*').eq('creado_por',Z.doc).eq('clase',Z.tab).gte('updated_at',Z.d+'T00:00:00-05:00').lt('updated_at',mas(Z.h,1)+'T00:00:00-05:00').order('updated_at',{ascending:false}).limit(300);if(r.error)throw r.error;Z.rows=r.data||[]}
     else if(Z.tab==='plan'){const r=await sb.from('planes_area').select('*').eq('docente_id',Z.doc).order('anio',{ascending:false}).order('grado');if(r.error)throw r.error;Z.rows=r.data||[]}
@@ -40,7 +42,7 @@ async function buscar(quiet){
 function tabs(){return`<div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0">${TABS().map(x=>`<button onclick="REV.tab('${x[0]}')" style="padding:9px 14px;border-radius:10px;font-weight:800;border:1.5px solid ${Z.tab===x[0]?'#1e63e9':'#cbd5e1'};background:${Z.tab===x[0]?'#e8f1ff':'#fff'};color:${Z.tab===x[0]?'#1e3a8a':'#334155'}">${x[1]}</button>`).join('')}</div>`}
 function filtros(){
   const dt=(k,l)=>`<label style="font-size:12px;font-weight:700">${l}<br><input type="date" value="${Z[k]}" onchange="REV.f('${k}',this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px"></label>`;
-  return`<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end"><label style="font-size:12px;font-weight:700">Persona a revisar<br><select onchange="REV.f('doc',this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:9px;min-width:230px"><option value="">Elige una persona…</option>${Z.docs.map(x=>`<option value="${x.id}" ${x.id===Z.doc?'selected':''}>${e(x.full_name)}${ROL(x)}</option>`).join('')}</select></label>
+  return`<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end"><label style="font-size:12px;font-weight:700">${Z.modo==='est'?'Estudiante':'Persona a revisar'}<br><select onchange="REV.f('doc',this.value)" style="border:1px solid #cbd5e1;border-radius:8px;padding:9px;min-width:230px"><option value="">${Z.modo==='est'?'Elige un estudiante…':'Elige una persona…'}</option>${(Z.modo==='est'?Z.ests.map(x=>({id:x.id,t:x.full_name+' · '+x.grade+'° '+(x.grupo||'')})):Z.docs.map(x=>({id:x.id,t:x.full_name+ROL(x)}))).map(x=>`<option value="${x.id}" ${x.id===Z.doc?'selected':''}>${e(x.t)}</option>`).join('')}</select></label>
   ${['plan'].includes(Z.tab)?'':dt('d','Desde')+dt('h','Hasta')}</div>`}
 function acciones(i,ref){return`<button onclick="REV.ver(${i})" ${btn('#1e63e9')}>👁 Ver</button> <button onclick="REV.pdf(${i})" ${btn('#16a34a')}>🖨️ PDF</button> <button onclick="REV.guardar(${i})" ${btn('#0f766e')}>💾 Guardar</button> <button onclick="REV.nota(${i})" ${btn('#7c3aed')}>📝 Nota</button>`}
 function acciones2(i){return`<button onclick="REV.ver(${i})" ${btn('#1e63e9')}>👁 Vista previa</button> <button onclick="REV.pdf(${i})" ${btn('#16a34a')}>🖨️ Imprimir</button> <button onclick="REV.nota(${i})" ${btn('#7c3aed')}>📝 Nota</button>`}
@@ -66,7 +68,8 @@ function guardados(){
 function view(){
   return`<div class="aic-card" style="padding:18px"><h2 style="font-weight:800;font-size:19px">🔎 Revisión de coordinador y docentes</h2>
   <p style="font-size:13px;color:#64748b;margin:4px 0 8px">Aquí solo se audita: elige una persona y la fecha, mira lo que ha hecho en cada sección (sin entrar a su entorno), guárdalos en tu entorno, descárgalos en PDF o déjale una nota.</p>
-  ${filtros()}${tabs()}${Z.tab==='guardados'?guardados():lista()}</div>`}
+  ${quien()}${filtros()}${tabs()}${Z.tab==='guardados'?guardados():lista()}</div>`}
+function quien(){const b=(m,l)=>`<button onclick="REV.modo('${m}')" style="padding:9px 14px;border-radius:10px;font-weight:800;border:1.5px solid ${Z.modo===m?'#0f766e':'#cbd5e1'};background:${Z.modo===m?'#ccfbf1':'#fff'}">${l}</button>`;return`<div style="display:flex;gap:8px;margin:8px 0 12px">${b('per','👩‍🏫 Docentes y coordinadores')}${b('est','🎓 Estudiantes')}</div>`}
 /* ---------- documentos ---------- */
 async function htmlDe(x){
   if(AN[Z.tab])return actHtml(x);
@@ -102,4 +105,6 @@ async function tGuardar(id,tit){const h=tablaHtml(id);if(!h)return toast('⚠️
   try{const r=await sb.from('doc_guardados').insert({colegio_id:M.colegio_id,tipo:'asistencia',titulo:tit+' · '+fF(hoy()),fecha:hoy(),html:h});if(r.error)throw r.error;await cargaGu();toast('💾','Guardado en tu entorno','Lo encuentras en «Revisión de docentes → Guardados en mi entorno».')}catch(x){err(x)}}
 return{load,view,cerrar,ver,pdf,guardar,bajar,nota,enviarNota,verG,pdfG,borrarG,tPdf,tGuardar,
   f(k,v){Z[k]=v;if(k==='doc'||Z.tab!=='guardados')buscar()},
-  tab(t){Z.tab=t;buscar()}}})();
+  tab(t){Z.tab=t;buscar()},
+  async modo(m){Z.modo=m;Z.doc='';Z.rows=[];Z.tab=m==='est'?'notas':'planeador';if(m==='est'&&!Z.ests.length){try{await cargaEsts()}catch(x){err(x)}}R()},
+  async abrir(id,m){Z.modo=m||'per';Z.doc=id;Z.tab=Z.modo==='est'?'notas':'planeador';if(Z.modo==='est'&&!Z.ests.length)await cargaEsts()}}})();
