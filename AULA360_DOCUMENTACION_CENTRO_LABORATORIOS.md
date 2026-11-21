@@ -118,3 +118,10 @@ saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y 
 - Rector/coordinador: en Personal, Coordinadores y Estudiantes el botón «Ver lo que ha hecho» abre Auditoría (revision.js v4) con la persona elegida; ya no entra a su entorno. Modo Estudiantes con RPC rev_estudiantes / rev_actividad_est (notas, asistencia, trabajos, laboratorios, observador).
 - I.E. Prueba (id 2084): 20 docentes con planeadores, observador, ficha, plan de área, simulacros, tareas, exámenes de clase y recuperación, trabajos, talleres, clases preparadas, laboratorios, impresiones, asistencia y reuniones; coordinador y rector con reuniones, simulacros Saber, documentos y mensajes; estudiantes con resultados.
 - Horario 2026 publicado: 160 de 160 horas, sin choques de docente ni de grupo (generado con un script de la base de datos, no con el botón de la plataforma).
+
+## Catálogo de 100 laboratorios de Química — Etapa 2 (nov 2026)
+- Inventario oficial guardado en INVENTARIO_QUIMICA_100_ORIGINAL.md (es la fuente de verdad; cada laboratorio lleva su número `no` 1–100).
+- Sexto ajustado al inventario: 16 oficiales (1–16) + 4 extras (densidad de líquidos, gráfica masa–volumen, reto de materiales, huevo y agua salada). Nuevos: 1 Explorador de la materia, 4 Propiedades físicas, 10 Mezclas homogéneas/heterogéneas, 15 Transformaciones físicas/químicas. Los códigos Q06-001…016 se conservaron para no perder el avance guardado.
+- Séptimo (17–32), archivo quimica_g7.js, códigos Q07-001…016: construcción del átomo, modelos atómicos (dispersión de Rutherford), número atómico y masa, isótopos, distribución electrónica, tabla periódica (explorador, familias, metales/no metales/metaloides, radio atómico, electronegatividad), formación de iones, elementos cotidianos, símbolos y nombres, clasificación de sustancias, lenguaje químico, estructura de materiales.
+- Motores nuevos en quimica_motor.js: tabla (elementos 1–36), atomo, rutherford, isotopos, formula.
+- DBA y estándares: siguen «por verificar» (no se inventan códigos).

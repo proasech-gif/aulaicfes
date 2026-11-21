@@ -3,10 +3,11 @@
 (function(){
 const C1='Uso comprensivo del conocimiento científico',C2='Explicación de fenómenos',C3='Indagación',PV='Por verificar con el documento oficial del MEN antes de citarlo',
  EST='Estándares básicos de competencias en Ciencias Naturales (entorno físico, grupos 6°–7°): enunciado exacto por verificar';
-const L=[];const add=o=>{o.g=6;o.dba=PV;o.est=EST;o.area='Química';L.push(o)};
+const L=[];const NO={'Q06-001':5,'Q06-002':6,'Q06-003':7,'Q06-007':2,'Q06-008':3,'Q06-009':8,'Q06-011':9,'Q06-012':11,'Q06-013':12,'Q06-014':13,'Q06-015':14,'Q06-016':16,'Q06-017':1,'Q06-018':4,'Q06-019':10,'Q06-020':15};
+const add=o=>{o.g=6;o.dba=PV;o.est=EST;o.area='Química';o.no=NO[o.c]||null;if(!o.no)o.extra=true;L.push(o)};
 const MC=(q,o,ok,fb)=>({q,o,ok,fb});
 
-add({c:'Q06-001',n:'Medir masa con la balanza',tema:'Materia · medición',dif:1,mot:'medir',
+add({c:'Q06-001',n:'Laboratorio de medición de masa',tema:'Materia · medición',dif:1,mot:'medir',
  obj:'Medir la masa de objetos con una balanza, usar la tara y expresar la medida con su resolución.',comp:[C1,C3],
  evid:['Usa la tara correctamente.','Expresa la masa con las cifras que permite la balanza.','Explica por qué cambia la lectura al cambiar la resolución.'],
  teo:'La <b>masa</b> es la cantidad de materia de un cuerpo; se mide en gramos (g) con una balanza. Cada balanza tiene una <b>resolución</b>: el cambio mínimo que puede mostrar (1 g, 0,1 g, 0,01 g). Si pesas dentro de un recipiente, la balanza marca la masa del recipiente más la del objeto; la <b>tara</b> pone el display en cero para leer solo el objeto.',
@@ -17,7 +18,7 @@ add({c:'Q06-001',n:'Medir masa con la balanza',tema:'Materia · medición',dif:1
  ev:[MC('Si pesas un objeto dentro de un vaso sin tarar, la balanza marca…',['Solo la masa del objeto','La masa del vaso más la del objeto','Cero','El volumen del objeto'],1,'Sin tarar se suma la masa del recipiente.'),MC('La resolución de 0,01 g significa que la balanza…',['Pesa hasta 0,01 g','Distingue cambios de 0,01 g','Solo mide objetos livianos','Siempre es exacta'],1,'Es el cambio mínimo que puede mostrar; no garantiza exactitud.'),MC('La tara sirve para…',['Aumentar la resolución','Descontar la masa del recipiente','Medir volumen','Calibrar el gramo'],1,'Pone el cero con el recipiente encima.')],
  conc:'Escribe cómo se mide correctamente una masa y por qué importa la resolución.',lim:'Modelo de balanza ideal: no incluye deriva térmica, corrientes de aire ni errores de calibración.'});
 
-add({c:'Q06-002',n:'Medir volumen con la probeta',tema:'Materia · medición',dif:1,mot:'medir',
+add({c:'Q06-002',n:'Laboratorio de volumen',tema:'Materia · medición',dif:1,mot:'medir',
  obj:'Medir el volumen de líquidos y de sólidos irregulares (por desplazamiento de agua) leyendo el menisco.',comp:[C1,C3],
  evid:['Elige la probeta adecuada.','Calcula el volumen de un sólido por diferencia de lecturas.','Reporta el volumen con la división de la probeta.'],
  teo:'El <b>volumen</b> es el espacio que ocupa la materia; se mide en mililitros (mL = cm³). Un sólido irregular se sumerge en agua: su volumen es la <b>diferencia</b> entre la lectura final y la inicial. La lectura se hace a la altura de los ojos, en la parte baja del menisco. Una probeta más angosta lee con más precisión.',
@@ -28,7 +29,7 @@ add({c:'Q06-002',n:'Medir volumen con la probeta',tema:'Materia · medición',di
  ev:[MC('El volumen de un sólido irregular se obtiene…',['Pesándolo','Por la diferencia de lecturas del agua','Con la tara','Multiplicando masa por densidad'],1,'Desplazamiento de agua.'),MC('1 mL equivale a…',['1 g','1 cm³','1 L','10 cm³'],1,'1 mL = 1 cm³.'),MC('Para leer el menisco debes…',['Mirar desde arriba','Poner el ojo a la altura del líquido','Inclinar la probeta','Leer la parte alta del borde'],1,'Evita el error de paralaje.')],
  conc:'Resume cómo medir el volumen de un sólido y de un líquido.',lim:'No se simula el error de paralaje ni la tensión superficial; el menisco se asume leído correctamente.'});
 
-add({c:'Q06-003',n:'Densidad de sólidos',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
+add({c:'Q06-003',n:'Laboratorio de densidad',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
  obj:'Calcular la densidad de sólidos a partir de su masa y su volumen y reconocer que depende del material, no del tamaño.',comp:[C1,C3],
  evid:['Calcula ρ = m/V.','Reporta la densidad con su incertidumbre.','Compara densidades de materiales distintos.'],
  teo:'La <b>densidad</b> es la masa por unidad de volumen: ρ = m / V (g/mL). Es una propiedad característica: un trozo grande y uno pequeño del mismo material tienen la misma densidad. Valores de referencia a ~20 °C: aluminio 2,70; vidrio ≈2,5; acero 7,85; cobre 8,96; plomo 11,34 g/cm³. La incertidumbre sale de la resolución de la balanza y de la probeta.',
@@ -39,7 +40,7 @@ add({c:'Q06-003',n:'Densidad de sólidos',tema:'Propiedades de la materia · den
  ev:[MC('La densidad se calcula como…',['V / m','m / V','m × V','m − V'],1,'ρ = m/V.'),MC('Un trozo grande y uno pequeño de cobre tienen…',['Distinta densidad','Igual densidad','La del trozo grande mayor','Densidad cero'],1,'Es propiedad del material.'),MC('Un objeto de 27 g y 10 mL tiene densidad…',['0,37 g/mL','2,7 g/mL','27 g/mL','37 g/mL'],1,'27/10 = 2,7.')],
  conc:'Explica por qué la densidad sirve para caracterizar un material.',lim:'Materiales ideales y homogéneos a 20 °C; no se simulan huecos, impurezas ni dilatación térmica.'});
 
-add({c:'Q06-004',n:'Densidad de líquidos',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
+add({c:'Q06-004',n:'Densidad de líquidos (extra)',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
  obj:'Determinar la densidad de líquidos pesando un volumen conocido y usando la tara del vaso.',comp:[C1,C3],
  evid:['Tara el vaso antes de pesar el líquido.','Calcula la densidad de cada líquido.','Ordena los líquidos por densidad.'],
  teo:'Para un líquido se mide un volumen con la probeta y su masa con la balanza (restando el vaso). Referencias a ~20 °C: etanol 0,79; aceite vegetal ≈0,92; agua 1,00; glicerina 1,26 g/mL. La densidad del agua cambia con la temperatura (máxima cerca de 4 °C).',
@@ -50,7 +51,7 @@ add({c:'Q06-004',n:'Densidad de líquidos',tema:'Propiedades de la materia · de
  ev:[MC('Un líquido con 50 mL y 39,5 g tiene densidad…',['0,79 g/mL','1,27 g/mL','1,00 g/mL','2,0 g/mL'],0,'39,5/50 = 0,79.'),MC('Si no taras el vaso, la densidad calculada sale…',['Menor','Mayor','Igual','No se puede calcular'],1,'Se suma masa del vaso.'),MC('El aceite flota sobre el agua porque…',['Es más viscoso','Es menos denso','Es más pesado','Está más caliente'],1,'0,92 < 1,00 g/mL.')],
  conc:'Escribe cómo determinaste la densidad de un líquido paso a paso.',lim:'Líquidos a 20 °C, sin burbujas; la masa de la película de líquido que queda en el vaso no se considera.'});
 
-add({c:'Q06-005',n:'Gráfica masa–volumen',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
+add({c:'Q06-005',n:'Gráfica masa–volumen (extra)',tema:'Propiedades de la materia · densidad',dif:2,mot:'medir',
  obj:'Construir la gráfica masa–volumen de un material e interpretar su pendiente como la densidad.',comp:[C1,C2,C3],
  evid:['Registra varios puntos del mismo material.','Interpreta la pendiente.','Distingue materiales por su pendiente.'],
  teo:'Para un mismo material, la masa es <b>directamente proporcional</b> al volumen: la gráfica m–V es una recta que pasa por el origen y su <b>pendiente es la densidad</b>. Materiales distintos dan rectas con pendientes distintas.',
@@ -61,7 +62,7 @@ add({c:'Q06-005',n:'Gráfica masa–volumen',tema:'Propiedades de la materia · 
  ev:[MC('En una gráfica masa–volumen, la pendiente representa…',['La masa','El volumen','La densidad','La temperatura'],2,'Δm/ΔV = ρ.'),MC('Si el volumen se duplica, la masa del mismo material…',['Se duplica','Se reduce a la mitad','Igual','Se triplica'],0,'Proporcionalidad directa.'),MC('Una recta más inclinada indica…',['Menor densidad','Mayor densidad','Menor masa','Mayor volumen'],1,'Más masa por cada mL.')],
  conc:'Explica qué muestra la gráfica y cómo se obtiene la densidad de ella.',lim:'La pendiente se calcula por mínimos cuadrados con recta por el origen; con pocos puntos es solo una estimación.'});
 
-add({c:'Q06-006',n:'Reto: ¿qué material es?',tema:'Propiedades de la materia · identificación',dif:3,mot:'medir',
+add({c:'Q06-006',n:'Reto: ¿qué material es? (extra)',tema:'Propiedades de la materia · identificación',dif:3,mot:'medir',
  obj:'Identificar un material desconocido comparando su densidad medida con una tabla de referencia.',comp:[C1,C2,C3],
  evid:['Mide masa y volumen con rigor.','Calcula la densidad con incertidumbre.','Justifica la identificación con datos.'],
  teo:'La densidad es una propiedad característica y permite identificar materiales. Al comparar tu medida (con su incertidumbre) con una tabla: aluminio 2,70; hierro 7,87; cobre 8,96; plomo 11,34 g/cm³. Dos materiales con densidad parecida exigen medir con más precisión.',
@@ -72,7 +73,7 @@ add({c:'Q06-006',n:'Reto: ¿qué material es?',tema:'Propiedades de la materia �
  ev:[MC('Si tu densidad es 8,9 ± 0,3 g/mL, el material más probable es…',['Aluminio','Hierro','Cobre','Plomo'],2,'8,96 está dentro del intervalo.'),MC('Usar una probeta más angosta…',['Aumenta el error','Mejora la precisión','No cambia nada','Cambia la densidad'],1,'Divisiones más finas.'),MC('Identificar un material por densidad es posible porque…',['Todos tienen igual densidad','Es una propiedad característica','Depende del tamaño','Solo cambia con el color'],1,'Es propia de cada material.')],
  conc:'Escribe cómo identificaste el material y qué tan seguro estás.',lim:'Tabla limitada a 4 metales puros; en la vida real hay aleaciones e impurezas.'});
 
-add({c:'Q06-007',n:'Estados de la materia y partículas',tema:'Materia · estados',dif:1,mot:'particulas',
+add({c:'Q06-007',n:'Estados de la materia',tema:'Materia · estados',dif:1,mot:'particulas',
  obj:'Relacionar el estado de una sustancia con la temperatura y el movimiento de sus partículas (modelo cinético).',comp:[C1,C2],
  evid:['Identifica el estado según el punto de fusión y ebullición.','Describe el movimiento de las partículas en cada estado.','Explica por qué cambia el estado al variar la temperatura.'],
  teo:'Según el <b>modelo cinético de partículas</b>, en un sólido las partículas vibran en posiciones fijas; en un líquido se desplazan unas sobre otras sin separarse; en un gas se mueven libres y muy separadas. Al aumentar la temperatura aumenta la energía cinética media. El estado depende de la temperatura frente a los puntos de fusión y de ebullición (a 1 atm).',
@@ -83,7 +84,7 @@ add({c:'Q06-007',n:'Estados de la materia y partículas',tema:'Materia · estado
  ev:[MC('Las partículas de un gas…',['Vibran en posición fija','Se mueven libres y separadas','Están juntas y ordenadas','No se mueven'],1,'Modelo cinético.'),MC('A 20 °C el etanol es…',['Sólido','Líquido','Gas','Plasma'],1,'Entre −114 y 78 °C.'),MC('Al subir la temperatura, la energía cinética de las partículas…',['Disminuye','Aumenta','No cambia','Se anula'],1,'T mide la energía cinética media.')],
  conc:'Explica con tus palabras cómo el calor cambia el estado de la materia.',lim:'Las partículas se dibujan como esferas planas (48 en 2D); no representa las fuerzas ni la estructura real de cada sustancia.'});
 
-add({c:'Q06-008',n:'Curva de calentamiento del agua',tema:'Materia · cambios de estado',dif:2,mot:'curva',
+add({c:'Q06-008',n:'Cambios de estado',tema:'Materia · cambios de estado',dif:2,mot:'curva',
  obj:'Interpretar la curva de calentamiento: tramos de aumento de temperatura y mesetas durante los cambios de estado.',comp:[C1,C2,C3],
  evid:['Reconoce las mesetas de fusión y ebullición.','Relaciona energía, masa y tiempo.','Predice cómo cambia la curva al variar masa o potencia.'],
  teo:'Al calentar, la temperatura sube mientras la sustancia está en un solo estado (Q = m·c·ΔT). Durante un cambio de estado la temperatura <b>no cambia</b> (meseta): la energía rompe fuerzas entre partículas (Q = m·L). Para el agua: c(hielo) ≈ 2,09; c(líquida) ≈ 4,18; c(vapor) ≈ 2,01 J/g·K; L fusión ≈ 334 J/g; L vaporización ≈ 2257 J/g. Mayor potencia → menor tiempo.',
@@ -94,7 +95,7 @@ add({c:'Q06-008',n:'Curva de calentamiento del agua',tema:'Materia · cambios de
  ev:[MC('Durante la ebullición del agua a 1 atm la temperatura…',['Sube sin parar','Se mantiene en 100 °C','Baja','Llega a 0 °C'],1,'Meseta de ebullición.'),MC('Si duplicas la masa, el tiempo del mismo tramo…',['Se reduce a la mitad','Se duplica','Igual','Se triplica'],1,'Q = m·c·ΔT.'),MC('La energía de la meseta se usa para…',['Subir la temperatura','Romper fuerzas entre partículas','Enfriar','Cambiar la masa'],1,'Calor latente.')],
  conc:'Explica por qué hay mesetas en la curva de calentamiento.',lim:'Sin pérdidas de calor al ambiente; calor específico constante en cada estado; presión de 1 atm.'});
 
-add({c:'Q06-009',n:'Flotación y densidad',tema:'Propiedades de la materia · densidad',dif:2,mot:'flota',
+add({c:'Q06-009',n:'Flotación y hundimiento',tema:'Propiedades de la materia · densidad',dif:2,mot:'flota',
  obj:'Predecir si un objeto flota o se hunde comparando su densidad con la del líquido.',comp:[C1,C2],
  evid:['Compara densidades para predecir.','Relaciona la parte sumergida con la razón de densidades.','Explica con el empuje y el peso.'],
  teo:'Un objeto flota si su densidad es menor o igual que la del líquido. El <b>empuje</b> (principio de Arquímedes) es igual al peso del líquido desplazado. Flota con una fracción sumergida ρobjeto/ρlíquido. Si ρobjeto > ρlíquido, el empuje máximo no alcanza a igualar el peso y se hunde.',
@@ -105,7 +106,7 @@ add({c:'Q06-009',n:'Flotación y densidad',tema:'Propiedades de la materia · de
  ev:[MC('Un objeto flota si…',['Es grande','Su densidad ≤ la del líquido','Es liviano en la mano','Es redondo'],1,'Comparación de densidades.'),MC('El hielo (0,917) en agua queda sumergido aproximadamente…',['9 %','92 %','50 %','100 %'],1,'ρo/ρl ≈ 0,92.'),MC('El empuje es igual al…',['Peso del objeto siempre','Peso del líquido desplazado','Volumen del líquido','Calor aplicado'],1,'Arquímedes.')],
  conc:'Redacta una regla para predecir la flotación y pruébala con un ejemplo.',lim:'Objetos de 100 cm³ totalmente rígidos y homogéneos; no se simula la forma (por ejemplo, los barcos de acero).'});
 
-add({c:'Q06-010',n:'El huevo y el agua salada',tema:'Propiedades de la materia · densidad de disoluciones',dif:2,mot:'flota',
+add({c:'Q06-010',n:'El huevo y el agua salada (extra)',tema:'Propiedades de la materia · densidad de disoluciones',dif:2,mot:'flota',
  obj:'Descubrir cómo la sal disuelta aumenta la densidad del agua y hace flotar al huevo.',comp:[C2,C3],
  evid:['Varía una sola variable (la sal).','Identifica la concentración en la que el huevo flota.','Explica el cambio con la densidad de la disolución.'],
  teo:'Al disolver sal en agua aumenta la masa por unidad de volumen: la densidad de la disolución crece (aprox. ρ ≈ 0,998 + 0,00068·s, con s en g/L, en el intervalo del laboratorio). Un huevo (≈1,03 g/mL) se hunde en agua dulce, pero flota cuando la disolución supera su densidad.',
@@ -140,7 +141,7 @@ add({c:'Q06-011',n:'Sustancias puras y mezclas',tema:'Materia · clasificación'
  ev:[MC('Una mezcla homogénea tiene…',['Varias fases visibles','Una sola fase','Una sola sustancia','Siempre dos líquidos'],1,'Disolución.'),MC('Para distinguir agua pura de agua con sal conviene…',['Mirarla','Evaporarla','Moverla','Medir su color'],1,'La sal deja residuo.'),MC('El aceite con agua es…',['Mezcla homogénea','Mezcla heterogénea','Sustancia pura','Compuesto'],1,'Dos fases.')],
  conc:'Explica cómo decides si una muestra es pura o mezcla.',lim:'Resultados escritos a partir de propiedades reales conocidas; no simula muestras comerciales con impurezas.'});
 
-add({c:'Q06-012',n:'Separar por filtración',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
+add({c:'Q06-012',n:'Separación de mezclas por filtración',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
  obj:'Elegir el filtro adecuado según el tamaño de las partículas y explicar qué no puede separar la filtración.',comp:[C1,C2,C3],
  evid:['Relaciona tamaño de partícula y poro del filtro.','Identifica qué queda en el filtro y qué pasa.','Reconoce que la sal disuelta atraviesa el filtro.'],
  teo:'La <b>filtración</b> separa un sólido insoluble de un líquido: el filtro retiene las partículas más grandes que sus poros. Un sólido <b>disuelto</b> (como la sal) tiene partículas de tamaño atómico y atraviesa el filtro. Para separarla se usa evaporación o destilación.',
@@ -151,7 +152,7 @@ add({c:'Q06-012',n:'Separar por filtración',tema:'Mezclas · métodos de separa
  ev:[MC('El filtro retiene…',['Todo lo que hay en la mezcla','Partículas mayores que sus poros','Solo líquidos','Las sales disueltas'],1,'Tamaño de poro.'),MC('La sal disuelta…',['Queda en el filtro','Atraviesa el filtro','Se destruye','Se vuelve arena'],1,'Partículas muy pequeñas.'),MC('Para separar la sal del agua usarías…',['Un colador','Evaporación','Una cuchara','Decantación'],1,'Se evapora el agua.')],
  conc:'Escribe cuándo sirve la filtración y cuándo no.',lim:'Modelo por tamaño de partícula frente a poro; no simula colmatación ni filtros reales con distribución de poros.'});
 
-add({c:'Q06-013',n:'Decantación y sedimentación',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
+add({c:'Q06-013',n:'Separación por decantación',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
  obj:'Separar líquidos inmiscibles con embudo de decantación y analizar la sedimentación de sólidos (ley de Stokes).',comp:[C1,C2,C3],
  evid:['Cierra la llave en el momento correcto.','Explica la separación por diferencia de densidad.','Predice cómo cambia el tiempo de sedimentación con el tamaño y la temperatura.'],
  teo:'Los líquidos inmiscibles se separan por <b>decantación</b>: el más denso queda abajo (agua 1,00 g/mL; aceite 0,92). Un sólido en agua <b>sedimenta</b> más rápido cuanto mayor es la partícula (Stokes: v = 2(ρs−ρl)g r² / 9μ, válida si Re &lt; 0,1). El agua caliente es menos viscosa y acelera la sedimentación.',
@@ -162,7 +163,7 @@ add({c:'Q06-013',n:'Decantación y sedimentación',tema:'Mezclas · métodos de 
  ev:[MC('En el embudo de decantación el agua queda…',['Arriba','Abajo','Mezclada','Desaparece'],1,'Es más densa que el aceite.'),MC('Si duplicas el radio de la partícula, la velocidad de sedimentación…',['Se duplica','Se cuadruplica','Igual','Se reduce'],1,'v ∝ r².'),MC('La decantación sirve para…',['Mezclas homogéneas','Líquidos inmiscibles','Gases','Aleaciones'],1,'Dos fases líquidas.')],
  conc:'Explica la diferencia entre decantar un líquido y sedimentar un sólido.',lim:'Stokes solo para partículas esféricas pequeñas (Re < 0,1); el embudo es ideal y no simula la interfaz difusa.'});
 
-add({c:'Q06-014',n:'Evaporación y cristalización',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
+add({c:'Q06-014',n:'Separación por evaporación',tema:'Mezclas · métodos de separación',dif:2,mot:'separa',
  obj:'Recuperar una sal disuelta evaporando el agua y analizar qué factores aceleran la evaporación.',comp:[C1,C2,C3],
  evid:['Relaciona temperatura, área y rapidez.','Identifica cuándo empieza a cristalizar.','Calcula la masa de sal recuperada.'],
  teo:'Al <b>evaporar</b> una disolución, el agua sale y la sal permanece; cuando la concentración supera la <b>solubilidad</b> (NaCl ≈ 360 g/L a 20 °C) la sal <b>cristaliza</b>. La evaporación es más rápida con mayor temperatura y mayor superficie expuesta.',
@@ -173,7 +174,7 @@ add({c:'Q06-014',n:'Evaporación y cristalización',tema:'Mezclas · métodos de
  ev:[MC('Al evaporar agua salada queda…',['Agua','Sal','Nada','Aire'],1,'La sal no se evapora.'),MC('La rapidez de evaporación aumenta con…',['Menos área','Mayor temperatura','Más sal','Menos calor'],1,'Mayor energía.'),MC('La sal cristaliza cuando…',['Hay poca sal','La concentración supera la solubilidad','Se enfría el aire','Se agita'],1,'Sobresaturación.')],
  conc:'Resume cómo se recupera una sal de una disolución.',lim:'Rapidez modelada con una ley empírica (aumenta ≈5 % por °C); no incluye humedad ambiental ni viento.'});
 
-add({c:'Q06-015',n:'Destilación',tema:'Mezclas · métodos de separación',dif:3,mot:'separa',
+add({c:'Q06-015',n:'Separación por destilación',tema:'Mezclas · métodos de separación',dif:3,mot:'separa',
  obj:'Separar líquidos miscibles por diferencia de punto de ebullición y evaluar la pureza del destilado.',comp:[C1,C2,C3],
  evid:['Relaciona puntos de ebullición y orden de destilación.','Elige la temperatura de corte para obtener un destilado puro.','Interpreta la curva de temperatura.'],
  teo:'En la <b>destilación</b> se calienta la mezcla; el componente más volátil (menor punto de ebullición) se evapora primero, se condensa y se recoge. Referencias: acetona 56 °C; metanol 64,7 °C; etanol 78,4 °C; agua 100 °C. Cuanto más separados estén los puntos de ebullición, más puro el destilado.',
@@ -194,6 +195,95 @@ add({c:'Q06-016',n:'Conservación de la materia',tema:'Materia · cambios quími
  ana:['¿A dónde fue la masa que «faltó» en el sistema abierto?','¿Qué reactivo se acabó primero y cómo lo sabes?'],
  ev:[MC('En el sistema cerrado, la masa total…',['Disminuye','Aumenta','Se conserva','Se duplica'],2,'No entra ni sale materia.'),MC('En el sistema abierto la balanza baja porque…',['La masa se destruye','Escapa CO₂','Se evapora el matraz','Se enfría'],1,'Gas que sale.'),MC('La ley de conservación de la masa es de…',['Newton','Lavoisier','Dalton','Mendeleiev'],1,'Antoine Lavoisier.')],
  conc:'Explica la conservación de la masa con tus datos.',lim:'No se simula el empuje del aire sobre el globo (error real de centésimas de gramo) ni la solubilidad parcial del CO₂.'});
+
+
+/* ===== laboratorios del inventario oficial que faltaban en sexto (1, 4, 10, 15) ===== */
+add({c:'Q06-017',n:'Explorador de la materia',tema:'Materia · concepto',dif:1,mot:'clasif',
+ obj:'Decidir si algo es materia a partir de dos criterios: tiene masa y ocupa espacio.',comp:[C1,C3],
+ evid:['Usa masa y volumen como criterios.','Reconoce que el aire es materia.','Distingue materia de energía y ondas.'],
+ teo:'<b>Materia</b> es todo lo que tiene <b>masa</b> y ocupa un <b>lugar en el espacio</b> (volumen). El aire es materia aunque no se vea: se puede pesar y llena un globo. La luz, el sonido y el calor no son materia: son formas de energía u ondas y no tienen masa.',
+ mat:['6 muestras','2 pruebas: masa y espacio'],
+ proc:[{t:'Elige una muestra y haz las dos pruebas.',a:'prueba',n:2},{t:'Clasifícala como materia o no materia.',a:'clasifica_ok'},{t:'Clasifica bien las 6 muestras.',a:'todo_ok'}],
+ cfg:{tituloItems:'Muestras',pregunta:'¿Es materia?',
+  items:[{k:'pi',n:'Piedra',e:'🪨'},{k:'ai',n:'Aire',e:'🌬️'},{k:'lu',n:'Luz del Sol',e:'☀️'},{k:'ag',n:'Agua',e:'💧'},{k:'so',n:'Sonido',e:'🔊'},{k:'ca',n:'Calor',e:'🔥'}],
+  tests:[{k:'ma',n:'¿Tiene masa? (pesar)'},{k:'es',n:'¿Ocupa espacio?'}],
+  cats:[{k:'m',n:'Es materia'},{k:'n',n:'No es materia'}],
+  ans:{pi:'m',ai:'m',lu:'n',ag:'m',so:'n',ca:'n'},
+  res:{pi:{ma:'Sí: la balanza marca su masa.',es:'Sí: desplaza agua al sumergirla.'},ai:{ma:'Sí: un balón inflado pesa más que desinflado (≈1,2 g por litro).',es:'Sí: infla un globo y ocupa su volumen.'},lu:{ma:'No se puede pesar: no tiene masa.',es:'No: dos rayos se cruzan sin chocar.'},ag:{ma:'Sí: 1 g por cada mL.',es:'Sí: llena el recipiente.'},so:{ma:'No tiene masa: es una vibración que se propaga.',es:'No ocupa espacio: es una onda en un material.'},ca:{ma:'No tiene masa: es energía que pasa de un cuerpo a otro.',es:'No ocupa espacio.'}},
+  why:{pi:'Tiene masa y volumen.',ai:'Tiene masa y volumen aunque sea invisible.',lu:'Es energía (radiación), sin masa.',ag:'Tiene masa y volumen.',so:'Es una onda, no una sustancia.',ca:'Es energía en tránsito, no materia.'}},
+ ana:['¿Por qué el aire es materia aunque no se vea?','¿Qué tienen en común la luz, el sonido y el calor?'],
+ ev:[MC('Materia es todo lo que…',['Se ve','Tiene masa y ocupa espacio','Se mueve','Tiene color'],1,'Masa y volumen.'),MC('El aire es materia porque…',['Se ve azul','Tiene masa y ocupa espacio','Hace viento','Es frío'],1,'Se puede pesar y llena un globo.'),MC('¿Cuál NO es materia?',['Agua','Piedra','Luz','Aire'],2,'La luz es energía.')],
+ conc:'Escribe los dos criterios para reconocer materia y un ejemplo que cumpla y otro que no.',lim:'Es una actividad de clasificación con resultados descritos; no mide masas reales.'});
+
+add({c:'Q06-018',n:'Propiedades físicas de la materia',tema:'Materia · propiedades',dif:1,mot:'clasif',
+ obj:'Reconocer propiedades físicas (conductividad, magnetismo, dureza, brillo) y usarlas para decidir si un material conduce la electricidad.',comp:[C1,C3],
+ evid:['Elige pruebas pertinentes.','Relaciona propiedades con el tipo de material.','Justifica su decisión con resultados.'],
+ teo:'Las <b>propiedades físicas</b> se observan o miden sin cambiar la sustancia: color, brillo, dureza, magnetismo, conductividad eléctrica, densidad, puntos de fusión y ebullición. Los metales suelen ser brillantes y buenos conductores; la madera, el vidrio y los plásticos suelen ser aislantes. El magnetismo no es de todos los metales: lo tienen el hierro, el cobalto y el níquel.',
+ mat:['6 materiales','4 pruebas: conductividad, imán, dureza y brillo'],
+ proc:[{t:'Elige un material y haz al menos dos pruebas.',a:'prueba',n:2},{t:'Decide si conduce la electricidad.',a:'clasifica_ok'},{t:'Clasifica bien los 6 materiales.',a:'todo_ok'}],
+ cfg:{tituloItems:'Materiales',pregunta:'¿Conduce la electricidad?',
+  items:[{k:'cu',n:'Cobre',e:'🔌'},{k:'ma',n:'Madera',e:'🪵'},{k:'vi',n:'Vidrio',e:'🪟'},{k:'fe',n:'Hierro',e:'🧲'},{k:'pv',n:'Plástico PVC',e:'🧴'},{k:'al',n:'Aluminio',e:'🥫'}],
+  tests:[{k:'co',n:'Conectar a un circuito'},{k:'im',n:'Acercar un imán'},{k:'du',n:'Rayar con una moneda'},{k:'br',n:'Observar el brillo'}],
+  cats:[{k:'c',n:'Conductor'},{k:'a',n:'Aislante'}],
+  ans:{cu:'c',ma:'a',vi:'a',fe:'c',pv:'a',al:'c'},
+  res:{cu:{co:'El bombillo enciende: conduce muy bien.',im:'No lo atrae.',du:'Se raya con facilidad: es blando.',br:'Brillo metálico rojizo.'},
+   ma:{co:'El bombillo no enciende.',im:'No lo atrae.',du:'Se raya con la moneda (madera blanda).',br:'Opaca, sin brillo metálico.'},
+   vi:{co:'El bombillo no enciende.',im:'No lo atrae.',du:'La moneda no lo raya: es duro.',br:'Transparente, brillo no metálico.'},
+   fe:{co:'El bombillo enciende: conduce (menos que el cobre).',im:'Lo atrae con fuerza.',du:'La moneda no lo raya: es duro.',br:'Brillo metálico gris.'},
+   pv:{co:'El bombillo no enciende.',im:'No lo atrae.',du:'Se raya con la uña o la moneda.',br:'Superficie lisa, brillo no metálico.'},
+   al:{co:'El bombillo enciende: conduce bien.',im:'No lo atrae.',du:'Se raya con una moneda: es blando.',br:'Brillo metálico plateado.'}},
+  why:{cu:'Los metales conducen; el cobre es el más usado en cables.',ma:'La madera seca es aislante.',vi:'El vidrio es aislante.',fe:'Es un metal: conduce y además es magnético.',pv:'Los plásticos aíslan: por eso recubren los cables.',al:'Es un metal conductor aunque no sea magnético.'}},
+ ana:['¿Qué prueba te sirvió más para decidir si conduce la electricidad?','¿Por qué el aluminio conduce pero no lo atrae el imán?'],
+ ev:[MC('Una propiedad física se puede observar o medir…',['Cambiando la sustancia','Sin cambiar la sustancia','Solo quemándola','Solo con microscopio'],1,'No transforma la sustancia.'),MC('Los cables eléctricos se recubren de plástico porque este es…',['Conductor','Aislante','Magnético','Más pesado'],1,'Evita el paso de corriente al exterior.'),MC('¿Todos los metales son atraídos por un imán?',['Sí','No: por ejemplo el cobre y el aluminio no','Solo los brillantes','Solo los blandos'],1,'Solo hierro, cobalto y níquel (entre los comunes).')],
+ conc:'Explica qué propiedades usaste para decidir y con qué resultados.',lim:'Resultados descritos de materiales típicos; la conductividad real depende de la pureza y la humedad.'});
+
+add({c:'Q06-019',n:'Mezclas homogéneas y heterogéneas',tema:'Materia · clasificación',dif:2,mot:'clasif',
+ obj:'Distinguir mezclas homogéneas de heterogéneas usando observación, reposo y filtración.',comp:[C1,C2,C3],
+ evid:['Usa el número de fases como criterio.','Relaciona el reposo y la filtración con la heterogeneidad.','Reconoce soluciones sólidas y gaseosas.'],
+ teo:'Una mezcla es <b>homogénea</b> si tiene una sola fase y sus componentes no se distinguen (azúcar en agua, aire, vinagre, latón). Es <b>heterogénea</b> si se distinguen dos o más fases (ensalada, agua con aceite, granito). Dejar reposar o filtrar puede separar las fases de una heterogénea, pero no las de una homogénea.',
+ mat:['8 mezclas','4 pruebas: simple vista, lupa, reposo y filtro'],
+ proc:[{t:'Elige una mezcla y haz al menos dos pruebas.',a:'prueba',n:2},{t:'Clasifícala y lee la retroalimentación.',a:'clasifica_ok'},{t:'Clasifica bien las 8 mezclas.',a:'todo_ok'}],
+ cfg:{tituloItems:'Mezclas',pregunta:'¿Qué tipo de mezcla es?',
+  items:[{k:'az',n:'Azúcar en agua',e:'🥤'},{k:'en',n:'Ensalada',e:'🥗'},{k:'ai',n:'Aire limpio',e:'🌬️'},{k:'ac',n:'Agua y aceite',e:'🫗'},{k:'gr',n:'Granito',e:'🪨'},{k:'vi',n:'Vinagre',e:'🍶'},{k:'so',n:'Sopa con verduras',e:'🍲'},{k:'la',n:'Latón',e:'🔔'}],
+  tests:[{k:'sv',n:'Mirar a simple vista'},{k:'lu',n:'Mirar con lupa'},{k:'re',n:'Dejar en reposo'},{k:'fi',n:'Filtrar'}],
+  cats:[{k:'h',n:'Homogénea'},{k:'e',n:'Heterogénea'}],
+  ans:{az:'h',en:'e',ai:'h',ac:'e',gr:'e',vi:'h',so:'e',la:'h'},
+  res:{az:{sv:'Una sola fase transparente.',lu:'Sin partículas visibles.',re:'No se separa nada.',fi:'Todo pasa por el filtro.'},
+   en:{sv:'Se distinguen varios ingredientes.',lu:'Trozos de distinto color y textura.',re:'Siguen separados.',fi:'Los trozos quedan en el filtro.'},
+   ai:{sv:'Invisible, una sola fase.',lu:'Nada visible.',re:'No se separa.',fi:'Pasa todo.'},
+   ac:{sv:'Dos capas visibles.',lu:'Gotas de aceite en el agua.',re:'El aceite sube y queda arriba.',fi:'Pasan ambos líquidos: el filtro no los separa.'},
+   gr:{sv:'Granos de varios colores.',lu:'Cristales distintos (cuarzo, feldespato, mica).',re:'Nada cambia: es sólido.',fi:'No aplica.'},
+   vi:{sv:'Líquido uniforme.',lu:'Sin partículas.',re:'No se separa.',fi:'Todo pasa.'},
+   so:{sv:'Caldo con trozos de verdura.',lu:'Trozos y grasa en el caldo.',re:'La grasa sube y las verduras bajan.',fi:'Los trozos quedan en el filtro.'},
+   la:{sv:'Metal amarillo uniforme.',lu:'Superficie uniforme a esa escala.',re:'No aplica.',fi:'No aplica.'}},
+  why:{az:'Una sola fase: solución.',en:'Se ven varias fases.',ai:'Mezcla gaseosa de una sola fase.',ac:'Dos fases líquidas inmiscibles.',gr:'Varios minerales visibles.',vi:'Solución de ácido acético en agua.',so:'Varias fases.',la:'Aleación de cobre y zinc: solución sólida de una sola fase.'}},
+ ana:['¿Qué prueba separó las fases en una mezcla heterogénea y por qué no funcionó en una homogénea?','¿Cómo explicas que el aire sea una mezcla y se vea como una sola cosa?'],
+ ev:[MC('Una mezcla homogénea tiene…',['Una sola fase','Varias fases','Solo sólidos','Solo líquidos'],0,'No se distinguen sus componentes.'),MC('El agua con aceite es una mezcla…',['Homogénea','Heterogénea','Pura','Solución'],1,'Forma dos capas.'),MC('El latón es…',['Una sustancia pura','Una mezcla homogénea (aleación)','Una mezcla heterogénea','Un compuesto'],1,'Solución sólida de cobre y zinc.')],
+ conc:'Resume cómo distingues una mezcla homogénea de una heterogénea con un ejemplo de cada una.',lim:'Resultados descritos; algunas mezclas pueden parecer homogéneas y ser heterogéneas a escala microscópica (como la leche).'});
+
+add({c:'Q06-020',n:'Transformaciones físicas y químicas',tema:'Materia · cambios',dif:2,mot:'clasif',
+ obj:'Clasificar cambios como físicos o químicos con tres criterios: forma, sustancias nuevas y reversibilidad.',comp:[C1,C2,C3],
+ evid:['Aplica los tres criterios.','Reconoce evidencias de reacción.','Distingue disolver de reaccionar.'],
+ teo:'En un cambio <b>físico</b> no se forman sustancias nuevas (cortar, hervir, disolver, romper). En un cambio <b>químico</b> sí: aparecen sustancias con otras propiedades (quemar, oxidar, cocinar, agriarse). Un cambio químico suele dar pistas como gas, color, olor, luz o calor, y casi nunca se revierte con facilidad.',
+ mat:['8 situaciones','3 preguntas guía'],
+ proc:[{t:'Elige una situación y haz al menos dos pruebas.',a:'prueba',n:2},{t:'Clasifícala como física o química.',a:'clasifica_ok'},{t:'Clasifica bien las 8 situaciones.',a:'todo_ok'}],
+ cfg:{tituloItems:'Situaciones',pregunta:'¿Qué tipo de cambio es?',
+  items:[{k:'co',n:'Cortar papel',e:'✂️'},{k:'qu',n:'Quemar papel',e:'🔥'},{k:'he',n:'Hervir agua',e:'♨️'},{k:'cl',n:'Clavo que se oxida',e:'🔩'},{k:'di',n:'Disolver azúcar',e:'🥄'},{k:'hu',n:'Cocinar un huevo',e:'🍳'},{k:'vi',n:'Romper un vidrio',e:'🪟'},{k:'le',n:'Leche que se agria',e:'🥛'}],
+  tests:[{k:'fo',n:'¿Cambia solo la forma o el estado?'},{k:'su',n:'¿Aparecen sustancias nuevas?'},{k:'re',n:'¿Se revierte fácilmente?'}],
+  cats:[{k:'f',n:'Cambio físico'},{k:'q',n:'Cambio químico'}],
+  ans:{co:'f',qu:'q',he:'f',cl:'q',di:'f',hu:'q',vi:'f',le:'q'},
+  res:{co:{fo:'Solo cambian el tamaño y la forma.',su:'No: sigue siendo papel.',re:'La sustancia no cambió; los trozos se pueden pegar.'},
+   qu:{fo:'Cambia mucho: queda ceniza y sale humo.',su:'Sí: ceniza, dióxido de carbono y vapor de agua.',re:'No: el papel no se recupera.'},
+   he:{fo:'Cambia de estado: de líquido a gas.',su:'No: el vapor sigue siendo H₂O.',re:'Sí: al enfriarse se condensa.'},
+   cl:{fo:'Aparece una capa rojiza.',su:'Sí: óxido de hierro.',re:'No se revierte fácilmente.'},
+   di:{fo:'El azúcar desaparece a la vista.',su:'No: sigue siendo azúcar; al evaporar el agua reaparece.',re:'Sí: se recupera por evaporación.'},
+   hu:{fo:'Cambia la textura y el color de la clara.',su:'Sí: las proteínas se transforman.',re:'No: no vuelve a estar crudo.'},
+   vi:{fo:'Solo cambian la forma y el tamaño.',su:'No: sigue siendo vidrio.',re:'No se pega solo, pero se puede fundir y moldear de nuevo sin cambiar la sustancia.'},
+   le:{fo:'Cambian olor, sabor y textura.',su:'Sí: se forma ácido láctico.',re:'No.'}},
+  why:{co:'Misma sustancia, otra forma.',qu:'Se forman sustancias nuevas.',he:'Cambio de estado.',cl:'Se forma óxido.',di:'Se mezcla sin reaccionar.',hu:'Cambian las proteínas.',vi:'Misma sustancia, otra forma.',le:'Se forma una sustancia nueva.'}},
+ ana:['¿Por qué disolver azúcar es un cambio físico aunque «desaparezca»?','¿Qué evidencias te indicaron un cambio químico?'],
+ ev:[MC('En un cambio químico…',['No aparecen sustancias nuevas','Se forman sustancias nuevas','Solo cambia el tamaño','Siempre se revierte'],1,'Cambia la composición.'),MC('Hervir agua es un cambio…',['Químico','Físico','Nuclear','Ninguno'],1,'El vapor sigue siendo H₂O.'),MC('Una pista de cambio químico es…',['Cortar','Formación de gas, color nuevo o calor','Cambiar de tamaño','Mezclar'],1,'Señales de reacción.')],
+ conc:'Escribe un ejemplo de cada tipo de cambio y los criterios con que los distinguiste.',lim:'Resultados descritos; algunos cambios tienen componentes físicos y químicos a la vez (por ejemplo cocinar).'});
 
 window.QUI_G6=L;
 })();
