@@ -9,7 +9,7 @@ async function cargar(){
   if(Z.sub==='panel'||!Z.r){const r=await sb.rpc('auditor_resumen');if(r.error)throw r.error;Z.r=r.data}
   if(Z.sub==='salud'){const r=await sb.rpc('auditor_salud');if(r.error)throw r.error;Z.salud=r.data||[]}
   if(Z.sub==='icfes'){try{const r=await sb.rpc('saber_periodos');Z.ic.lista=r.error?null:(r.data||[])}catch(_){Z.ic.lista=null}}
-  if(Z.sub==='informecol'){await loadScript('analisis.js?v=8');await ANA.load()}
+  if(Z.sub==='informecol'){await loadScript('analisis.js?v=9');await ANA.load()}
   if(Z.sub==='susc'){await loadScript('suscripcion_admin.js?v=2');await SUBA.load()}
   if(Z.sub==='errores'){const r=await sb.from('errores_cliente').select('*').order('created_at',{ascending:false}).limit(200);if(r.error)throw r.error;Z.errs=r.data||[]}
   if(Z.sub==='informe'||Z.sub==='panel'){const r=await sb.from('soporte_reportes').select('*').order('created_at',{ascending:false}).limit(300);if(!r.error)Z.rep=r.data||[]}

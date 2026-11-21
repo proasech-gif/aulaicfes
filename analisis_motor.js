@@ -5,7 +5,7 @@
 'use strict';
 const AREAS=[['lec','Lectura Crítica'],['mat','Matemáticas'],['soc','Sociales y Ciudadanas'],['nat','Ciencias Naturales'],['ing','Inglés']];
 const ROL={lec:'Jefe del área de Lenguaje',mat:'Jefe del área de Matemáticas',soc:'Jefe del área de Ciencias Sociales',nat:'Jefe del área de Ciencias Naturales',ing:'Jefe del área de Idiomas'};
-const SECC=[['resumen','Resumen ejecutivo'],['ficha','Ficha técnica y metodología'],['evolucion','Evolución histórica'],['territorial','Comparación territorial'],['areas','Análisis por áreas'],['diagnostico','Diagnóstico y prioridades'],['proyeccion','Proyección con escenarios'],['pmi','Plan de Mejoramiento Institucional'],['conclusiones','Conclusiones y recomendaciones'],['anexos','Anexos']];
+const SECC=[['ficha','Portada y ficha de identificación'],['presentacion','Presentación, propósito y alcance'],['resumen','Resumen ejecutivo y principales hallazgos'],['normativo','Marco normativo y referentes técnicos'],['fuentes','Fuentes, calidad y validación de los datos'],['metodologia','Metodología estadística'],['poblacion','Caracterización de la población evaluada'],['evolucion','Evolución histórica del puntaje global'],['territorial','Comparación municipal, departamental y nacional'],['areas','Análisis estadístico de las cinco pruebas'],['brechas','Brechas y tendencias'],['competencias','Diagnóstico por competencias y aprendizajes'],['fortalezas','Fortalezas y oportunidades institucionales'],['diagnostico','Identificación y priorización de problemas'],['conclusiones','Conclusiones generales y específicas'],['pmi','Plan de Mejoramiento Institucional (estratégico)'],['planes','Planes de mejoramiento por área'],['cronograma','Cronograma general de ejecución'],['presupuesto','Presupuesto y recursos'],['indicadores','Sistema de indicadores y seguimiento'],['impacto','Evaluación del impacto y escenarios de metas'],['recomendaciones','Recomendaciones estratégicas'],['anexos','Anexos estadísticos, glosario y fuentes']];
 const C={navy:'#0b2a5b',blue:'#2563eb',teal:'#0d9488',amber:'#d97706',red:'#b91c1c',ink:'#1e293b',mut:'#64748b',line:'#e2e8f0',soft:'#f1f5f9',gray:'#475569'};
 const T95={1:12.71,2:4.30,3:3.18,4:2.78,5:2.57,6:2.45,7:2.36,8:2.31,9:2.26,10:2.23};
 const e=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -41,7 +41,7 @@ function tendencia(pts,umbral){
   const m=pts.length>=4?ols(pts):null;
   const uso=m?m.b:porAnio;
   const dir=uso>umbral?'mejora':uso<-umbral?'descenso':'estable';
-  return{n:pts.length,ok:true,desde:a[0],hasta:z[0],span,cum,porAnio,m,pendiente:uso,metodo:m?'recta de tendencia (mínimos cuadrados, años reales)':'cambio acumulado ÷ años transcurridos',dir,r2:m?m.r2:null};
+  return{n:pts.length,ok:true,desde:a[0],hasta:z[0],span,cum,simple:porAnio,porAnio:uso,m,pendiente:uso,metodo:m?'recta de tendencia (mínimos cuadrados, años reales)':'cambio acumulado ÷ años transcurridos',dir,r2:m?m.r2:null};
 }
 /* regla de prioridad transparente: brecha relativa contra el país + tendencia */
 function prioridad(gapRel,dir,n){
@@ -55,10 +55,13 @@ const PCOL={'Crítica':C.red,'Alta':C.amber,'Media':C.blue,'Seguimiento':C.teal,
 
 function analizar(r,o){
   o=o||{};
-  const an=r.anios.slice(),ult=r.ult,pri=r.pri;
+  const an=r.anios.slice(),ultAll=r.ult,pri=r.pri;
+  let refY=null;for(let i=an.length-1;i>=0&&refY==null;i--){const y=an[i];if(by(pri,y).global!=null&&by(r.pais,y).global!=null)refY=y}
+  for(let i=an.length-1;i>=0&&refY==null;i--){const y=an[i];if(by(pri,y).global!=null&&by(r.dep,y).global!=null)refY=y}
+  const ult=refY!=null?refY:ultAll;
   const u=by(pri,ult),p=by(r.pais,ult),d=by(r.dep,ult),m=by(r.mun,ult),colego=r.nivel==='colegio';
-  const A={r,an,ult,u,p,d,m,colego,nombre:clean(r.titulo),adv:[],emit:o.emit||''};
-  A.faltan=[];for(let y=an[0];y<=ult;y++)if(!an.includes(y))A.faltan.push(y);
+  const A={r,an,ult,ultAll,uAll:by(pri,ultAll),u,p,d,m,colego,nombre:clean(r.titulo),adv:[],emit:o.emit||''};
+  A.faltan=[];for(let y=an[0];y<=ultAll;y++)if(!an.includes(y))A.faltan.push(y);
   // muestra
   A.nUlt=u.n;A.muestra=u.n==null?'sin dato':u.n<10?'insuficiente':u.n<30?'pequeña':'adecuada';
   if(A.muestra==='insuficiente')A.adv.push('En '+ult+' solo hubo '+u.n+' estudiantes evaluados: con menos de 10 evaluados las cifras son apenas indicativas y no deben usarse para decisiones.');
@@ -72,7 +75,7 @@ function analizar(r,o){
   const gp=pri.map(x=>[x.anio,x.global]).filter(x=>x[1]!=null);
   A.gp=gp;A.tg=tendencia(gp,1.5);
   A.gap={p:u.global!=null&&p.global!=null?r1(u.global-p.global):null,d:u.global!=null&&d.global!=null?r1(u.global-d.global):null,m:u.global!=null&&m.global!=null?r1(u.global-m.global):null};
-  A.gapRel=A.gap.p!=null?A.gap.p/p.global*100:null;
+  A.gapRel=A.gap.p!=null&&p.global?A.gap.p/p.global*100:null;A.sinPais=A.gap.p==null;
   // mayor caída / mejor año / cambios año a año
   A.yoy=[];for(let i=1;i<gp.length;i++)A.yoy.push({de:gp[i-1][0],a:gp[i][0],d:r1(gp[i][1]-gp[i-1][1]),pa:(gp[i][1]-gp[i-1][1])/(gp[i][0]-gp[i-1][0])});
   A.peor=A.yoy.length?A.yoy.reduce((a,b)=>b.d<a.d?b:a):null;A.mejor=A.yoy.length?A.yoy.reduce((a,b)=>b.d>a.d?b:a):null;
@@ -86,22 +89,23 @@ function analizar(r,o){
   A.areas=AREAS.map(([k,nm])=>{
     const v=u[k];if(v==null)return null;
     const pts=pri.map(x=>[x.anio,x[k]]),t=tendencia(pts,0.3);
-    const gp_=r1(v-p[k]),gd=d[k]!=null?r1(v-d[k]):null,gm=m[k]!=null?r1(v-m[k]):null,rel=p[k]?gp_/p[k]*100:null;
+    const gp_=p[k]!=null?r1(v-p[k]):null,gd=d[k]!=null?r1(v-d[k]):null,gm=m[k]!=null?r1(v-m[k]):null,rel=p[k]&&gp_!=null?gp_/p[k]*100:null;
     const pr=prioridad(rel,t.dir,u.n);
     return{k,nm,v,p:p[k],d:d[k],m:m[k],gp:gp_,gd,gm,rel,t,pr:pr.p,ord:pr.o,pts,first:(t.ok?pts.find(x=>x[1]!=null)[1]:null)};
   }).filter(Boolean);
-  A.orden=A.areas.slice().sort((a,b)=>a.ord-b.ord||a.rel-b.rel);
-  A.relativa=A.areas.length?A.areas.slice().sort((a,b)=>b.rel-a.rel)[0]:null; // fortaleza relativa interna
-  A.menor=A.areas.length?A.areas.slice().sort((a,b)=>a.rel-b.rel)[0]:null;
+  A.areasC=A.areas.filter(a=>a.rel!=null);A.sinRef=A.areas.filter(a=>a.rel==null);
+  A.orden=A.areas.slice().sort((a,b)=>a.ord-b.ord||(a.rel==null?0:a.rel)-(b.rel==null?0:b.rel));
+  A.relativa=A.areasC.length?A.areasC.slice().sort((a,b)=>b.rel-a.rel)[0]:null; // fortaleza relativa interna
+  A.menor=A.areasC.length?A.areasC.slice().sort((a,b)=>a.rel-b.rel)[0]:null;
   A.nCrit=A.areas.filter(a=>a.pr==='Crítica').length;
   // proyecciones (global)
   const hs=(o.horizontes&&o.horizontes.length?o.horizontes:[1,3]);
   A.hor=hs;A.proy=null;
-  const base=u.global;
+  const base=by(pri,ultAll).global!=null?by(pri,ultAll).global:u.global;
   const metaAnual=A.gap.p==null?2:(A.gap.p<0?clamp(0.15*Math.abs(A.gap.p),2,8):2);
   A.metaAnual=metaAnual;
   A.proy={ok:!!A.tg.m,esc:hs.map(h=>{
-    const y=ult+h;let tend=null;
+    const y=ultAll+h;let tend=null;
     if(A.tg.m){tend=pred(A.tg.m,y,500)}
     const mej=base==null?null:clamp(base+(h===1?metaAnual:Math.max(metaAnual*h*0.8,Math.min(0.4*Math.abs(A.gap.p||0),25))),0,500);
     return{h,y,sin:base,tend,mej};
@@ -119,15 +123,16 @@ function analizar(r,o){
 
 /* Plan de mejoramiento: metas por área según la brecha */
 function metaArea(a,h){
-  const gapAbs=Math.abs(Math.min(a.gp,0));
+  const gapAbs=Math.abs(Math.min(a.gp==null?0:a.gp,0));
   const un=clamp(0.2*gapAbs,1,3);
-  const inc=h===1?un:Math.max(un*h*0.9,0.4*gapAbs);
-  return r1(Math.min(100,a.v+(a.gp<0?inc:1)));
+  const inc=h===1?un:Math.max(un*h*0.9,0.4*gapAbs,un+1);
+  return r1(Math.min(100,a.v+inc));
 }
 
 /* ============ 2. REDACCIÓN (reglas sobre los números) ============ */
 const dirTxt=t=>t.dir==='mejora'?'tendencia al alza':t.dir==='descenso'?'tendencia a la baja':'tendencia estable';
 function textoComparacion(A){
+  if(A.gap.p==null&&A.gap.d==null)return 'no hay promedio nacional ni departamental publicado para comparar';
   const par=(x,ref,lab)=>x==null?'':x>0?`${f1(x)} puntos por encima ${lab}`:x<0?`${f1(-x)} puntos por debajo ${lab}`:`igual ${lab}`;
   const parts=[par(A.gap.p,A.p.global,'del promedio nacional ('+f1(A.p.global)+')')];
   if(A.gap.d!=null)parts.push(par(A.gap.d,0,'del departamental ('+f1(A.d.global)+')'));
@@ -136,7 +141,7 @@ function textoComparacion(A){
 }
 function hallazgos(A){
   const h=[],t=A.tg,u=A.u;
-  h.push(`En ${A.ult} el puntaje global fue de <b>${f1(u.global)}</b> sobre 500 (${f0(u.n)} evaluados): ${textoComparacion(A)}. Equivale a ${f1(Math.abs(A.gapRel))}% ${A.gapRel<0?'menos':'más'} que el país.`);
+  h.push(`En ${A.ult}${A.ultAll!==A.ult?' (último año con comparativo oficial)':''} el puntaje global fue de <b>${f1(u.global)}</b> sobre 500 (${f0(u.n)} evaluados): ${textoComparacion(A)}. ${A.gapRel==null?'':'Equivale a '+f1(Math.abs(A.gapRel))+'% '+(A.gapRel<0?'menos':'más')+' que el país.'}`);
   if(t.ok)h.push(`Entre ${t.desde} y ${t.hasta} el puntaje ${t.cum>=0?'subió':'bajó'} <b>${f1(Math.abs(t.cum))} puntos en total</b> (${sg(t.porAnio,2)} puntos por año en ${t.span} años${A.faltan.length?', contando los años reales sin dato':''}). ${t.m?`La recta de tendencia calculada con los años reales indica ${sg(t.m.b,2)} puntos por año (${dirTxt(t)}).`:'Con menos de 4 observaciones no se calcula una recta de tendencia.'}`);
   if(A.deltaRef.p!=null&&t.ok)h.push(`En el mismo periodo el promedio nacional cambió ${sg(A.deltaRef.p)} puntos${A.deltaRef.d!=null?' y el departamental '+sg(A.deltaRef.d):''}. La brecha con el país pasó de ${sg(A.brechaIni.p)} (${A.an[0]}) a ${sg(A.gap.p)} (${A.ult}).`);
   if(A.peor&&A.peor.d<-3)h.push(`La mayor caída entre observaciones fue de ${f1(-A.peor.d)} puntos (${A.peor.de}→${A.peor.a}); el mejor punto del periodo fue ${A.pico[0]} con ${f1(A.pico[1])}.`);
@@ -144,8 +149,8 @@ function hallazgos(A){
   return h;
 }
 function lecturaArea(a,A){
-  const tr=a.t.ok?`${a.t.cum>=0?'subió':'bajó'} ${f1(Math.abs(a.t.cum))} puntos entre ${a.t.desde} y ${a.t.hasta} (${sg(a.t.porAnio,2)} por año)`:'sin serie suficiente para medir cambio';
-  return `<b>${a.nm}:</b> ${f1(a.v)} en ${A.ult}, ${a.gp<0?f1(-a.gp)+' puntos por debajo':f1(a.gp)+' por encima'} del país (${sg(a.rel,1)}%); ${tr}. Prioridad <b style="color:${PCOL[a.pr]}">${a.pr}</b>.`;
+  const tr=a.t.ok?`cambio entre extremos ${sg(a.t.cum)} puntos (${a.t.desde}→${a.t.hasta}); tendencia ${sg(a.t.porAnio,2)} por año`:'sin serie suficiente para medir cambio';
+  return `<b>${a.nm}:</b> ${f1(a.v)} en ${A.ult}, ${a.gp==null?'sin promedio nacional publicado para comparar':a.gp<0?f1(-a.gp)+' puntos por debajo del país ('+sg(a.rel,1)+'%)':f1(a.gp)+' puntos por encima del país ('+sg(a.rel,1)+'%)'}; ${tr}. Prioridad <b style="color:${PCOL[a.pr]}">${a.pr}</b>.`;
 }
 
 /* ============ 3. GRÁFICOS SVG ============ */
@@ -177,11 +182,11 @@ function gGlobal(A,o){
   const s=[{l:A.colego?'Institución':'Territorio',pts:mk(r.pri),c:C.navy,w:3.2}];
   if(A.colego&&r.mun&&r.mun.length)s.push({l:'Municipio',pts:mk(r.mun),c:C.teal,w:2});
   s.push({l:'Departamento',pts:mk(r.dep),c:C.amber,w:2,dash:'6 3'},{l:'País',pts:mk(r.pais),c:C.gray,w:2,dash:'2 3',hollow:true});
-  if(o.tend&&A.tg.m){const m=A.tg.m;s.push({l:'Tendencia',pts:[[an[0],m.a+m.b*an[0]],[A.ult,m.a+m.b*A.ult]],c:C.red,w:1.4,dash:'4 3',noDots:true,nogap:true})}
-  return lc({series:s,x0:an[0]-.5,x1:A.ult+.5,ticks:an,miss:A.faltan,H:o.H||265,titulo:'Puntaje global promedio por año (escala 0–500)',alt:'Evolución del puntaje global frente al municipio, departamento y país',step:10});
+  if(o.tend&&A.tg.m){const m=A.tg.m;s.push({l:'Tendencia',pts:[[an[0],m.a+m.b*an[0]],[A.ultAll,m.a+m.b*A.ultAll]],c:C.red,w:1.4,dash:'4 3',noDots:true,nogap:true})}
+  return lc({series:s,x0:an[0]-.5,x1:A.ultAll+.5,ticks:an,miss:A.faltan,H:o.H||265,titulo:'Puntaje global promedio por año (escala 0–500)',alt:'Evolución del puntaje global frente al municipio, departamento y país',step:10});
 }
 function gBrechas(A){
-  const items=A.orden.slice().sort((a,b)=>a.rel-b.rel),W=640,rowH=34,H=items.length*rowH+56,L=190,mid=L+(W-L-60)*0.62;
+  const items=A.orden.filter(a=>a.rel!=null).sort((a,b)=>a.rel-b.rel),W=640,rowH=34,H=items.length*rowH+56,L=190,mid=L+(W-L-60)*0.62;
   const mn=Math.min(0,...items.map(a=>a.gp)),mx=Math.max(0,...items.map(a=>a.gp));const sc=(mid-L-6)/Math.max(1,-mn||1);
   const sp=(W-60-mid)/Math.max(1,mx||1);const X=v=>v<0?mid+v*sc:mid+v*Math.min(sp,sc);
   let g=`<text x="0" y="11" font-size="10.5" font-weight="700" fill="${C.navy}">Brecha frente al promedio nacional por prueba (puntos, escala 0–100)</text><line x1="${mid}" x2="${mid}" y1="22" y2="${H-18}" stroke="${C.ink}"/>`;
@@ -202,11 +207,11 @@ function gPuntos(A){
 }
 function gMini(A,a){
   const an=A.an,r=A.r,s=[{pts:an.map(y=>[y,by(r.pri,y)[a.k]]),c:C.navy,w:2.4,lab:true,dec:0},{pts:an.map(y=>[y,by(r.pais,y)[a.k]]),c:C.gray,w:1.6,dash:'3 3',hollow:true}];
-  return lc({W:300,H:150,L:30,R:12,B:26,T:20,series:s,x0:an[0]-.5,x1:A.ult+.5,ticks:an.length>6?an.filter((y,i)=>i%2===0||y===A.ult):an,miss:A.faltan,leg:false,step:5,titulo:a.nm,alt:'Evolución de '+a.nm});
+  return lc({W:300,H:150,L:30,R:12,B:26,T:20,series:s,x0:an[0]-.5,x1:A.ultAll+.5,ticks:an.length>6?an.filter((y,i)=>i%2===0||y===A.ultAll):an,miss:A.faltan,leg:false,step:5,titulo:a.nm,alt:'Evolución de '+a.nm});
 }
 function gAbanico(A){
-  const an=A.an,u=A.r.pri,hmax=Math.max(...A.hor),x1=A.ult+hmax+.5;
-  const hist=an.map(y=>[y,by(u,y).global]),last=[A.ult,A.u.global];
+  const an=A.an,u=A.r.pri,hmax=Math.max(...A.hor),x1=A.ultAll+hmax+.5;
+  const hist=an.map(y=>[y,by(u,y).global]),last=[A.ultAll,A.u.global];
   const s=[{l:'Resultados reales',pts:hist,c:C.navy,w:3,lab:true,dec:0}];
   const pe=A.proy.esc;
   s.push({l:'Sin cambios',pts:[last].concat(pe.map(x=>[x.y,x.sin])),c:C.gray,w:1.8,dash:'5 3',nogap:true,hollow:true});
@@ -216,10 +221,10 @@ function gAbanico(A){
     var bands=[{pts:up.concat(dn),c:C.red}];pe.forEach(x=>{ext.push(x.tend.hi,x.tend.lo)})}
   s.push({l:'Meta de mejoramiento',pts:[last].concat(pe.map(x=>[x.y,x.mej])),c:C.teal,w:2.2,nogap:true});
   const ticks=an.concat(pe.map(x=>x.y));
-  return lc({series:s,bands:bands||[],x0:an[0]-.5,x1:x1,ticks:ticks.filter((y,i)=>ticks.length<=9||i%2===0||y>A.ult),miss:A.faltan,vlines:[A.ult+.5],H:275,extraY:ext,titulo:'Puntaje global: resultados reales y escenarios a futuro (banda = intervalo de incertidumbre 95%)',step:10,alt:'Proyección con escenarios'});
+  return lc({series:s,bands:bands||[],x0:an[0]-.5,x1:x1,ticks:ticks.filter((y,i)=>ticks.length<=9||i%2===0||y>A.ultAll),miss:A.faltan,vlines:[A.ultAll+.5],H:275,extraY:ext,titulo:'Puntaje global: resultados reales y escenarios a futuro (banda = intervalo de incertidumbre 95%)',step:10,alt:'Proyección con escenarios'});
 }
 function gMatriz(A){
-  const W=640,H=300,L=56,R=20,T=30,B=40,xs=1.6,ylo=Math.min(-35,Math.floor(Math.min(...A.areas.map(a=>a.rel))/5)*5-5),yhi=Math.max(5,Math.ceil(Math.max(...A.areas.map(a=>a.rel))/5)*5+3);
+  const W=640,H=300,L=56,R=20,T=30,B=40,xs=1.6,ylo=Math.min(-35,Math.floor(Math.min(...A.areasC.map(a=>a.rel))/5)*5-5),yhi=Math.max(5,Math.ceil(Math.max(...A.areasC.map(a=>a.rel))/5)*5+3);
   const X=v=>L+(clamp(v,-xs,xs)+xs)/(2*xs)*(W-L-R),Y=v=>T+(yhi-v)/(yhi-ylo)*(H-T-B);
   let g=`<text x="${L}" y="12" font-size="10.5" font-weight="700" fill="${C.navy}">Matriz de prioridad: distancia con el país vs. tendencia propia</text>`;
   g+=`<rect x="${L}" y="${Y(-10)}" width="${X(-.3)-L}" height="${Y(ylo)-Y(-10)}" fill="${C.red}" opacity=".10"/><rect x="${X(-.3)}" y="${T}" width="${X(.3)-X(-.3)}" height="${H-T-B}" fill="#94a3b8" opacity=".07"/>`;
@@ -227,7 +232,7 @@ function gMatriz(A){
   [[-10,'−10% (Crítica/Alta)'],[-5,'−5%'],[-2,'−2%']].forEach(v=>{if(v[0]>ylo)g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v[0])}" y2="${Y(v[0])}" stroke="${C.line}" stroke-dasharray="4 3"/><text x="${L-5}" y="${Y(v[0])+3}" text-anchor="end" font-size="9" fill="${C.mut}">${v[0]}%</text>`});
   g+=`<text x="${L}" y="${H-8}" font-size="9.5" fill="${C.mut}">← baja ${'('+sg(-xs)+' pts/año)'}</text><text x="${W-R}" y="${H-8}" text-anchor="end" font-size="9.5" fill="${C.mut}">sube ${'('+sg(xs)+' pts/año) →'}</text><text x="${(L+W-R)/2}" y="${H-8}" text-anchor="middle" font-size="9.5" fill="${C.mut}">estable (±0,3)</text>`;
   g+=`<text x="14" y="${(T+H-B)/2}" font-size="9.5" fill="${C.mut}" transform="rotate(-90 14 ${(T+H-B)/2})" text-anchor="middle">brecha relativa con el país (%)</text>`;
-  const used=[];A.areas.forEach(a=>{let x=X(a.t.pendiente==null?0:a.t.pendiente),y=Y(a.rel);let k=0;while(used.some(u=>Math.abs(u[0]-x)<90&&Math.abs(u[1]-y)<15)&&k<10){y+=15;k++}used.push([x,y]);
+  const used=[];A.areasC.forEach(a=>{let x=X(a.t.pendiente==null?0:a.t.pendiente),y=Y(a.rel);let k=0;while(used.some(u=>Math.abs(u[0]-x)<90&&Math.abs(u[1]-y)<15)&&k<10){y+=15;k++}used.push([x,y]);
     g+=`<circle cx="${x}" cy="${y}" r="7" fill="${PCOL[a.pr]}" opacity=".9"/><text x="${x+11}" y="${y+4}" font-size="10" font-weight="600" fill="${C.ink}">${e(a.nm.split(' ')[0])}${a.k==='soc'?' y C.':''}</text>`});
   return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="${FONT};display:block" role="img" aria-label="Matriz de prioridad">${g}</svg>`;
 }
@@ -268,9 +273,9 @@ ul{margin:0 0 2.5mm;padding-left:5mm}li{margin-bottom:1.3mm;text-align:justify}
 .cover .top{position:absolute;left:17mm;right:17mm;top:12mm;display:flex;gap:4mm;align-items:center;color:#fff}
 .cover .top img{height:17mm;background:#fff;border-radius:2mm;padding:1mm}
 .cover .art{position:absolute;left:0;right:0;top:34mm}
-.cover .tit{position:absolute;left:17mm;right:17mm;top:158mm}
+.cover .tit{position:absolute;left:17mm;right:17mm;top:150mm}
 .cover .tit .k{letter-spacing:.25em;font-size:9pt;color:#5eead4;font-weight:700}
-.cover .tit h1{color:#fff;font-size:27pt;margin:3mm 0 3mm}
+.cover .tit h1{color:#fff;font-size:22pt;line-height:1.2;margin:3mm 0 4mm}
 .cover .tit .n{font-size:15pt;font-weight:600;line-height:1.25}
 .cover .meta{position:absolute;left:17mm;right:17mm;bottom:14mm;display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;font-size:8.6pt;border-top:.6pt solid #ffffff55;padding-top:4mm}
 .cover .meta b{display:block;color:#5eead4;font-size:7.4pt;letter-spacing:.12em}
@@ -281,135 +286,322 @@ ul{margin:0 0 2.5mm;padding-left:5mm}li{margin-bottom:1.3mm;text-align:justify}
 .sig{display:grid;grid-template-columns:1fr 1fr;gap:14mm;margin-top:16mm;text-align:center;font-size:8.6pt}.sig div{border-top:.8pt solid ${C.ink};padding-top:1.5mm}
 svg{max-width:100%}`;
 
+/* ---------- apoyos de contenido (solo texto fijo y reglas; no inventan resultados) ---------- */
+function ser(v){v=(v||[]).filter(x=>x!=null);const n=v.length;if(!n)return null;const m=v.reduce((a,b)=>a+b,0)/n,s=[...v].sort((a,b)=>a-b),med=n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2,sd=n>1?Math.sqrt(v.reduce((a,b)=>a+(b-m)*(b-m),0)/(n-1)):null;return{n,m,med,sd,cv:sd!=null&&m?sd/m*100:null,min:s[0],max:s[n-1]}}
+const QUE={
+ lec:'Comprensión de textos continuos y discontinuos: identificar y entender contenidos explícitos, comprender cómo se articulan las partes del texto y reflexionar y evaluar su contenido.',
+ mat:'Interpretación y representación, formulación y ejecución, y argumentación, aplicadas a problemas de álgebra y cálculo, geometría y estadística.',
+ soc:'Pensamiento social, interpretación y análisis de perspectivas, y pensamiento reflexivo y sistémico en situaciones sociales, históricas y ciudadanas.',
+ nat:'Uso comprensivo del conocimiento científico, explicación de fenómenos e indagación, en los componentes de entorno vivo, entorno físico y ciencia, tecnología y sociedad.',
+ ing:'Comprensión de lectura y uso del lenguaje en contextos comunicativos; los resultados se reportan en niveles del Marco Común Europeo (A−, A1, A2, B1, B+).'};
+const LINEAS={
+ lec:['Comprensión literal e inferencial','Interpretación de textos discontinuos','Evaluación de argumentos y posturas','Identificación de intenciones comunicativas','Lectura crítica de fuentes','Resolución de preguntas contextualizadas'],
+ mat:['Razonamiento y resolución de problemas contextualizados','Interpretación de gráficas, tablas y datos','Pensamiento variacional y algebraico','Geometría y medida aplicadas','Estadística y probabilidad básica','Argumentación y justificación de procedimientos'],
+ soc:['Pensamiento histórico y análisis de fuentes','Constitución, democracia y competencias ciudadanas','Análisis de perspectivas y conflictos','Geografía, territorio y economía','Pensamiento reflexivo y sistémico','Lectura de casos y dilemas'],
+ nat:['Explicación de fenómenos naturales','Indagación y diseño de experimentos','Interpretación de datos y gráficas científicas','Entorno vivo (biología y ambiente)','Entorno físico (química y física)','Ciencia, tecnología y sociedad'],
+ ing:['Vocabulario y estructuras de uso frecuente','Comprensión de lectura en contexto','Uso comunicativo del idioma','Avisos, conversaciones y textos cortos','Gramática en situaciones reales','Práctica oral y auditiva en clase']};
+const ACTS={
+ lec:['Diagnóstico inicial por competencia','Talleres semanales de lectura','Secuencias didácticas interdisciplinarias','Simulacros periódicos en AULA360','Análisis de distractores y errores frecuentes','Retroalimentación individual y grupal'],
+ mat:['Diagnóstico inicial por componente','Banco de problemas contextualizados por periodo','Simulacros periódicos en AULA360','Análisis de errores por tipo de pregunta','Tutorías de refuerzo a estudiantes en riesgo','Retroalimentación individual y grupal'],
+ soc:['Diagnóstico inicial por competencia','Estudios de caso y lectura de fuentes','Simulacros periódicos en AULA360','Proyectos de aula de competencias ciudadanas','Análisis de errores y distractores','Retroalimentación individual y grupal'],
+ nat:['Diagnóstico inicial por competencia','Prácticas de indagación y laboratorio','Simulacros periódicos en AULA360','Lectura e interpretación de gráficas y datos','Análisis de errores y distractores','Retroalimentación individual y grupal'],
+ ing:['Diagnóstico inicial por nivel (MCER)','Práctica semanal de lectura y escucha','Simulacros periódicos en AULA360','Vocabulario y gramática en contexto','Clubes de conversación y recursos digitales','Retroalimentación individual y grupal']};
+const INDIC={
+ lec:['% de estudiantes que alcanza la meta de aprendizaje','% de respuestas correctas por competencia','Variación del resultado entre diagnósticos','Participación en actividades de refuerzo','Evolución de resultados en simulacros'],
+ mat:['% de estudiantes que alcanza la meta de aprendizaje','% de respuestas correctas por componente','Variación del resultado entre diagnósticos','Participación en tutorías de refuerzo','Evolución de resultados en simulacros'],
+ soc:['% de estudiantes que alcanza la meta de aprendizaje','% de respuestas correctas por competencia','Variación del resultado entre diagnósticos','Participación en proyectos y refuerzos','Evolución de resultados en simulacros'],
+ nat:['% de estudiantes que alcanza la meta de aprendizaje','% de respuestas correctas por competencia','Variación del resultado entre diagnósticos','Participación en prácticas de indagación','Evolución de resultados en simulacros'],
+ ing:['% de estudiantes por nivel MCER en el diagnóstico interno','% de respuestas correctas por parte','Variación del resultado entre diagnósticos','Participación en actividades de práctica','Evolución de resultados en simulacros']};
+const OBJ_AREA={lec:'Fortalecer la capacidad de interpretar, comprender, evaluar y asumir posiciones críticas frente a diferentes tipos de textos.',mat:'Mejorar el razonamiento y la resolución de problemas matemáticos en contextos reales.',soc:'Desarrollar el pensamiento social, histórico y ciudadano para analizar situaciones y perspectivas.',nat:'Fortalecer la explicación de fenómenos y la indagación científica.',ing:'Mejorar la comprensión y el uso comunicativo del inglés.'};
+
+function heat(A){
+  const ys=A.an.filter(y=>by(A.r.pais,y).global!=null&&by(A.r.pri,y).global!=null);
+  if(!ys.length)return'<p class="note">No hay años con promedio institucional y nacional al mismo tiempo; no se puede construir la matriz de brechas.</p>';
+  const cell=(a,b)=>{if(a==null||b==null)return'<td class="n" style="color:#94a3b8">—</td>';const g=r1(a-b),rel=b?g/b*100:0,al=Math.min(.6,Math.abs(rel)/20*.6),bg=g<0?`rgba(185,28,28,${al})`:`rgba(13,148,136,${al})`;return`<td class="n" style="background:${bg};font-weight:600">${sg(g)}</td>`};
+  const rows=[['global','Global (0–500)']].concat(AREAS).map(([k,nm])=>`<tr><td><b>${nm}</b></td>${ys.map(y=>cell(by(A.r.pri,y)[k],by(A.r.pais,y)[k])).join('')}</tr>`).join('');
+  return`<table><tr><th>Prueba</th>${ys.map(y=>`<th class="n">${y}</th>`).join('')}</tr>${rows}</table><p class="note">Puntos de diferencia entre la institución y el promedio nacional de cada año. Rojo: por debajo del país; verde azulado: por encima; la intensidad crece con la distancia relativa.</p>`;
+}
+function gYoy(A){
+  const y=A.yoy;if(!y.length)return'';
+  const W=640,H=190,L=40,R=16,T=26,B=34,mx=Math.max(5,...y.map(v=>Math.abs(v.d)))*1.25,Y=v=>T+(H-T-B)/2*(1-v/mx),bw=Math.min(46,(W-L-R)/y.length*.6);
+  let g=`<text x="0" y="11" font-size="10.5" font-weight="700" fill="${C.navy}">Variación del puntaje global entre observaciones consecutivas (puntos)</text><line x1="${L}" x2="${W-R}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C.ink}"/>`;
+  y.forEach((v,i)=>{const cx=L+(i+.5)*(W-L-R)/y.length,y0=Y(0),y1=Y(v.d);g+=`<rect x="${cx-bw/2}" y="${Math.min(y0,y1)}" width="${bw}" height="${Math.max(1,Math.abs(y1-y0))}" fill="${v.d<0?C.red:C.teal}" rx="2"/><text x="${cx}" y="${v.d<0?y1+13:y1-4}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${C.ink}">${sg(v.d)}</text><text x="${cx}" y="${H-12}" text-anchor="middle" font-size="9.5" fill="${C.mut}">${v.de}→${v.a}</text>`});
+  return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="${FONT};display:block" role="img" aria-label="Variación anual del puntaje global">${g}</svg>`;
+}
+
 function build(r,ctx){
   ctx=ctx||{};
   const A=analizar(r,ctx),Lh=ctx.membrete||{},emit=ctx.emit||'';
   const sec=ctx.sec||{};const on=k=>sec[k]!==false;
   const pages=[];const P=(s,html)=>pages.push({s,html});
-  const per=A.an[0]+(A.an.length>1?'–'+A.ult:'');
-  const nm=A.nombre;
-  const wcol=!!ctx.word;
+  const per=A.an[0]+(A.an.length>1?'–'+A.ultAll:'');
+  const nm=A.nombre,cal=e(r.cal||'A');
+  const H2=(k,t,sub)=>`<h2>{{N:${k}}}. ${t}</h2>${sub?`<p class="sub">${sub}</p>`:''}`;
+  const hasMun=A.colego&&A.r.mun&&A.r.mun.length;
+  const f=r.ficha||{};
+  const prio=A.orden.filter(a=>a.pr!=='Seguimiento'&&a.pr!=='Sin dato');
+  const acc=ctx.acc||(()=>[]);
+  const tag=a=>`<span class="tag" style="background:${PCOL[a.pr]}">${a.pr}</span>`;
+  const anioMeta=(h)=>A.ultAll+h;
+  const MJ=(a,h)=>f1(metaArea(a,h));
+  const gAll=A.uAll&&A.uAll.global!=null?A.uAll.global:A.u.global;
 
-  /* --- Resumen --- */
+  /* 1. Ficha de identificación */
+  if(on('ficha')){
+    P('ficha',`${H2('ficha','Ficha de identificación','Datos básicos del informe')}
+    <table><tr><td style="width:36mm"><b>${A.colego?'Institución':'Territorio'}</b></td><td colspan="3">${e(nm)}</td></tr>
+    ${A.colego?`<tr><td><b>Código DANE</b></td><td>${e(r.dane||'—')}</td><td style="width:26mm"><b>Sector</b></td><td>${e(f.sector||'—')}</td></tr><tr><td><b>Municipio</b></td><td>${e(f.mcpio||'—')}</td><td><b>Departamento</b></td><td>${e(f.depto||'—')}</td></tr><tr><td><b>Zona</b></td><td colspan="3">${e(r.zona||'Sin dato (el colegio no la ha registrado)')}</td></tr>`:''}
+    <tr><td><b>Calendario</b></td><td>${cal}</td><td><b>Periodo</b></td><td>${A.an[0]}–${A.ultAll}</td></tr>
+    <tr><td><b>Años analizados</b></td><td colspan="3">${A.an.join(', ')}</td></tr>
+    <tr><td><b>Años sin datos</b></td><td colspan="3">${A.faltan.length?A.faltan.join(', ')+' (no publicados por el ICFES o no disponibles)':'Ninguno dentro del periodo'}</td></tr>
+    <tr><td><b>Año con comparativo oficial</b></td><td colspan="3">${A.ult}${A.ultAll!==A.ult?' · el resultado de '+A.ultAll+' aún no tiene promedio nacional publicado y se muestra sin comparación':''}</td></tr>
+    <tr><td><b>Evaluados en ${A.ult}</b></td><td colspan="3">${f0(A.u.n)} · muestra ${A.muestra}</td></tr>
+    <tr><td><b>Fecha de emisión</b></td><td colspan="3">${e(emit)}</td></tr>
+    <tr><td><b>Elaborado por</b></td><td colspan="3">AULA360 · Análisis estadístico institucional</td></tr></table>
+    <h3>Destinatarios</h3><p>Rectoría, Consejo Directivo, Consejo Académico, coordinaciones, jefes de área y docentes; y, como evidencia de la gestión académica, la Secretaría de Educación.</p>
+    <h3>Cómo está organizado</h3><p>El informe va de lo general a lo específico: primero el contexto, los datos y el método (capítulos 2 a 7); después los resultados y su comparación (8 a 13); luego el diagnóstico y las conclusiones (14 y 15); y finalmente el plan de mejoramiento ejecutable con cronograma, recursos e indicadores (16 a 26). Los anexos reúnen las tablas completas.</p>
+    <div class="box b"><b>Regla de oro del informe.</b> Solo se presentan cifras que provienen de las fuentes citadas. Lo que no está disponible se declara como tal; nunca se estima para llenar un espacio.</div>`);
+  }
+  /* 2. Presentación */
+  if(on('presentacion')){
+    P('presentacion',`${H2('presentacion','Presentación, propósito y alcance','Para qué sirve este documento')}
+    <p>Este informe analiza los resultados de la prueba Saber 11 de <b>${e(nm)}</b> entre ${A.an[0]} y ${A.ultAll}, los compara con su entorno y los convierte en un plan de mejoramiento con metas, responsables, indicadores y seguimiento. Está pensado para que el rector, los coordinadores y los docentes puedan leerlo y usarlo para decidir.</p>
+    <h3>Propósitos</h3><ul><li><b>Presentar resultados técnicamente sólidos</b> ante Rectoría, Consejo Académico, Consejo Directivo y Secretaría de Educación.</li><li><b>Identificar con evidencia</b> las fortalezas, debilidades, brechas y tendencias de la institución.</li><li><b>Convertir los resultados en un plan ejecutable</b>, con metas, actividades, responsables, recursos, indicadores y mecanismos de seguimiento.</li></ul>
+    <h3>Alcance</h3><ul><li>Las cinco pruebas de Saber 11: Lectura Crítica, Matemáticas, Sociales y Ciudadanas, Ciencias Naturales e Inglés, y el puntaje global.</li><li>Comparación con ${hasMun?'el municipio, ':''}el departamento y el país, cuando el ICFES publica el dato.</li><li>Un plan de mejoramiento que articula el componente académico con la ruta de autoevaluación institucional del MEN.</li></ul>
+    <h3>Lo que este informe no hace</h3><ul><li>No analiza estudiantes individuales ni establece causas de los resultados: describe y compara.</li><li>No reporta desviación estándar entre estudiantes, niveles de desempeño ni resultados por competencia, porque las fuentes agregadas disponibles no los incluyen (ver capítulos 5 y 12).</li><li>No fija presupuestos: los valores se calculan con los costos reales de la institución (capítulo 23).</li></ul>
+    <h3>Cómo leerlo</h3><ul><li>Puntaje global: 0 a 500. Cada prueba: 0 a 100.</li><li>«Brecha» = institución − referencia (+ por encima, − por debajo).</li><li>Las prioridades siguen una regla pública y fija (capítulo 6).</li><li>Las proyecciones son escenarios estadísticos, no resultados oficiales.</li></ul>`);
+  }
+  /* 3. Resumen ejecutivo */
   if(on('resumen')){
     const t=A.tg,hz=hallazgos(A);
-    const kp=`<div class="kpis"><div class="kpi"><b>${f1(A.u.global)}</b><span>Puntaje global ${A.ult} (de 500)</span></div><div class="kpi"><b>${sg(A.gap.p)}</b><span>Brecha con el país (${sg(A.gapRel,0)}%)</span></div><div class="kpi"><b>${t.ok?sg(t.cum):'—'}</b><span>Cambio acumulado ${t.ok?t.desde+'→'+t.hasta:''}</span></div><div class="kpi"><b>${f0(A.u.n)}</b><span>Estudiantes evaluados · muestra ${A.muestra}</span></div></div>`;
-    const prios=A.orden.filter(a=>a.pr!=='Seguimiento').map(a=>`<li><b>${a.nm}</b> — <span class="tag" style="background:${PCOL[a.pr]}">${a.pr}</span> ${f1(a.v)} (${sg(a.gp)} vs. país; ${dirTxt(a.t)})</li>`).join('');
-    P('resumen',`<h2>Resumen ejecutivo</h2><p class="sub">${e(nm)} · Saber 11 · calendario ${r.cal||'A'} · ${per}</p>${kp}
+    const kp=`<div class="kpis"><div class="kpi"><b>${f1(A.u.global)}</b><span>Puntaje global ${A.ult} (de 500)</span></div><div class="kpi"><b>${A.gap.p==null?'—':sg(A.gap.p)}</b><span>${A.gap.p==null?'Sin promedio nacional publicado':'Brecha con el país ('+sg(A.gapRel,0)+'%)'}</span></div><div class="kpi"><b>${t.ok?sg(t.cum):'—'}</b><span>Cambio acumulado ${t.ok?t.desde+'→'+t.hasta:''}</span></div><div class="kpi"><b>${f0(A.u.n)}</b><span>Evaluados ${A.ult} · muestra ${A.muestra}</span></div></div>`;
+    const prios=A.orden.filter(a=>a.pr!=='Seguimiento'&&a.pr!=='Sin dato').map(a=>`<li><b>${a.nm}</b> — ${tag(a)} ${f1(a.v)} (${sg(a.gp)} vs. país; ${dirTxt(a.t)})</li>`).join('');
+    P('resumen',`${H2('resumen','Resumen ejecutivo y principales hallazgos',e(nm)+' · Saber 11 · calendario '+cal+' · '+per)}${kp}
     <h3>Hallazgos principales</h3><ul>${hz.map(x=>`<li>${x}</li>`).join('')}</ul>
-    ${A.orden.length?`<h3>Prioridades de mejoramiento</h3><ul style="list-style:none;padding-left:0">${prios||'<li>Ninguna prueba requiere prioridad alta con la regla aplicada.</li>'}</ul><p class="note">Regla: brecha relativa contra el país combinada con la tendencia propia de cada prueba (ver sección «Diagnóstico y prioridades»).</p>`:''}
-    ${A.adv.length?`<div class="box w"><b>Advertencias de lectura</b><ul style="margin:1mm 0 0">${A.adv.map(x=>`<li>${e(x)}</li>`).join('')}</ul></div>`:''}
+    ${A.ultAll!==A.ult?`<div class="box w"><b>Dato más reciente sin comparativo.</b> En ${A.ultAll} la institución reporta un global de <b>${f1(gAll)}</b>${A.uAll&&A.uAll.n?' ('+f0(A.uAll.n)+' evaluados)':''}. Aún no hay promedios municipal, departamental ni nacional de ese año; por eso las comparaciones y prioridades usan ${A.ult}, el último año con referencia oficial.</div>`:''}
+    ${A.orden.length?`<h3>Prioridades de mejoramiento</h3><ul style="list-style:none;padding-left:0">${prios||'<li>Ninguna prueba requiere prioridad alta con la regla aplicada.</li>'}</ul>`:''}
+    ${A.sinRef.length?`<div class="box w"><b>Sin referencia nacional:</b> ${A.sinRef.map(a=>a.nm).join(', ')}. Estas pruebas no se clasifican por prioridad porque no hay promedio nacional con el cual compararlas.</div>`:''}
     ${A.posD?`<div class="box b">Posición en el ranking departamental ${r.rankAnio||A.ult}${critTxt(r)}: <b>${A.posD.i} de ${A.posD.n}</b> establecimientos con resultado${A.posM?` · en su municipio: <b>${A.posM.i} de ${A.posM.n}</b>`:''}.</div>`:''}
-    <div class="box"><b>Lectura general.</b> ${A.gap.p!=null&&A.gap.p<0?`El resultado global se mantiene por debajo del promedio nacional y ${t.ok&&t.dir==='descenso'?'la tendencia propia es descendente, lo que justifica un plan de mejoramiento inmediato y con seguimiento trimestral.':'requiere un plan de mejoramiento sostenido con metas por prueba.'}`:'El resultado global está en o por encima del promedio nacional; la prioridad es consolidar y documentar las prácticas que funcionan.'}</div>`);
+    <div class="box"><b>Lectura general.</b> ${A.gap.p==null?'No hay promedio nacional publicado para el periodo; el diagnóstico se limita a la evolución propia.':A.gap.p<0?`El resultado global se mantiene por debajo del promedio nacional y ${t.ok&&t.dir==='descenso'?'la tendencia propia es descendente, lo que justifica un plan de mejoramiento inmediato y con seguimiento trimestral.':'requiere un plan de mejoramiento sostenido con metas por prueba.'}`:'El resultado global está en o por encima del promedio nacional; la prioridad es consolidar y documentar las prácticas que funcionan.'}</div>`);
   }
-  /* --- Ficha técnica y metodología --- */
-  if(on('ficha')){
-    const f=r.ficha||{};
-    P('ficha',`<div style="font-size:9.4pt"><h2>Ficha técnica y metodología</h2><p class="sub">Qué datos se usaron y cómo se calcularon las cifras</p>
-    <table><tr><td style="width:32mm"><b>${A.colego?'Institución':'Territorio'}</b></td><td colspan="3">${e(nm)}</td></tr>
-    ${A.colego?`<tr><td><b>Código DANE</b></td><td>${e(r.dane||'—')}</td><td><b>Sector</b></td><td>${e(f.sector||'—')}</td></tr><tr><td><b>Municipio</b></td><td>${e(f.mcpio||'—')}</td><td><b>Departamento</b></td><td>${e(f.depto||'—')}</td></tr>`:''}
-    ${A.colego?`<tr><td><b>Zona</b></td><td colspan="3">${e(r.zona||'Sin dato (el colegio no la ha registrado)')}</td></tr>`:''}<tr><td><b>Calendario</b></td><td>${r.cal||'A'}</td><td><b>Años analizados</b></td><td>${A.an.join(', ')}</td></tr>
-    <tr><td><b>Años sin datos</b></td><td colspan="3">${A.faltan.length?A.faltan.join(', ')+' (no publicados por el ICFES o no disponibles)':'Ninguno dentro del periodo'}</td></tr>
-    <tr><td><b>Evaluados</b></td><td colspan="3">${f0(A.u.n)} en ${A.ult} · muestra ${A.muestra}</td></tr></table>
-    <h3>Fuentes</h3><ul><li>ICFES, «Resultados únicos Saber 11» (datos abiertos, datos.gov.co): años 2019–2022, agregados por establecimiento, municipio, departamento y país; promedios con un decimal.</li><li>ICFES, archivos oficiales de resultados agregados por establecimiento (publicados en el sitio del ICFES): años 2023 en adelante; los promedios por área llegan como números enteros.</li></ul>
-    <h3>Cómo se calcularon las cifras</h3><ul>
-    <li><b>Puntaje global (0–500):</b> promedio de los resultados de las sedes y jornadas del establecimiento, ponderado por número de evaluados. Cada prueba va de 0 a 100.</li>
-    <li><b>Brecha:</b> diferencia entre el resultado de la institución y el de cada referencia (municipio, departamento, país) en el mismo año; la brecha relativa es esa diferencia dividida por el valor nacional.</li>
-    <li><b>Cambio por año:</b> diferencia entre dos observaciones dividida por los años <i>reales</i> transcurridos (si falta un año, no se trata como consecutivo).</li>
-    <li><b>Tendencia:</b> con 4 o más observaciones se ajusta una recta de mínimos cuadrados sobre los años reales; con menos, se usa el cambio acumulado dividido por los años transcurridos. Se considera «estable» un cambio menor a ±0,3 puntos por año en las pruebas y ±1,5 en el global.</li>
-    <li><b>Proyección:</b> la recta se extiende con un intervalo de incertidumbre del 95 %. Si hay menos de 4 observaciones <b>no</b> se proyecta tendencia. Es un ejercicio estadístico, no un resultado oficial.</li>
-    <li><b>Prioridad:</b> regla fija y pública: brecha relativa ≤ −10 % y tendencia a la baja = Crítica; ≤ −10 % sin descenso o ≤ −5 % con descenso = Alta; hasta −2 % = Media; mejor que −2 % = Seguimiento.</li></ul>
-    <div class="box w"><b>Alcance y limitaciones</b><ul style="margin:1mm 0 0"><li>Las fuentes agregadas no incluyen desviación estándar, niveles de desempeño ni resultados por competencia: por eso este informe <b>no</b> analiza competencias ni dispersión.</li><li>Los datos de 2019–2022 y los de 2023 en adelante provienen de publicaciones distintas (precisión de decimales diferente); las diferencias menores a 1 punto en un área pueden deberse a este redondeo.</li><li>Un resultado de una cohorte pequeña varía por azar; las causas de los cambios no se pueden determinar con estos datos.</li></ul></div></div>`);
+  /* 4. Marco normativo */
+  if(on('normativo')){
+    P('normativo',`${H2('normativo','Marco normativo y referentes técnicos','Con qué se construye este informe')}
+    <div class="box w"><b>Precisión importante.</b> No existe una norma que obligue a una plantilla de determinada extensión para un informe estadístico de Saber 11. El informe se construye con referentes técnicos del ICFES y articula su componente de mejoramiento con los lineamientos del Ministerio de Educación Nacional (MEN).</div>
+    <table><tr><th style="width:44mm">Referente</th><th>Qué establece</th><th style="width:50mm">Uso en este informe</th></tr>
+    <tr><td><b>Ley 115 de 1994</b></td><td>Ley General de Educación: fines, organización del servicio y evaluación del servicio educativo.</td><td>Marco general de la educación colombiana.</td></tr>
+    <tr><td><b>Ley 1324 de 2009</b></td><td>Fija parámetros y criterios para organizar el sistema de evaluación de resultados de la calidad de la educación y dicta normas para el fomento de la cultura de la evaluación.</td><td>Sentido de la evaluación externa Saber 11 como insumo de calidad.</td></tr>
+    <tr><td><b>Decreto 1290 de 2009</b> (compilado en el Decreto 1075 de 2015)</td><td>Reglamenta la evaluación del aprendizaje y la promoción de los estudiantes; la evaluación institucional aporta información para ajustar el plan de mejoramiento.</td><td>Articulación entre resultados y mejoramiento institucional.</td></tr>
+    <tr><td><b>Resolución ICFES 268 de 2020</b></td><td>Reglamenta las metodologías asociadas al cálculo y publicación de los resultados, individuales y agregados, de los exámenes de Estado (incluye Saber 11).</td><td>Base de las cifras agregadas: conteo de evaluados, promedios y, en el reporte oficial, desviaciones y niveles.</td></tr>
+    <tr><td><b>Guía 34 del MEN</b></td><td>«Guía para el mejoramiento institucional»: ruta de autoevaluación y plan de mejoramiento en cuatro áreas de gestión: directiva, académica, administrativa y financiera, y de la comunidad.</td><td>El PMI no se limita a preparar para Saber 11: se conecta con la gestión académica y directiva.</td></tr>
+    <tr><td><b>Marcos de evaluación y guías de orientación Saber 11 (ICFES)</b></td><td>Describen qué evalúa cada prueba y cómo se reportan los resultados.</td><td>Descripción de las pruebas y de las líneas de intervención (capítulos 12 y 17–21).</td></tr></table>
+    <p class="note">Las normas se citan por su objeto general. Antes de usar este documento ante una autoridad, conviene confirmar la versión vigente de cada norma en los portales oficiales del MEN y del ICFES.</p>`);
   }
-  /* --- Evolución --- */
+  /* 5. Fuentes y calidad */
+  if(on('fuentes')){
+    const man=r.manuales||[],pro=(r.propios||[]).filter(y=>!man.includes(y));
+    const fil=A.an.map(y=>{const x=by(A.r.pri,y),oficial=!man.includes(y)&&!pro.includes(y),ref=by(A.r.pais,y).global!=null;
+      const est=x.n==null?'—':x.n<10?'insuficiente':x.n<30?'pequeña':'adecuada';
+      let chk='—';if(x.global!=null&&['mat','lec','nat','soc','ing'].every(k=>x[k]!=null)){const q=5*(3*(x.mat+x.lec+x.nat+x.soc)+x.ing)/13,dif=x.global-q;chk=Math.abs(dif)<=3?'coherente ('+sg(dif)+')':'revisar ('+sg(dif)+')'}
+      return`<tr><td><b>${y}</b></td><td>${oficial?'ICFES · resultados oficiales agregados':man.includes(y)?'Carga manual (institución/auditor)':'Resultados individuales de la institución'}</td><td class="n">${f0(x.n)}</td><td>${est}</td><td>${ref?'sí':'no'}</td><td>${chk}</td></tr>`}).join('');
+    P('fuentes',`${H2('fuentes','Fuentes, calidad y validación de los datos','De dónde salen las cifras y qué controles se aplicaron')}
+    <h3>Fuentes</h3><ul><li><b>ICFES, «Resultados únicos Saber 11»</b> (datos abiertos, datos.gov.co): años 2019–2022, agregados por establecimiento, municipio, departamento y país; promedios con un decimal.</li><li><b>ICFES, archivos oficiales de resultados agregados por establecimiento</b>: años 2023 en adelante; los promedios por área llegan como números enteros.</li><li><b>Resultados propios o cargados manualmente</b> (cuando el ICFES aún no publica el año): se identifican como tales y no tienen comparativo ni puesto en el ranking.</li></ul>
+    <h3>Inventario de datos por año</h3>
+    <table><tr><th>Año</th><th>Fuente</th><th class="n">Evaluados</th><th>Muestra</th><th>Comparativo nacional</th><th>Control del global*</th></tr>${fil}</table>
+    <p class="note">* Control: el global se compara con el calculado por la fórmula oficial a partir de las cinco pruebas (5 × [3·(Lectura+Matemáticas+Sociales+Naturales)+Inglés] ÷ 13). Como las pruebas de 2023 en adelante llegan redondeadas a enteros, se acepta una diferencia de hasta ±3 puntos.</p>
+    <h3>Validaciones y límites</h3><ul><li>Cuando el ICFES no publica el global de un establecimiento pero sí sus cinco pruebas, el ranking usa el global calculado con la fórmula oficial y se indica como estimado.</li><li>Las diferencias menores a 1 punto en un área entre 2019–2022 y 2023 en adelante pueden deberse al redondeo de la fuente.</li></ul>
+    ${A.adv.length?`<div class="box w"><b>Advertencias de lectura para esta institución</b><ul style="margin:1mm 0 0">${A.adv.map(x=>`<li>${e(x)}</li>`).join('')}</ul></div>`:''}`);
+  }
+  /* 6. Metodología */
+  if(on('metodologia')){
+    P('metodologia',`${H2('metodologia','Metodología estadística','Cómo se calcularon las cifras')}
+    <table><tr><th style="width:42mm">Indicador</th><th>Cálculo</th><th style="width:30mm">Disponible</th></tr>
+    <tr><td><b>Media (puntaje promedio)</b></td><td>Promedio de las sedes y jornadas del establecimiento, ponderado por número de evaluados. Cada prueba va de 0 a 100; el global, de 0 a 500.</td><td>Sí</td></tr>
+    <tr><td><b>Brecha territorial</b></td><td>Institución − referencia (municipio, departamento, país) en el mismo año; la brecha relativa es esa diferencia dividida por el valor de la referencia.</td><td>Sí, si el ICFES publica la referencia</td></tr>
+    <tr><td><b>Variación interanual y acumulada</b></td><td>Diferencia entre observaciones; la tasa por año divide por los años <i>reales</i> transcurridos.</td><td>Sí</td></tr>
+    <tr><td><b>Tendencia lineal</b></td><td>Con 4 o más observaciones, recta de mínimos cuadrados sobre los años reales; con menos, cambio acumulado ÷ años. Es la <b>única tasa por año</b> que se cita en todo el documento. Estable: menos de ±0,3 puntos/año por prueba y ±1,5 en el global.</td><td>Sí</td></tr>
+    <tr><td><b>Variabilidad entre años</b></td><td>Mediana, desviación estándar y coeficiente de variación de la serie de promedios anuales (no entre estudiantes), con máximo y mínimo.</td><td>Sí</td></tr>
+    <tr><td><b>Intervalo de proyección</b></td><td>Banda del 95 % alrededor de la recta de tendencia; solo con 4 o más observaciones.</td><td>Parcial</td></tr>
+    <tr><td><b>Desviación estándar entre estudiantes, percentiles, niveles de desempeño, intervalos de confianza del promedio</b></td><td>Requieren resultados individuales o los reportes agregados con esos campos.</td><td>No: las fuentes usadas no los traen</td></tr></table>
+    <h3>Regla de prioridad</h3><p>Se combina la brecha relativa con el país y la tendencia propia de cada prueba: brecha ≤ −10 % con tendencia a la baja = <b>Crítica</b>; ≤ −10 % sin descenso o ≤ −5 % con descenso = <b>Alta</b>; entre −2 % y −10 % = <b>Media</b>; mejor que −2 % = <b>Seguimiento</b>. Si no hay referencia nacional, la prueba queda <b>Sin dato</b> y no se saca ninguna conclusión de prioridad sobre ella.</p>
+    <h3>Metas</h3><p>Meta a 1 año = línea base + 20 % de la brecha con el país (entre 1 y 3 puntos). Meta a 3 años = al menos el 40 % de la brecha y siempre mayor que la de 1 año. Son propuestas para el Consejo Académico, que puede ajustarlas.</p>`);
+  }
+  /* 7. Población */
+  if(on('poblacion')){
+    const fil=A.an.map((y,i)=>{const x=by(A.r.pri,y),mu=by(A.r.mun,y),de=by(A.r.dep,y),pa=by(A.r.pais,y),pv=i?by(A.r.pri,A.an[i-1]).n:null;return`<tr><td><b>${y}</b></td><td class="n"><b>${f0(x.n)}</b></td><td class="n">${pv!=null&&x.n!=null?sg(x.n-pv,0):'—'}</td>${hasMun?`<td class="n">${f0(mu.n)}</td><td class="n">${mu.n&&x.n?f1(x.n/mu.n*100)+' %':'—'}</td>`:''}<td class="n">${f0(de.n)}</td><td class="n">${f0(pa.n)}</td></tr>`}).join('');
+    const sn=ser(A.an.map(y=>by(A.r.pri,y).n));
+    P('poblacion',`${H2('poblacion','Caracterización de la población evaluada','Cuántos estudiantes presentaron la prueba')}
+    <table><tr><th>Año</th><th class="n">Evaluados</th><th class="n">Cambio</th>${hasMun?'<th class="n">Evaluados municipio</th><th class="n">% del municipio</th>':''}<th class="n">Evaluados depto.</th><th class="n">Evaluados país</th></tr>${fil}</table>
+    ${sn?`<div class="kpis" style="grid-template-columns:repeat(4,1fr)"><div class="kpi"><b>${f0(sn.m)}</b><span>Promedio de evaluados por año</span></div><div class="kpi"><b>${f0(sn.min)}</b><span>Mínimo del periodo</span></div><div class="kpi"><b>${f0(sn.max)}</b><span>Máximo del periodo</span></div><div class="kpi"><b>${A.muestra}</b><span>Muestra en ${A.ult}</span></div></div>`:''}
+    <h3>Lectura</h3><ul><li>Una cohorte de ${f0(A.u.n)} estudiantes en ${A.ult} es considerada «${A.muestra}»: ${A.muestra==='adecuada'?'los promedios son razonablemente estables.':'los promedios pueden variar varios puntos por azar entre un año y otro.'}</li>${sn&&sn.cv!=null?`<li>El tamaño de la cohorte varió entre ${f0(sn.min)} y ${f0(sn.max)} evaluados (coeficiente de variación ${f1(sn.cv)} %); los cambios de resultado deben leerse sabiendo que cada año evalúa estudiantes distintos.</li>`:''}</ul>
+    <div class="box w"><b>Datos no disponibles.</b> Las fuentes agregadas no incluyen sexo, edad, estrato, jornada ni modalidad de los evaluados; por eso no se presenta una caracterización sociodemográfica. Si la institución desea ese análisis, puede cargar los resultados individuales de sus estudiantes en AULA360.</div>`);
+  }
+  /* 8. Evolución */
   if(on('evolucion')){
-    const t=A.tg;
+    const t=A.tg,ss=ser(A.an.map(y=>by(A.r.pri,y).global));
     const filas=A.r.pri.map((x,i)=>{const prev=i?A.r.pri[i-1]:null,dy=prev&&x.global!=null&&prev.global!=null?x.global-prev.global:null,py=dy!=null?dy/(x.anio-prev.anio):null,bp=x.global!=null&&by(A.r.pais,x.anio).global!=null?r1(x.global-by(A.r.pais,x.anio).global):null;
-      return`<tr><td><b>${x.anio}</b></td><td class="n">${f0(x.n)}</td><td class="n"><b>${f1(x.global)}</b></td>${A.colego&&A.r.mun&&A.r.mun.length?`<td class="n">${f1(by(A.r.mun,x.anio).global)}</td>`:''}<td class="n">${f1(by(A.r.dep,x.anio).global)}</td><td class="n">${f1(by(A.r.pais,x.anio).global)}</td><td class="n">${prev?sg(dy)+(x.anio-prev.anio>1?'<sup>*</sup>':''):'—'}</td><td class="n">${prev?sg(py,2):'—'}</td><td class="n">${sg(bp)}</td></tr>`}).join('');
-    P('evolucion',`<h2>Evolución histórica del puntaje global</h2><p class="sub">${per} · ${A.an.length} observaciones${A.faltan.length?' · sin datos: '+A.faltan.join(', '):''}</p>
+      return`<tr><td><b>${x.anio}</b></td><td class="n">${f0(x.n)}</td><td class="n"><b>${f1(x.global)}</b></td>${hasMun?`<td class="n">${f1(by(A.r.mun,x.anio).global)}</td>`:''}<td class="n">${f1(by(A.r.dep,x.anio).global)}</td><td class="n">${f1(by(A.r.pais,x.anio).global)}</td><td class="n">${prev?sg(dy)+(x.anio-prev.anio>1?'<sup>*</sup>':''):'—'}</td><td class="n">${prev?sg(py,2):'—'}</td><td class="n">${sg(bp)}</td></tr>`}).join('');
+    P('evolucion',`${H2('evolucion','Evolución histórica del puntaje global',per+' · '+A.an.length+' observaciones'+(A.faltan.length?' · sin datos: '+A.faltan.join(', '):''))}
     ${gGlobal(A,{tend:true})}
-    <table><tr><th>Año</th><th class="n">Evaluados</th><th class="n">${A.colego?'Institución':'Territorio'}</th>${A.colego&&A.r.mun&&A.r.mun.length?'<th class="n">Municipio</th>':''}<th class="n">Depto.</th><th class="n">País</th><th class="n">Δ puntos</th><th class="n">Δ por año</th><th class="n">Brecha país</th></tr>${filas}</table>
-    <p class="note"><sup>*</sup> Variación entre observaciones separadas por más de un año; «Δ por año» ya la divide por los años reales transcurridos.</p>
-    <h3>Lectura</h3><ul>${t.ok?`<li>Cambio acumulado de ${t.desde} a ${t.hasta}: <b>${sg(t.cum)} puntos</b> (${sg(t.porAnio,2)} por año en ${t.span} años).</li>`:''}${t.m?`<li>Recta de tendencia (años reales): <b>${sg(t.m.b,2)} puntos por año</b>, R² = ${f2(t.m.r2)} — ${t.m.r2<0.5?'ajuste débil: la serie es irregular y la tendencia es poco concluyente':'ajuste aceptable'}.</li>`:'<li>Con menos de 4 observaciones no se ajusta recta de tendencia.</li>'}${A.peor&&A.peor.d<0?`<li>Mayor caída entre observaciones: <b>${f1(-A.peor.d)} puntos</b> (${A.peor.de}→${A.peor.a}).</li>`:''}${A.mejor&&A.mejor.d>0?`<li>Mayor avance entre observaciones: <b>+${f1(A.mejor.d)} puntos</b> (${A.mejor.de}→${A.mejor.a}).</li>`:''}${A.deltaRef.p!=null?`<li>Mientras la institución cambió ${sg(t.cum)} puntos, el promedio nacional cambió ${sg(A.deltaRef.p)}${A.deltaRef.d!=null?' y el departamental '+sg(A.deltaRef.d):''}.</li>`:''}</ul>`);
+    <table><tr><th>Año</th><th class="n">Evaluados</th><th class="n">${A.colego?'Institución':'Territorio'}</th>${hasMun?'<th class="n">Municipio</th>':''}<th class="n">Depto.</th><th class="n">País</th><th class="n">Δ puntos</th><th class="n">Δ por año</th><th class="n">Brecha país</th></tr>${filas}</table>
+    <p class="note"><sup>*</sup> Variación entre observaciones separadas por más de un año; «Δ por año» la divide por los años reales transcurridos. «—» en municipio, departamento o país: el ICFES aún no publica ese año.</p>
+    <h3>Lectura</h3><ul>${t.ok?`<li>Cambio acumulado de ${t.desde} a ${t.hasta}: <b>${sg(t.cum)} puntos</b> en ${t.span} años.</li><li><b>Tendencia:</b> ${sg(t.porAnio,2)} puntos por año (${dirTxt(t)}; ${t.metodo})${t.m&&t.m.r2!=null?`; R² = ${f2(t.m.r2)} — ${t.m.r2<0.5?'ajuste débil, la serie es irregular y la tendencia es poco concluyente':'ajuste aceptable'}`:''}.</li>`:''}${ss?`<li>Promedio del periodo: <b>${f1(ss.m)}</b> (mediana ${f1(ss.med)}; mínimo ${f1(ss.min)}, máximo ${f1(ss.max)}${ss.sd!=null?'; variabilidad entre años: desv. estándar '+f1(ss.sd)+', coef. de variación '+f1(ss.cv)+' %':''}).</li>`:''}${A.peor&&A.peor.d<0?`<li>Mayor caída entre observaciones: <b>${f1(-A.peor.d)} puntos</b> (${A.peor.de}→${A.peor.a}).</li>`:''}${A.mejor&&A.mejor.d>0?`<li>Mayor avance: <b>+${f1(A.mejor.d)} puntos</b> (${A.mejor.de}→${A.mejor.a}).</li>`:''}${A.deltaRef.p!=null?`<li>En el mismo periodo el promedio nacional cambió ${sg(A.deltaRef.p)} puntos${A.deltaRef.d!=null?' y el departamental '+sg(A.deltaRef.d):''}.</li>`:''}</ul>`);
   }
-  /* --- Territorial --- */
+  /* 9. Territorial */
   if(on('territorial')){
     const gp=(x,y)=>x==null||y==null?null:r1(x-y);
-    const filas=[['Global (0–500)',A.u.global,A.m.global,A.d.global,A.p.global]].concat(A.areas.map(a=>[a.nm,a.v,a.m,a.d,a.p])).map(x=>`<tr><td><b>${x[0]}</b></td><td class="n"><b>${f1(x[1])}</b></td>${A.colego&&A.r.mun&&A.r.mun.length?`<td class="n">${f1(x[2])}</td>`:''}<td class="n">${f1(x[3])}</td><td class="n">${f1(x[4])}</td>${A.colego&&A.r.mun&&A.r.mun.length?`<td class="n">${sg(gp(x[1],x[2]))}</td>`:''}<td class="n">${sg(gp(x[1],x[3]))}</td><td class="n">${sg(gp(x[1],x[4]))}</td></tr>`).join('');
+    const filas=[['Global (0–500)',A.u.global,A.m.global,A.d.global,A.p.global]].concat(A.areas.map(a=>[a.nm,a.v,a.m,a.d,a.p])).map(x=>`<tr><td><b>${x[0]}</b></td><td class="n"><b>${f1(x[1])}</b></td>${hasMun?`<td class="n">${f1(x[2])}</td>`:''}<td class="n">${f1(x[3])}</td><td class="n">${f1(x[4])}</td>${hasMun?`<td class="n">${sg(gp(x[1],x[2]))}</td>`:''}<td class="n">${sg(gp(x[1],x[3]))}</td><td class="n">${sg(gp(x[1],x[4]))}</td></tr>`).join('');
     const rm=A.rankMun&&A.rankMun.length?A.rankMun:null,lista=rm||A.rank.slice(0,10);
-    const rk=A.rank.length?`<h3>Ranking ${rm?'del municipio':'del departamento'} · ${r.rankAnio||A.ult}${critTxt(r)}</h3><table><tr><th>Puesto</th><th>Establecimiento</th><th>Sector</th><th class="n">Evaluados</th><th class="n">Global</th></tr>${lista.slice(0,9).map((x,i)=>{const mine=x.dane===r.dane;return`<tr ${mine?`style="font-weight:700"`:''}><td ${mine?`style="background:#dbeafe"`:''}>${i+1}</td><td ${mine?`style="background:#dbeafe"`:''}>${e(clean(x.nombre))}${mine?' ◀':''}</td><td ${mine?`style="background:#dbeafe"`:''}>${e(x.sector||'')}</td><td class="n" ${mine?`style="background:#dbeafe"`:''}>${f0(x.n)}</td><td class="n" ${mine?`style="background:#dbeafe"`:''}><b>${f1(x.g)}</b></td></tr>`}).join('')}</table><p class="note">Solo establecimientos con 5 o más evaluados y puntaje global publicado${A.rankExcl?` (se excluyeron ${A.rankExcl} sin resultado o con muestra menor)`:''}. ${A.posD?`Posición departamental: ${A.posD.i} de ${A.posD.n}${A.posM?'; municipal: '+A.posM.i+' de '+A.posM.n:''}.`:''}</p>`:'';
-    P('territorial',`<h2>Comparación territorial</h2><p class="sub">Institución frente al municipio, el departamento y el país · ${A.ult}</p>${gPuntos(A)}
-    <table><tr><th>Prueba</th><th class="n">Inst.</th>${A.colego&&A.r.mun&&A.r.mun.length?'<th class="n">Munic.</th>':''}<th class="n">Depto.</th><th class="n">País</th>${A.colego&&A.r.mun&&A.r.mun.length?'<th class="n">Brecha munic.</th>':''}<th class="n">Brecha depto.</th><th class="n">Brecha país</th></tr>${filas}</table>
-    <div class="box b">${A.gap.d!=null&&A.brechaIni.d!=null?`Frente al departamento, la brecha pasó de <b>${sg(A.brechaIni.d)}</b> en ${A.an[0]} a <b>${sg(A.gap.d)}</b> en ${A.ult}. `:''}${A.gap.m!=null&&A.brechaIni.m!=null?`Frente al municipio, de <b>${sg(A.brechaIni.m)}</b> a <b>${sg(A.gap.m)}</b>. `:''}Esto indica si la institución se mueve con su entorno o se separa de él.</div>${rk}`);
+    const rk=A.rank.length?`<h3>Ranking ${rm?'del municipio':'del departamento'} · ${r.rankAnio||A.ult}${critTxt(r)}</h3><table><tr><th>Puesto</th><th>Establecimiento</th><th>Sector</th><th class="n">Evaluados</th><th class="n">Global</th></tr>${lista.slice(0,9).map((x,i)=>{const mine=x.dane===r.dane,st=mine?` style="background:#dbeafe"`:'';return`<tr ${mine?`style="font-weight:700"`:''}><td${st}>${i+1}</td><td${st}>${e(clean(x.nombre))}${mine?' ◀':''}</td><td${st}>${e(x.sector||'')}</td><td class="n"${st}>${f0(x.n)}</td><td class="n"${st}><b>${f1(x.g)}</b></td></tr>`}).join('')}</table><p class="note">Solo establecimientos con 5 o más evaluados. Si el ICFES no publicó el global de un establecimiento, se calcula con la fórmula oficial a partir de sus cinco pruebas.${A.posD?` Posición departamental: ${A.posD.i} de ${A.posD.n}${A.posM?'; municipal: '+A.posM.i+' de '+A.posM.n:''}.`:''}</p>`:'';
+    P('territorial',`${H2('territorial','Comparación municipal, departamental y nacional','Institución frente a su entorno · '+A.ult)}${gPuntos(A)}
+    <table><tr><th>Prueba</th><th class="n">Inst.</th>${hasMun?'<th class="n">Munic.</th>':''}<th class="n">Depto.</th><th class="n">País</th>${hasMun?'<th class="n">Brecha munic.</th>':''}<th class="n">Brecha depto.</th><th class="n">Brecha país</th></tr>${filas}</table>
+    <div class="box b">${A.gap.d!=null&&A.brechaIni.d!=null?`Frente al departamento, la brecha pasó de <b>${sg(A.brechaIni.d)}</b> en ${A.an[0]} a <b>${sg(A.gap.d)}</b> en ${A.ult}. `:''}${A.gap.m!=null&&A.brechaIni.m!=null?`Frente al municipio, de <b>${sg(A.brechaIni.m)}</b> a <b>${sg(A.gap.m)}</b>. `:''}${A.gap.p!=null&&A.brechaIni.p!=null?`Frente al país, de <b>${sg(A.brechaIni.p)}</b> a <b>${sg(A.gap.p)}</b>. `:''}Muestra si la institución se mueve con su entorno o se separa de él.</div>${rk}`);
   }
-  /* --- Áreas --- */
+  /* 10. Cinco pruebas */
   if(on('areas')&&A.areas.length){
-    const fil=A.orden.map(a=>`<tr><td><b>${a.nm}</b></td><td class="n"><b>${f1(a.v)}</b></td><td class="n">${f1(a.p)}</td><td class="n">${sg(a.gp)}</td><td class="n">${sg(a.rel,0)}%</td><td class="n">${a.t.ok?sg(a.t.cum):'—'}</td><td class="n">${a.t.ok?sg(a.t.porAnio,2):'—'}</td><td>${a.t.ok?dirTxt(a.t).replace('tendencia ',''):'—'}</td><td><span class="tag" style="background:${PCOL[a.pr]}">${a.pr}</span></td></tr>`).join('');
-    P('areas',`<h2>Análisis por áreas</h2><p class="sub">Resultados ${A.ult} por prueba (escala 0–100) y su cambio en el periodo</p>${gBrechas(A)}
-    <table><tr><th>Prueba</th><th class="n">Inst.</th><th class="n">País</th><th class="n">Brecha</th><th class="n">Brecha %</th><th class="n">Δ acum.</th><th class="n">Δ por año</th><th>Tendencia</th><th>Prioridad</th></tr>${fil}</table>
-    <div class="box">La prueba con <b>menor distancia relativa</b> con el país es <b>${A.relativa?e(A.relativa.nm):'—'}</b> (${A.relativa?sg(A.relativa.rel,0):''}%). Es una «fortaleza relativa interna»: no significa que supere al país, sino que es donde la institución está más cerca de él.</div>
+    const est=A.areas.map(a=>{const s=ser(a.pts.map(x=>x[1])),mx=a.pts.filter(x=>x[1]!=null&&s&&x[1]===s.max)[0],mn=a.pts.filter(x=>x[1]!=null&&s&&x[1]===s.min)[0];return{a,s,mx,mn}});
+    const fil=est.map(({a,s,mx,mn})=>`<tr><td><b>${a.nm}</b></td><td class="n"><b>${f1(a.v)}</b></td><td class="n">${f1(a.p)}</td><td class="n">${a.gp==null?'—':sg(a.gp)}</td><td class="n">${a.rel==null?'—':sg(a.rel,0)+'%'}</td><td class="n">${a.t.ok?sg(a.t.cum):'—'}</td><td class="n">${a.t.ok?sg(a.t.porAnio,2):'—'}</td><td>${a.t.ok?dirTxt(a.t).replace('tendencia ',''):'—'}</td></tr>`).join('');
+    P('areas',`${H2('areas','Análisis estadístico de las cinco pruebas','Resultados '+A.ult+' por prueba (escala 0–100) y su cambio en el periodo')}${gBrechas(A)}
+    <table><tr><th>Prueba</th><th class="n">Inst.</th><th class="n">País</th><th class="n">Brecha</th><th class="n">Brecha %</th><th class="n">Δ acum.</th><th class="n">Δ por año</th><th>Tendencia</th></tr>${fil}</table>
+    <div class="box">La prueba más cercana al país es <b>${A.relativa?e(A.relativa.nm):'—'}</b>${A.relativa?' ('+sg(A.relativa.rel,0)+'%)':''}: es una «fortaleza relativa interna», no significa que supere al país.</div>
     <h3>Lectura por prueba</h3><ul>${A.orden.map(a=>`<li>${lecturaArea(a,A)}</li>`).join('')}</ul>`);
-    P('areas',`<h2>Evolución por prueba</h2><p class="sub">Institución (línea continua) frente al país (línea punteada)</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm">${A.areas.map(a=>`<div style="border:.6pt solid ${C.line};border-radius:2mm;padding:2mm">${gMini(A,a)}<div class="note" style="text-align:center">${a.t.ok?`${sg(a.t.cum)} puntos (${sg(a.t.porAnio,2)}/año)`:'—'} · <b style="color:${PCOL[a.pr]}">${a.pr}</b></div></div>`).join('')}</div>
+    P('areas',`<h2>Estadísticos de cada prueba en el periodo</h2><p class="sub">Calculados sobre la serie de promedios anuales de la institución (variabilidad entre años, no entre estudiantes)</p>
+    <table><tr><th>Prueba</th><th class="n">Años</th><th class="n">Media</th><th class="n">Mediana</th><th class="n">Desv. est.</th><th class="n">Coef. var.</th><th class="n">Mínimo</th><th class="n">Máximo</th></tr>${est.map(({a,s,mx,mn})=>s?`<tr><td><b>${a.nm}</b></td><td class="n">${s.n}</td><td class="n">${f1(s.m)}</td><td class="n">${f1(s.med)}</td><td class="n">${s.sd==null?'—':f1(s.sd)}</td><td class="n">${s.cv==null?'—':f1(s.cv)+' %'}</td><td class="n">${f1(s.min)}${mn?' ('+mn[0]+')':''}</td><td class="n">${f1(s.max)}${mx?' ('+mx[0]+')':''}</td></tr>`:'').join('')}</table>
+    <p class="note">Coeficiente de variación = desviación estándar ÷ media. Un valor alto indica resultados muy cambiantes de un año a otro (frecuente con cohortes pequeñas).</p>
     <h3>Valores por año</h3><table><tr><th>Prueba</th>${A.an.map(y=>`<th class="n">${y}</th>`).join('')}</tr>${A.areas.map(a=>`<tr><td><b>${a.nm}</b></td>${A.an.map(y=>`<td class="n">${f1(by(A.r.pri,y)[a.k])}</td>`).join('')}</tr>`).join('')}</table>`);
+    P('areas',`<h2>Evolución de cada prueba</h2><p class="sub">Institución (línea continua) frente al país (línea punteada)</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm">${A.areas.map(a=>`<div style="border:.6pt solid ${C.line};border-radius:2mm;padding:2mm">${gMini(A,a)}<div class="note" style="text-align:center">${a.t.ok?`${sg(a.t.cum)} puntos (${sg(a.t.porAnio,2)}/año)`:'—'} · <b style="color:${PCOL[a.pr]}">${a.pr}</b></div></div>`).join('')}</div>`);
   }
-  /* --- Diagnóstico --- */
+  /* 11. Brechas y tendencias */
+  if(on('brechas')&&A.areas.length){
+    P('brechas',`${H2('brechas','Brechas y tendencias','Dónde y cuándo la institución se separa del país')}${heat(A)}${gYoy(A)}
+    ${A.areasC.length?`<h3>Matriz de priorización</h3>${gMatriz(A)}<p class="note">Cada círculo es una prueba: la altura es su distancia relativa con el país; la posición horizontal, su tendencia en puntos por año. El color es la prioridad.</p>`:''}`);
+  }
+  /* 12. Competencias */
+  if(on('competencias')&&A.areas.length){
+    P('competencias',`${H2('competencias','Diagnóstico por competencias y aprendizajes','Qué evalúa cada prueba y qué información falta')}
+    <div class="box w"><b>Limitación de los datos.</b> Los resultados agregados disponibles traen solo el promedio por prueba. No incluyen resultados por competencia, componente ni nivel de desempeño; por eso este capítulo <b>no atribuye</b> resultados a competencias específicas. Describe qué evalúa cada prueba y cómo obtener el diagnóstico fino.</div>
+    <table><tr><th style="width:34mm">Prueba</th><th>Qué evalúa</th><th style="width:20mm" class="n">Promedio ${A.ult}</th></tr>${A.areas.map(a=>`<tr><td><b>${a.nm}</b></td><td>${QUE[a.k]}</td><td class="n"><b>${f1(a.v)}</b></td></tr>`).join('')}</table>
+    <h3>Cómo completar el diagnóstico por competencias</h3><ul><li><b>Reporte de resultados del ICFES para el establecimiento</b> (plataforma de resultados para instituciones): trae niveles de desempeño y, para algunas pruebas, aprendizajes por evaluar; se puede cargar como anexo.</li><li><b>Simulacros en AULA360:</b> cada pregunta queda asociada a su competencia, lo que permite medir el porcentaje de aciertos por competencia y por distractor desde el primer periodo del plan.</li><li><b>Análisis de errores</b> por jefes de área con los cuadernillos liberados por el ICFES.</li></ul>
+    <p>Hasta contar con esa información, las líneas de intervención de los capítulos 17 a 21 se formulan a partir del marco de evaluación de cada prueba y deberán afinarse con el diagnóstico inicial del primer periodo.</p>`);
+  }
+  /* 13. Fortalezas y oportunidades */
+  if(on('fortalezas')&&A.areas.length){
+    const fort=[],opor=[];
+    A.areas.forEach(a=>{if(a.pr==='Seguimiento')fort.push(`<b>${a.nm}</b>: ${f1(a.v)}, cercana o superior al promedio nacional (${a.gp==null?'—':sg(a.gp)}).`);else if(a.t.ok&&a.t.dir==='mejora')fort.push(`<b>${a.nm}</b>: tendencia al alza (${sg(a.t.porAnio,2)} puntos por año).`);
+      if(a.pr==='Crítica'||a.pr==='Alta')opor.push(`<b>${a.nm}</b>: brecha de ${sg(a.gp)} puntos (${sg(a.rel,0)}%) con el país${a.t.ok?'; '+dirTxt(a.t):''}.`);else if(a.pr==='Media')opor.push(`<b>${a.nm}</b>: brecha moderada (${sg(a.rel,0)}%); espacio para cerrarla con acciones focalizadas.`)});
+    if(A.gap.m!=null&&A.gap.m>0)fort.push(`El resultado global está <b>${f1(A.gap.m)} puntos por encima del municipio</b>.`);
+    if(A.gap.d!=null&&A.gap.d>0)fort.push(`El resultado global está <b>${f1(A.gap.d)} puntos por encima del departamento</b>.`);
+    if(A.tg.ok&&A.tg.dir==='mejora')fort.push(`El puntaje global muestra tendencia al alza (${sg(A.tg.porAnio,2)} puntos por año).`);
+    if(A.posM&&A.posM.i<=Math.ceil(A.posM.n/2))fort.push(`Ocupa el puesto <b>${A.posM.i} de ${A.posM.n}</b> en su municipio.`);
+    if(A.pico&&A.pico[0]!==A.ultAll)opor.push(`El mejor año del periodo fue ${A.pico[0]} (${f1(A.pico[1])}): hay antecedentes internos de resultados más altos que conviene estudiar.`);
+    if(A.tg.ok&&A.tg.dir==='descenso')opor.push(`Revertir la tendencia a la baja del global (${sg(A.tg.porAnio,2)} puntos por año).`);
+    if(A.muestra!=='adecuada')opor.push('Fortalecer el seguimiento interno con simulacros, pues la cohorte es pequeña y el resultado anual varía por azar.');
+    P('fortalezas',`${H2('fortalezas','Fortalezas y oportunidades institucionales','Lo que conviene consolidar y lo que conviene mejorar')}
+    <h3>Fortalezas</h3>${fort.length?`<ul>${fort.map(x=>`<li>${x}</li>`).join('')}</ul>`:'<p>Con los datos disponibles no se identifican fortalezas frente a las referencias externas. Se reconocen como punto de partida los resultados propios por prueba y la disposición institucional de construir un plan de mejoramiento.</p>'}
+    ${A.relativa?`<p class="note">Fortaleza relativa interna: <b>${e(A.relativa.nm)}</b> es la prueba más cercana al país dentro de la institución.</p>`:''}
+    <h3>Oportunidades de mejoramiento</h3>${opor.length?`<ul>${opor.map(x=>`<li>${x}</li>`).join('')}</ul>`:'<p>No se identifican oportunidades críticas con la regla aplicada; el reto es sostener los resultados.</p>'}
+    <div class="box b">Las fortalezas se aprovechan en el plan transfiriendo a las áreas de mayor brecha las prácticas de la prueba más cercana al país (planeación conjunta, uso de simulacros, retroalimentación).</div>`);
+  }
+  /* 14. Priorización */
   if(on('diagnostico')&&A.areas.length){
-    const fort=A.areas.filter(a=>a.pr==='Seguimiento');
-    P('diagnostico',`<h2>Diagnóstico y prioridades</h2><p class="sub">Qué atender primero y por qué</p>${gMatriz(A)}
-    <p class="note">Cada círculo es una prueba: la altura es su distancia relativa con el país; la posición horizontal, su tendencia en puntos por año. El color es la prioridad.</p>
-    <table><tr><th>Orden</th><th>Prueba</th><th>Prioridad</th><th>Criterio que la activó</th></tr>${A.orden.map((a,i)=>`<tr><td>${i+1}</td><td><b>${a.nm}</b></td><td><span class="tag" style="background:${PCOL[a.pr]}">${a.pr}</span></td><td>Brecha ${sg(a.rel,1)}% con el país${a.t.ok?'; tendencia '+dirTxt(a.t).replace('tendencia ','')+' ('+sg(a.t.pendiente,2)+' pts/año)':''}.</td></tr>`).join('')}</table>
-    <div class="box ${A.nCrit?'r':'w'}"><b>Conclusión del diagnóstico.</b> ${A.nCrit?`${A.nCrit} de ${A.areas.length} pruebas están en prioridad <b>Crítica</b> (brecha de 10 % o más con el país y tendencia a la baja sostenida).`:'Ninguna prueba cumple a la vez brecha grande y descenso sostenido; aun así'} ${A.orden.filter(a=>a.ord<=1).length?`Las pruebas con prioridad Crítica o Alta son: ${A.orden.filter(a=>a.ord<=1).map(a=>'<b>'+a.nm+'</b>').join(', ')}.`:''} ${fort.length?`En seguimiento: ${fort.map(a=>a.nm).join(', ')}.`:'No hay pruebas en la categoría de seguimiento: la brecha con el país es amplia en todas.'}</div>
-    ${A.relativa?`<p>La <b>fortaleza relativa interna</b> es <b>${e(A.relativa.nm)}</b> y la mayor distancia está en <b>${e(A.menor.nm)}</b>; las acciones deben partir de la prueba más distante pero apoyarse en las prácticas de la más cercana.</p>`:''}`);
+    const fort=A.areas.filter(a=>a.pr==='Seguimiento'),cp=A.orden.filter(a=>a.ord<=1);
+    P('diagnostico',`${H2('diagnostico','Identificación y priorización de problemas','Qué atender primero y por qué')}
+    <table><tr><th>Orden</th><th>Prueba</th><th>Prioridad</th><th>Criterio que la activó</th></tr>${A.orden.map((a,i)=>`<tr><td>${i+1}</td><td><b>${a.nm}</b></td><td>${tag(a)}</td><td>${a.rel==null?'No hay promedio nacional publicado para comparar: <b>no se clasifica</b> y no se sacan conclusiones de prioridad sobre esta prueba.':`Brecha ${sg(a.rel,1)}% con el país${a.t.ok?'; tendencia '+dirTxt(a.t).replace('tendencia ','')+' ('+sg(a.t.pendiente,2)+' pts/año)':''}.`}</td></tr>`).join('')}</table>
+    <div class="box ${A.nCrit?'r':'w'}"><b>Conclusión del diagnóstico.</b> ${A.areasC.length?`${A.nCrit?`${A.nCrit} de ${A.areasC.length} pruebas clasificadas están en prioridad <b>Crítica</b>.`:'Ninguna prueba cumple a la vez brecha grande y descenso sostenido.'} ${cp.length?`Con prioridad Crítica o Alta: ${cp.map(a=>'<b>'+a.nm+'</b>').join(', ')}.`:''} ${fort.length?`En seguimiento: ${fort.map(a=>a.nm).join(', ')}.`:'No hay pruebas en seguimiento: la brecha con el país es amplia en todas.'}`:'No hay referencia nacional para ninguna prueba; el diagnóstico de prioridad no es posible con los datos actuales.'}</div>
+    ${A.relativa&&A.menor?`<p>La <b>fortaleza relativa interna</b> es <b>${e(A.relativa.nm)}</b> y la mayor distancia está en <b>${e(A.menor.nm)}</b>; las acciones deben partir de la prueba más distante y apoyarse en las prácticas de la más cercana.</p>`:''}
+    <h3>Problemas identificados</h3><ul>${cp.length?cp.map(a=>`<li><b>${a.nm}:</b> resultado ${f1(a.v)} con brecha ${sg(a.gp)} puntos respecto al país${a.t.ok?'; '+dirTxt(a.t):''}.</li>`).join(''):''}${A.tg.ok&&A.tg.dir==='descenso'?`<li><b>Global:</b> tendencia a la baja de ${sg(A.tg.porAnio,2)} puntos por año.</li>`:''}${A.muestra!=='adecuada'?`<li><b>Seguimiento:</b> cohorte ${A.muestra}; sin simulacros internos, el resultado anual es poco predecible.</li>`:''}<li><b>Información:</b> faltan datos por competencia y nivel de desempeño para precisar las causas (capítulo 12).</li></ul>`);
   }
-  /* --- Proyección --- */
-  if(on('proyeccion')&&A.u.global!=null){
-    const fil=A.proy.esc.map(x=>`<tr><td><b>${x.y}</b> (+${x.h} año${x.h>1?'s':''})</td><td class="n">${f1(x.sin)}</td><td class="n">${x.tend?f1(x.tend.v)+(x.tend.lo!=null?`<br><span class="note">(${f0(x.tend.lo)}–${f0(x.tend.hi)})</span>`:''):'—'}</td><td class="n"><b>${f1(x.mej)}</b></td></tr>`).join('');
-    P('proyeccion',`<h2>Proyección con escenarios</h2><p class="sub">Puntaje global esperable si... (no es un pronóstico oficial)</p>${gAbanico(A)}
-    <table><tr><th>Año</th><th class="n">Sin cambios</th><th class="n">Tendencial (banda 95 %)</th><th class="n">Meta de mejoramiento</th></tr>${fil}</table>
-    <ul><li><b>Sin cambios:</b> se repite el último resultado (${f1(A.u.global)}).</li><li><b>Tendencial:</b> ${A.proy.ok?`continúa la recta ajustada (${sg(A.tg.m.b,2)} puntos por año). La banda muestra la incertidumbre estadística: ${A.tg.m.r2<0.5?'es amplia porque la serie es irregular, de modo que la tendencia no es concluyente.':'es la esperable con este ajuste.'}`:'<b>no se calcula</b>: se necesitan al menos 4 observaciones.'}</li><li><b>Meta de mejoramiento:</b> objetivo propuesto, no pronóstico: +${f1(A.metaAnual)} puntos el primer año (15 % de la brecha con el país, entre 2 y 8 puntos) y un avance mayor a 3 años si se ejecuta el plan.</li></ul>
-    <div class="box w">Con cohortes de ${f0(A.u.n)} estudiantes, el puntaje de un año puede moverse varios puntos por azar. Use las proyecciones para fijar metas, no para predecir un resultado exacto.</div>`);
+  /* 15. Conclusiones */
+  if(on('conclusiones')){
+    const hz=hallazgos(A);
+    P('conclusiones',`${H2('conclusiones','Conclusiones generales y específicas','Resumen para la toma de decisiones')}
+    <h3>Conclusiones generales</h3><ul>${hz.slice(0,4).map(x=>`<li>${x}</li>`).join('')}${A.proy.ok?`<li>Si la tendencia reciente se mantuviera, el puntaje global de ${A.ultAll+1} estaría cerca de ${f0(A.proy.esc[0].tend.v)} (rango ${f0(A.proy.esc[0].tend.lo)}–${f0(A.proy.esc[0].tend.hi)}); es una estimación con alta incertidumbre.</li>`:''}</ul>
+    ${A.areas.length?`<h3>Conclusiones específicas por prueba</h3><ul>${A.orden.map(a=>`<li>${lecturaArea(a,A)}</li>`).join('')}</ul>`:''}
+    ${ctx.obs?`<h3>Observaciones de la institución</h3><div class="box b" style="white-space:pre-wrap">${e(ctx.obs)}</div>`:''}`);
   }
-  /* --- PMI --- */
+  /* 16. PMI estratégico */
   if(on('pmi')&&A.areas.length){
-    const prio=A.orden.filter(a=>a.pr!=='Seguimiento'),acc=ctx.acc||(()=>[]);
-    const res=a=>[ROL[a.k],'Coordinación académica (seguimiento)','Rectoría (aprobación y recursos)'];
-    P('pmi',`<h2>Plan de Mejoramiento Institucional</h2><p class="sub">Metas, responsables y seguimiento por prueba prioritaria · año base ${A.ult}</p>
-    <div class="box b"><b>Objetivo general.</b> Reducir de forma sostenida la brecha con el promedio nacional en Saber 11, empezando por las pruebas de mayor prioridad, con metas medibles a 1 y 3 años y seguimiento trimestral con simulacros en AULA360.</div>
-    <table><tr><th>Prueba</th><th>Prioridad</th><th class="n">Línea base ${A.ult}</th><th class="n">Meta 1 año</th><th class="n">Meta 3 años</th><th>Responsable</th></tr>${prio.map(a=>`<tr><td><b>${a.nm}</b></td><td><span class="tag" style="background:${PCOL[a.pr]}">${a.pr}</span></td><td class="n">${f1(a.v)}</td><td class="n"><b>${f1(metaArea(a,1))}</b></td><td class="n"><b>${f1(metaArea(a,3))}</b></td><td>${ROL[a.k]}</td></tr>`).join('')}</table>
-    <p class="note">Meta 1 año = línea base + 20 % de la brecha con el país (mínimo 1 y máximo 3 puntos). Meta 3 años ≈ 40 % de la brecha. Son metas propuestas para el consejo académico, que puede ajustarlas.</p>
-    <h3>Meta global</h3><p>Puntaje global: de <b>${f1(A.u.global)}</b> a <b>${f1(A.proy.esc[0]?A.proy.esc[0].mej:null)}</b> en ${A.ult+1}${A.proy.esc.find(x=>x.h===3)?` y <b>${f1(A.proy.esc.find(x=>x.h===3).mej)}</b> en ${A.ult+3}`:''}.</p>
-    <h3>Seguimiento y evaluación (aplica a todas las pruebas)</h3><ul><li><b>Trimestral:</b> simulacro por prueba en AULA360 y comparación con la línea base.</li><li><b>Semestral:</b> informe del jefe de área al consejo académico con avance de actividades y resultados.</li><li><b>Anual:</b> nuevo informe Saber 11 con los resultados oficiales y revisión de metas.</li></ul>`);
-    prio.forEach(a=>{
-      const ac=(acc(a.nm)||[]).slice(0,4);
-      const acts=ac.length?ac:['Diagnóstico por componente con simulacro inicial','Plan de aula con refuerzo focalizado','Banco de preguntas tipo Saber por competencia','Retroalimentación individual y seguimiento de estudiantes en riesgo'];
-      P('pmi',`<h2>PMI · ${a.nm}</h2><p class="sub"><span class="tag" style="background:${PCOL[a.pr]}">${a.pr}</span> &nbsp;Brecha ${sg(a.gp)} puntos (${sg(a.rel,0)}%) con el país</p>
-      <table class="pmi"><tr><td>Hallazgo y evidencia</td><td>${f1(a.v)} en ${A.ult}; país ${f1(a.p)}${a.d!=null?', departamento '+f1(a.d):''}${a.m!=null?', municipio '+f1(a.m):''}. ${a.t.ok?`Entre ${a.t.desde} y ${a.t.hasta} ${a.t.cum>=0?'subió':'bajó'} ${f1(Math.abs(a.t.cum))} puntos (${sg(a.t.porAnio,2)} por año; ${dirTxt(a.t)}).`:''} Fuente: ICFES.</td></tr>
-      <tr><td>Objetivo</td><td>Elevar el promedio de ${a.nm} de ${f1(a.v)} a ${f1(metaArea(a,3))} en tres años, reduciendo la brecha con el país.</td></tr>
-      <tr><td>Línea base</td><td>${f1(a.v)} puntos (${A.ult}, ${f0(A.u.n)} evaluados).</td></tr>
-      <tr><td>Metas</td><td><b>1 año (${A.ult+1}):</b> ${f1(metaArea(a,1))} · <b>3 años (${A.ult+3}):</b> ${f1(metaArea(a,3))}</td></tr>
-      <tr><td>Indicador y fórmula</td><td>Promedio institucional en ${a.nm} (0–100). Avance = (resultado actual − línea base) ÷ (meta − línea base) × 100. Complementario: % de estudiantes con puntaje ≥ promedio nacional en el simulacro del periodo.</td></tr>
+    const O=(k)=>{const a=A.areas.find(x=>x.k===k);return a?` <span class="note">Línea base ${A.ult}: ${f1(a.v)} · meta ${anioMeta(1)}: ${MJ(a,1)} · meta ${anioMeta(3)}: ${MJ(a,3)}.</span>`:''};
+    P('pmi',`${H2('pmi','Plan de Mejoramiento Institucional (estratégico)','Nivel 1 · Objetivo general y objetivos específicos')}
+    <div class="box b"><b>Objetivo general.</b> Incrementar progresivamente el desempeño académico de los estudiantes de ${e(nm)}, mediante el fortalecimiento de las competencias evaluadas por el ICFES, la transformación de las prácticas pedagógicas, el seguimiento sistemático de los aprendizajes y la implementación de estrategias de mejoramiento basadas en evidencia.</div>
+    <h3>Objetivos específicos</h3><ol style="margin:0 0 3mm;padding-left:6mm"><li>Fortalecer las competencias de Lectura Crítica.${O('lec')}</li><li>Mejorar el razonamiento y la resolución de problemas matemáticos.${O('mat')}</li><li>Desarrollar pensamiento social, histórico y ciudadano.${O('soc')}</li><li>Fortalecer la explicación de fenómenos y la indagación científica.${O('nat')}</li><li>Mejorar la comprensión y el uso comunicativo del inglés.${O('ing')}</li><li>Implementar un sistema institucional de evaluación y seguimiento (simulacros, informes por periodo, indicadores).</li><li>Reducir las brechas de aprendizaje identificadas mediante diagnósticos por competencia y acciones focalizadas.</li></ol>
+    <h3>Metas globales y por prueba</h3>
+    <table><tr><th>Prueba</th><th>Prioridad</th><th class="n">Línea base ${A.ult}</th><th class="n">Meta ${anioMeta(1)}</th><th class="n">Meta ${anioMeta(3)}</th><th>Responsable</th></tr>${A.orden.map(a=>`<tr><td><b>${a.nm}</b></td><td>${tag(a)}</td><td class="n">${f1(a.v)}</td><td class="n"><b>${MJ(a,1)}</b></td><td class="n"><b>${MJ(a,3)}</b></td><td>${ROL[a.k]}</td></tr>`).join('')}</table>
+    ${A.proy.esc.length?`<p><b>Meta global:</b> de <b>${f1(gAll)}</b> (${A.ultAll}) a <b>${f1(A.proy.esc[0].mej)}</b> en ${A.proy.esc[0].y}${A.proy.esc.find(x=>x.h===3)?` y <b>${f1(A.proy.esc.find(x=>x.h===3).mej)}</b> en ${A.proy.esc.find(x=>x.h===3).y}`:''}.</p>`:''}
+    <p class="note">La línea base es el último año con comparativo oficial (${A.ult}). Las metas son propuestas para el Consejo Académico.</p>
+    `);
+  }
+  /* 17-21. Planes por área */
+  if(on('planes')&&A.areas.length){
+    A.areas.forEach((a,i)=>{
+      const ac=(acc(a.nm)||[]).slice(0,6),acts=ac.length?ac:ACTS[a.k];
+      P('planes',`<h2>{{N:planes:${i}}}. Plan de mejoramiento · ${a.nm}</h2><p class="sub">${tag(a)} &nbsp;Nivel 2 · Plan específico por área</p>
+      <table class="pmi"><tr><td>Problema identificado</td><td>${f1(a.v)} en ${A.ult}${a.p!=null?'; país '+f1(a.p):''}${a.d!=null?', departamento '+f1(a.d):''}${a.m!=null?', municipio '+f1(a.m):''}. ${a.gp!=null?(a.gp<0?`Brecha de ${f1(-a.gp)} puntos (${sg(a.rel,0)}%) por debajo del país.`:`${f1(a.gp)} puntos por encima del país.`):'Sin promedio nacional para comparar.'} ${a.t.ok?`Entre ${a.t.desde} y ${a.t.hasta} ${a.t.cum>=0?'subió':'bajó'} ${f1(Math.abs(a.t.cum))} puntos (${dirTxt(a.t)}, ${sg(a.t.porAnio,2)} por año).`:''} <i>Debe contrastarse con resultados por competencia y niveles de desempeño.</i></td></tr>
+      <tr><td>Objetivo de mejoramiento</td><td>${OBJ_AREA[a.k]} Meta: de ${f1(a.v)} a ${MJ(a,3)} en tres años.</td></tr>
+      <tr><td>Líneas de intervención</td><td><ul style="margin:0">${LINEAS[a.k].map(x=>`<li>${x}</li>`).join('')}</ul></td></tr>
       <tr><td>Actividades</td><td><ul style="margin:0">${acts.map(x=>`<li>${e(x)}</li>`).join('')}</ul></td></tr>
-      <tr><td>Responsables</td><td>${res(a).map(e).join(' · ')}</td></tr>
-      <tr><td>Recursos</td><td>Horas de refuerzo en la jornada, simulacros y banco de preguntas en AULA360, material impreso por estudiante, tiempo de planeación de área.</td></tr>
-      <tr><td>Cronograma</td><td>T1: diagnóstico y plan de aula · T2: refuerzo focalizado y 1.er simulacro · T3: 2.º simulacro y ajustes · T4: simulacro final, balance y metas del año siguiente.</td></tr>
-      <tr><td>Seguimiento y evidencia</td><td>Resultados de simulacros por trimestre, actas del consejo académico, planes de aula, listados de asistencia a refuerzos.</td></tr>
-      <tr><td>Estado / avance</td><td>Pendiente · 0 % <span class="note">(se actualiza en cada seguimiento)</span></td></tr></table>`);
+      <tr><td>Indicadores</td><td><ul style="margin:0">${INDIC[a.k].map(x=>`<li>${x}</li>`).join('')}</ul></td></tr>
+      <tr><td>Línea base y metas</td><td>Base ${A.ult}: <b>${f1(a.v)}</b> · <b>Meta 1 año (${anioMeta(1)}):</b> ${MJ(a,1)} · <b>Meta 3 años (${anioMeta(3)}):</b> ${MJ(a,3)}${A.ultAll!==A.ult&&A.uAll[a.k]!=null?` · dato propio ${A.ultAll} (sin comparativo): ${f1(A.uAll[a.k])}`:''}</td></tr>
+      <tr><td>Responsables</td><td>${ROL[a.k]} · coordinación académica · rectoría</td></tr>
+      <tr><td>Evidencias</td><td>Planeaciones, resultados de diagnósticos y simulacros por periodo, actas de área, listados de participación en refuerzos.</td></tr></table>`);
     });
   }
-  /* --- Conclusiones --- */
-  if(on('conclusiones')){
-    const t=A.tg;
-    P('conclusiones',`<h2>Conclusiones y recomendaciones</h2><p class="sub">Resumen para la toma de decisiones</p>
-    <h3>Conclusiones</h3><ul>${hallazgos(A).slice(0,4).map(x=>`<li>${x}</li>`).join('')}${A.proy.ok?`<li>Si la tendencia reciente se mantuviera, el puntaje global de ${A.ult+1} estaría cerca de ${f0(A.proy.esc[0].tend.v)} (rango ${f0(A.proy.esc[0].tend.lo)}–${f0(A.proy.esc[0].tend.hi)}); es una estimación con alta incertidumbre.</li>`:''}</ul>
-    <h3>Recomendaciones</h3><ul><li>Aprobar el Plan de Mejoramiento en consejo académico y asignar un responsable por prueba prioritaria${A.orden.filter(a=>a.ord<=1).length?' ('+A.orden.filter(a=>a.ord<=1).map(a=>a.nm).join(', ')+')':''}.</li><li>Medir el avance con simulacros trimestrales y comparar con la línea base de este informe.</li><li>Socializar los resultados con docentes, estudiantes y familias, destacando las metas a 1 año.</li>${A.muestra!=='adecuada'?'<li>Complementar este análisis con los resultados internos de simulacros, dado el tamaño reducido de la cohorte.</li>':''}<li>Actualizar este informe cuando el ICFES publique el siguiente año.</li></ul>
-    ${ctx.obs?`<h3>Observaciones de la institución</h3><div class="box b" style="white-space:pre-wrap">${e(ctx.obs)}</div>`:''}
+  /* 22. Cronograma */
+  if(on('cronograma')&&A.areas.length){
+    const fil=[['Primer periodo','Diagnóstico y caracterización','Simulacro diagnóstico por prueba; análisis por competencia; ajuste de líneas de intervención','Informe inicial'],['Segundo periodo','Intervención pedagógica','Talleres, secuencias didácticas, refuerzos focalizados, formación docente','Planeaciones y registros de actividades'],['Tercer periodo','Seguimiento y simulacro','Simulacro intermedio, retroalimentación, ajuste de estrategias','Informe comparativo con la línea base'],['Cuarto periodo','Evaluación y ajustes','Simulacro final, balance de metas, propuesta del siguiente ciclo','Informe de cierre']].map(x=>`<tr><td><b>${x[0]}</b></td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]}</td><td>Jefes de área, coordinación académica</td><td>__/__/____</td><td class="n">0 %</td></tr>`).join('');
+    P('cronograma',`${H2('cronograma','Cronograma general de ejecución','Nivel 3 · Matriz operativa por periodo')}
+    <table><tr><th>Periodo</th><th>Acción principal</th><th>Actividades clave</th><th>Evidencia</th><th>Responsables</th><th>Fecha</th><th class="n">% cumpl.</th></tr>${fil}</table>
+    <p class="note">Las fechas las define el Consejo Académico según el calendario escolar; el porcentaje de cumplimiento se actualiza en cada seguimiento. Este cronograma aplica a las cinco pruebas; cada jefe de área lo detalla en su plan.</p>
+    <h3>Recursos por periodo</h3><ul><li><b>Periodo 1:</b> aplicación del simulacro diagnóstico, horas de planeación de área.</li><li><b>Periodo 2:</b> material pedagógico, formación docente, horas de refuerzo.</li><li><b>Periodo 3:</b> simulacro intermedio y reportes de resultados.</li><li><b>Periodo 4:</b> simulacro final, consolidación del informe de cierre y socialización con la comunidad.</li></ul>`);
+  }
+  /* 23. Presupuesto */
+  if(on('presupuesto')&&A.areas.length){
+    const comp=[['Formación docente','Capacitación y acompañamiento a jefes de área y docentes','Diagnóstico, secuencias didácticas'],['Material pedagógico','Guías, lecturas, talleres y cuadernillos','Talleres, banco de preguntas'],['Tecnología','AULA360 y recursos digitales; conectividad y equipos','Simulacros, seguimiento, reportes'],['Simulacros','Aplicación, evaluación y reportes','Diagnóstico y simulacros periódicos'],['Refuerzos','Tiempo docente y espacios para tutorías','Refuerzos focalizados'],['Seguimiento','Instrumentos, informes y socialización','Informes por periodo, evaluación de impacto']];
+    P('presupuesto',`${H2('presupuesto','Presupuesto y recursos','Nivel 4 · Recursos por componente')}
+    <table><tr><th>Componente</th><th>Recursos requeridos</th><th>Actividades asociadas</th><th>Valor estimado (COP)</th><th>Fuente de financiación</th></tr>${comp.map(x=>`<tr><td><b>${x[0]}</b></td><td>${x[1]}</td><td>${x[2]}</td><td>$ ____________</td><td>__________</td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td><b>$ ____________</b></td><td></td></tr></table>
+    <div class="box w"><b>Sin valores inventados.</b> Este informe no asigna cifras presupuestales: no hay datos de costos de la institución. Los valores se calculan con las cotizaciones y costos reales, y las fuentes de financiación (por ejemplo, el presupuesto del Fondo de Servicios Educativos u otros recursos) las define el Consejo Directivo.</div>
+    <h3>Cómo estimarlo</h3><ul><li>Costo = cantidad de unidades × valor unitario real (horas docentes, copias, licencias, honorarios).</li><li>Priorizar primero los componentes de las pruebas en prioridad Crítica o Alta${prio.length?' ('+prio.filter(a=>a.ord<=1).map(a=>a.nm).join(', ')+')':''}.</li><li>Registrar el valor ejecutado en cada seguimiento para comparar contra lo programado.</li></ul>`);
+  }
+  /* 24. Indicadores */
+  if(on('indicadores')&&A.areas.length){
+    const fil=A.areas.map(a=>`<tr><td><b>Promedio en ${a.nm}</b></td><td>Promedio institucional Saber 11 (0–100)</td><td>Anual</td><td>ICFES</td><td class="n">${f1(a.v)}</td><td class="n">${MJ(a,1)}</td><td class="n">${MJ(a,3)}</td></tr>`).join('');
+    P('indicadores',`${H2('indicadores','Sistema de indicadores y seguimiento','Cómo se mide el avance')}
+    <h3>Indicadores de resultado</h3>
+    <table><tr><th>Indicador</th><th>Fórmula</th><th>Frec.</th><th>Fuente</th><th class="n">Base ${A.ult}</th><th class="n">Meta ${anioMeta(1)}</th><th class="n">Meta ${anioMeta(3)}</th></tr><tr><td><b>Puntaje global</b></td><td>Promedio ponderado (0–500)</td><td>Anual</td><td>ICFES</td><td class="n">${f1(A.u.global)}</td><td class="n">${A.proy.esc[0]?f1(A.proy.esc[0].mej):'—'}</td><td class="n">${A.proy.esc.find(x=>x.h===3)?f1(A.proy.esc.find(x=>x.h===3).mej):'—'}</td></tr>${fil}</table>
+    <h3>Indicadores de gestión (se miden desde el primer periodo)</h3>
+    <table><tr><th>Indicador</th><th>Fórmula</th><th>Frecuencia</th><th>Línea base</th></tr>
+    <tr><td>Cumplimiento del cronograma</td><td>Actividades ejecutadas ÷ programadas × 100</td><td>Trimestral</td><td>0 %</td></tr>
+    <tr><td>Simulacros aplicados</td><td>Simulacros realizados ÷ programados × 100</td><td>Por periodo</td><td>Por medir</td></tr>
+    <tr><td>Participación de estudiantes</td><td>Estudiantes que presentan el simulacro ÷ matriculados en grado 11 × 100</td><td>Por simulacro</td><td>Por medir</td></tr>
+    <tr><td>Avance hacia la meta por prueba</td><td>(Resultado actual − base) ÷ (meta − base) × 100</td><td>Por periodo</td><td>0 %</td></tr>
+    <tr><td>Docentes formados</td><td>Docentes que completan la formación ÷ docentes del área × 100</td><td>Semestral</td><td>Por medir</td></tr>
+    <tr><td>Ejecución presupuestal</td><td>Valor ejecutado ÷ programado × 100</td><td>Trimestral</td><td>0 %</td></tr></table>
+    <h3>Seguimiento</h3><ul><li><b>Trimestral:</b> simulacro por prueba en AULA360 y comparación con la línea base.</li><li><b>Semestral:</b> informe de cada jefe de área al Consejo Académico.</li><li><b>Anual:</b> nuevo informe Saber 11 con los resultados oficiales y revisión de metas.</li></ul>`);
+  }
+  /* 25. Impacto y escenarios */
+  if(on('impacto')&&A.u.global!=null){
+    const fil=A.proy.esc.map(x=>`<tr><td><b>${x.y}</b> (+${x.h} año${x.h>1?'s':''})</td><td class="n">${f1(x.sin)}</td><td class="n">${x.tend?f1(x.tend.v)+(x.tend.lo!=null?`<br><span class="note">(${f0(x.tend.lo)}–${f0(x.tend.hi)})</span>`:''):'—'}</td><td class="n"><b>${f1(x.mej)}</b></td></tr>`).join('');
+    P('impacto',`${H2('impacto','Evaluación del impacto y escenarios de metas','Cómo sabremos si el plan funcionó')}${gAbanico(A)}
+    <table><tr><th>Año</th><th class="n">Sin cambios</th><th class="n">Tendencial (banda 95 %)</th><th class="n">Meta de mejoramiento</th></tr>${fil}</table>
+    <ul><li><b>Sin cambios:</b> se repite el último resultado (${f1(gAll)}).</li><li><b>Tendencial:</b> ${A.proy.ok?`continúa la recta ajustada (${sg(A.tg.m.b,2)} puntos por año); ${A.tg.m.r2<0.5?'la banda es amplia porque la serie es irregular.':'banda esperable con este ajuste.'}`:'<b>no se calcula</b>: se necesitan al menos 4 observaciones.'}</li><li><b>Meta de mejoramiento:</b> objetivo propuesto (+${f1(A.metaAnual)} puntos el primer año), no un pronóstico.</li></ul>
+    <div class="box w">Con cohortes de ${f0(A.u.n)} estudiantes el puntaje de un año puede moverse varios puntos por azar. Use las proyecciones para fijar metas, no para predecir un resultado exacto.</div>`);
+    P('impacto',`<h2>Cómo se evaluará el impacto</h2><p class="sub">Criterios y formato de seguimiento</p><ul><li><b>Comparación contra la línea base:</b> resultado oficial siguiente frente al año base ${A.ult} y frente a la meta por prueba.</li><li><b>Brecha:</b> si la distancia con el país, el departamento y el municipio se reduce.</li><li><b>Resultados internos:</b> evolución entre el simulacro diagnóstico y el final.</li><li><b>Cohortes:</b> cada año evalúa estudiantes distintos; un cambio de pocos puntos con cohortes pequeñas no prueba por sí solo el efecto del plan.</li></ul>
+    <table><tr><th>Prueba</th><th class="n">Base</th><th class="n">Meta 1 año</th><th class="n">Resultado obtenido</th><th class="n">Avance %</th></tr>${A.areas.map(a=>`<tr><td><b>${a.nm}</b></td><td class="n">${f1(a.v)}</td><td class="n">${MJ(a,1)}</td><td class="n">______</td><td class="n">____</td></tr>`).join('')}</table>`);
+  }
+  /* 26. Recomendaciones */
+  if(on('recomendaciones')){
+    const cp=A.orden.filter(a=>a.ord<=1);
+    P('recomendaciones',`${H2('recomendaciones','Recomendaciones estratégicas','Decisiones sugeridas')}
+    <ol style="margin:0 0 3mm;padding-left:6mm"><li><b>Aprobar el PMI</b> en Consejo Académico y Consejo Directivo, y designar un responsable por prueba${cp.length?', empezando por '+cp.map(a=>a.nm).join(', '):''}.</li><li><b>Implementar el sistema de seguimiento:</b> simulacros por periodo en AULA360 y tablero de indicadores del capítulo 24.</li><li><b>Completar el diagnóstico por competencias</b> con el reporte oficial del ICFES para la institución y los simulacros del primer periodo.</li><li><b>Costear el plan</b> con valores reales (capítulo 23) y asegurar las horas de refuerzo en la jornada.</li><li><b>Formar a los docentes</b> en análisis de resultados y en elaboración de preguntas tipo Saber.</li><li><b>Socializar</b> el informe con docentes, estudiantes y familias, destacando las metas a 1 año.</li>${A.muestra!=='adecuada'?'<li><b>Complementar con resultados internos</b>, dado el tamaño reducido de la cohorte.</li>':''}<li><b>Actualizar el informe</b> cuando el ICFES publique el siguiente año.</li></ol>
+    <h3>Articulación con las áreas de gestión (Guía 34)</h3>
+    <table><tr><th style="width:40mm">Gestión</th><th>Acciones sugeridas</th></tr><tr><td><b>Directiva</b></td><td>Liderar el plan, fijar metas, revisar avances en cada Consejo Académico.</td></tr><tr><td><b>Académica</b></td><td>Planes de aula por competencia, simulacros, retroalimentación, articulación entre grados.</td></tr><tr><td><b>Administrativa y financiera</b></td><td>Garantizar tiempos, materiales y recursos tecnológicos.</td></tr><tr><td><b>Comunidad</b></td><td>Informar a familias, acompañar a estudiantes en riesgo, orientación sobre la prueba.</td></tr></table>
     <div class="sig"><div>Rector(a)</div><div>Coordinación académica</div></div>`);
   }
-  /* --- Anexos --- */
+  /* 27. Anexos */
   if(on('anexos')){
-    const bloque=(tit,arr)=>arr&&arr.length?`<tr><td colspan="${A.an.length+1}" style="background:#e2e8f0"><b>${tit}</b></td></tr>`:'';
     const SER=[['Institución',A.r.pri],['Municipio',A.r.mun],['Departamento',A.r.dep],['País',A.r.pais]].filter(x=>x[1]&&x[1].length);
-    const hdr=`<tr><th>Serie</th>${A.an.map(y=>`<th class="n">${y}</th>`).join('')}</tr>`,cs=A.an.length+1;
+    const cs=A.an.length+1,hdr=`<tr><th>Serie</th>${A.an.map(y=>`<th class="n">${y}</th>`).join('')}</tr>`;
     const blk=([k,nmk])=>`<tr><td colspan="${cs}" style="background:#e2e8f0"><b>${nmk}</b></td></tr>`+SER.map(([l,arr])=>`<tr><td>${l}</td>${A.an.map(y=>`<td class="n">${f1(by(arr,y)[k])}</td>`).join('')}</tr>`).join('');
     const ev=`<tr><td colspan="${cs}" style="background:#e2e8f0"><b>Evaluados</b></td></tr>`+SER.map(([l,arr])=>`<tr><td>${l}</td>${A.an.map(y=>`<td class="n">${f0(by(arr,y).n)}</td>`).join('')}</tr>`).join('');
     const G=[['global','Global (0–500)']].concat(AREAS);
@@ -418,20 +610,22 @@ function build(r,ctx){
     const rm=A.rankMun&&A.rankMun.length?A.rankMun:[];
     P('anexos',`<h2>Anexo B · Glosario, fuentes y advertencias</h2>
     ${rm.length?`<h3>Ranking completo del municipio · ${r.rankAnio||A.ult}${critTxt(r)}</h3><table><tr><th>Puesto</th><th>Establecimiento</th><th class="n">Evaluados</th><th class="n">Global</th></tr>${rm.map((x,i)=>`<tr><td>${i+1}</td><td>${e(clean(x.nombre))}${x.dane===r.dane?' ◀':''}</td><td class="n">${f0(x.n)}</td><td class="n">${f1(x.g)}</td></tr>`).join('')}</table>`:''}
-    <h3>Glosario</h3><ul><li><b>Puntaje global:</b> índice de 0 a 500 que pondera las cinco pruebas (Lectura, Matemáticas, Sociales y Naturales con peso 3; Inglés con peso 1).</li><li><b>Brecha:</b> diferencia entre la institución y una referencia; la relativa se expresa como porcentaje de la referencia.</li><li><b>Δ por año:</b> cambio dividido por los años reales transcurridos.</li><li><b>Recta de tendencia:</b> línea de mínimos cuadrados sobre los años reales de la serie.</li><li><b>Banda de incertidumbre (95 %):</b> rango dentro del cual caería el resultado esperado según la variación histórica de la serie.</li><li><b>Fortaleza relativa interna:</b> la prueba más cercana al país dentro de la propia institución.</li></ul>
-    <h3>Fuentes y advertencias</h3><ul><li>ICFES · Resultados únicos Saber 11 (datos.gov.co) y archivos oficiales de resultados agregados por establecimiento.</li><li>${A.adv.length?A.adv.map(e).join('</li><li>'):'Sin advertencias adicionales de muestra.'}</li><li>Este informe describe resultados; no establece causas. Informe generado por AULA360 el ${e(emit)}.</li></ul>`);
+    <h3>Glosario</h3><ul><li><b>Puntaje global:</b> índice de 0 a 500 que pondera las cinco pruebas (Lectura, Matemáticas, Sociales y Naturales con peso 3; Inglés con peso 1).</li><li><b>Brecha:</b> diferencia entre la institución y una referencia; la relativa es porcentaje de la referencia.</li><li><b>Tendencia:</b> recta de mínimos cuadrados sobre los años reales (o cambio acumulado ÷ años si hay menos de 4 observaciones).</li><li><b>Coeficiente de variación:</b> desviación estándar ÷ media.</li><li><b>Banda del 95 %:</b> rango dentro del cual caería el resultado esperado según la variación histórica de la serie.</li><li><b>Fortaleza relativa interna:</b> la prueba más cercana al país dentro de la propia institución.</li><li><b>PMI:</b> Plan de Mejoramiento Institucional.</li></ul>
+    <h3>Fuentes</h3><ul><li>ICFES · Resultados únicos Saber 11 (datos.gov.co) y archivos oficiales de resultados agregados por establecimiento.</li><li>Referentes normativos del capítulo 4.</li><li>Este informe describe resultados; no establece causas. Generado por AULA360 el ${e(emit)}.</li></ul>`);
   }
 
-  /* --- ensamblaje con portada, índice y numeración --- */
+  /* --- ensamblaje: portada, índice, numeración de capítulos y de páginas --- */
   const out=[];
   const logo=Lh.logo?`<img src="${e(Lh.logo)}" alt="">`:'';
-  out.push({s:'portada',html:`<div class="sheet cover"><div class="top">${logo}<div><div style="font-weight:700;font-size:12pt">${e(Lh.l1||'')}</div><div style="font-size:8.6pt;opacity:.85">${e([Lh.l2,Lh.l3].filter(Boolean).join(' · '))}</div></div></div><div class="art">${geometria()}</div><div class="tit"><div class="k">INFORME DE RESULTADOS</div><h1>Saber 11</h1><div class="n">${e(nm)}</div><div style="margin-top:3mm;font-size:10.5pt;opacity:.9">Análisis ${per} · Calendario ${e(r.cal||'A')}</div></div><div class="meta"><div><b>${A.colego?'INSTITUCIÓN':'TERRITORIO'}</b>${e(A.colego?((r.ficha&&r.ficha.mcpio)||'')+' · '+((r.ficha&&r.ficha.depto)||''):'')}${A.colego&&r.dane?'<br>DANE '+e(r.dane):''}</div><div><b>EMISIÓN</b>${e(emit)}<br>Documento ${ctx.conf===false?'':'confidencial'}</div><div><b>ELABORADO POR</b>AULA360<br>Análisis estadístico institucional</div></div></div>`});
-  const first={};pages.forEach((p,i)=>{if(first[p.s]==null)first[p.s]=i+3}); // portada=1, índice=2
-  const toc=SECC.filter(x=>first[x[0]]!=null).map(x=>`<tr><td>${x[1]}</td><td class="n" style="width:14mm">${first[x[0]]}</td></tr>`).join('');
-  out.push({s:'indice',html:`<div class="sheet"><HD/><h2>Contenido</h2><p class="sub">Informe Saber 11 · ${e(nm)} · ${per}</p><table class="toc"><tbody>${toc}</tbody></table><div class="box b"><b>Cómo leer este informe</b><ul style="margin:1mm 0 0"><li>Los puntajes globales van de 0 a 500; los de cada prueba, de 0 a 100.</li><li>«Brecha» es la diferencia con una referencia (+ por encima, − por debajo).</li><li>Los colores de prioridad siguen una regla fija explicada en la ficha técnica; el rojo solo aparece en alertas críticas sostenidas.</li><li>Las proyecciones son escenarios estadísticos, no resultados oficiales.</li></ul></div><div class="box"><b>Datos usados.</b> Resultados agregados de Saber 11 publicados por el ICFES (calendario ${e(r.cal||'A')}). No se usan datos de estudiantes individuales.</div></div>`});
-  pages.forEach(p=>out.push({s:p.s,html:`<div class="sheet"><HD/>${p.html}</div>`}));
+  out.push({s:'portada',html:`<div class="sheet cover"><div class="top">${logo}<div><div style="font-weight:700;font-size:12pt">${e(Lh.l1||'')}</div><div style="font-size:8.6pt;opacity:.85">${e([Lh.l2,Lh.l3].filter(Boolean).join(' · '))}</div></div></div><div class="art">${geometria()}</div><div class="tit"><div class="k">RESULTADOS SABER 11 · ANÁLISIS ESTADÍSTICO · DIAGNÓSTICO · PMI</div><h1>Informe integral de desempeño académico y mejoramiento institucional</h1><div class="n">${e(nm)}</div><div style="margin-top:3mm;font-size:10.5pt;opacity:.9">Calendario ${cal} · Periodo ${per}</div></div><div class="meta"><div><b>${A.colego?'INSTITUCIÓN':'TERRITORIO'}</b>${e(A.colego?((f.mcpio)||'')+' · '+((f.depto)||''):'')}${A.colego&&r.dane?'<br>DANE '+e(r.dane):''}</div><div><b>EMISIÓN</b>${e(emit)}<br>Documento ${ctx.conf===false?'':'confidencial'}</div><div><b>ELABORADO POR</b>AULA360<br>Análisis estadístico institucional</div></div></div>`});
+  const first={};pages.forEach((p,i)=>{if(first[p.s]==null)first[p.s]=i+3});
+  const num={};let n=1;const nPl=A.areas.length;
+  SECC.forEach(([k])=>{if(first[k]==null)return;if(k==='planes'){for(let i=0;i<nPl;i++)num['planes:'+i]=n+i;num.planes=n;n+=nPl}else{num[k]=n;n++}});
+  const toc=SECC.filter(x=>first[x[0]]!=null).map(x=>`<tr><td>${x[0]==='planes'&&nPl>1?num.planes+'–'+(num.planes+nPl-1):num[x[0]]}. ${x[1]}</td><td class="n" style="width:14mm">${first[x[0]]}</td></tr>`).join('');
+  out.push({s:'indice',html:`<div class="sheet"><HD/><h2>Contenido</h2><p class="sub">Informe Saber 11 · ${e(nm)} · ${per}</p><table class="toc"><tbody>${toc}</tbody></table></div>`});
+  pages.forEach(p=>out.push({s:p.s,html:`<div class="sheet"><HD/>${p.html.replace(/\{\{N:([a-z_:0-9]+)\}\}/g,(m,k)=>num[k]!=null?num[k]:'')}</div>`}));
   const total=out.length;
-  const html=out.map((p,i)=>p.s==='portada'?p.html:p.html.replace('<HD/>',`<div class="hd"><span><b>${e(Lh.l1||'AULA360')}</b> · Informe Saber 11 · Cal. ${e(r.cal||'A')} · ${per}</span><span>Documento confidencial</span></div>`).replace(/<\/div>$/,`<div class="ft"><span>AULA360 · Análisis estadístico institucional · ${e(emit)}</span><span>Página ${i+1} de ${total}</span></div></div>`)).join('');
+  const html=out.map((p,i)=>p.s==='portada'?p.html:p.html.replace('<HD/>',`<div class="hd"><span><b>${e(Lh.l1||'AULA360')}</b> · Informe Saber 11 · Cal. ${cal} · ${per}</span><span>Documento confidencial</span></div>`).replace(/<\/div>$/,`<div class="ft"><span>AULA360 · Análisis estadístico institucional · ${e(emit)}</span><span>Página ${i+1} de ${total}</span></div></div>`)).join('');
   return{css:CSS,body:html,pages:total,A,doc:`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Informe Saber 11 · ${e(nm)}</title><style>${CSS}</style></head><body>${html}<script>(function(){function z(){var w=window.innerWidth,k=Math.min(1,(w-8)/794);document.body.style.zoom=k}z();addEventListener('resize',z);addEventListener('beforeprint',function(){document.body.style.zoom=1});addEventListener('afterprint',z)})()<\/script></body></html>`};
 }
 const API={build,analizar,ols,pred,tendencia,prioridad,metaArea,clean,f1,sg,SECC,AREAS};
