@@ -50,6 +50,7 @@ const HASH0=location.hash,REDIR=()=>location.origin+location.pathname;
 let sb=supabase.createClient('https://pmigzkhhqxzhspqmkbvf.supabase.co','sb_publishable_GZT40D67S2ICeD1LWOxbEQ_mimJCWlu');
 const IMG='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/question-images/';
 const LOGO='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/school-logos/';
+const LGU=p=>p?LOGO+encodeURI(p):location.origin+'/aula360-logo-vertical.png'; /* logo del colegio; si no lo ha subido, el de AULA360 */
 const MEDALS={first:['🥇','Primer Paso','Completar tu primer simulacro'],perfect:['🧠','Mente Brillante','100% de respuestas correctas'],clock:['⏱️','Contra el Reloj','Terminar con más de la mitad del tiempo restante'],streak:['🔥','Constante','Completar 3 simulacros'],high:['⭐','Alto Puntaje','Obtener 80 o más']};
 const isDir=()=>!!M&&(M.role==='rector'||M.role==='coordinador');
 const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -401,7 +402,7 @@ async function go(t){
     if(t==='miasis'){await loadScript('estmis.js?v=1');await EMI.load()}
     if(t==='labs'){await loadScript('labs.js?v=12');await LAB.load()}
     if(t==='docped'){await loadScript('docped.js?v=1');await DPD.load()}
-    if(t==='revdoc'){await loadScript('revision.js?v=1');await REV.load()}
+    if(t==='revdoc'){await loadScript('revision.js?v=2');await REV.load()}
     if(t==='obsv'||t==='fseg'){await loadScript('observador.js?v=2');await OBS.load(t)}
     if(t==='aclase'||t==='asistencias'){await loadScript('claseasis.js?v=9');await ACL.load()}
     if(t==='planeador'||t==='diario'){await loadScript('planeador.js?v=7');await PLN.load(t)}
@@ -778,7 +779,7 @@ const fch=d=>new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',m
 const vl=n=>'ABCDEF'[n-1]||String(n);
 function lhHtml(h){
   const L=LH();if(L.hoja)return'';
-  return`<div class="lh">${L.logo?`<img src="${LOGO}${encodeURI(L.logo)}" style="height:${h}mm;width:auto">`:''}<div class="t"><div class="l1">${E(L.l1)}</div>${L.l2?`<div>${E(L.l2)}</div>`:''}${L.l3?`<div>${E(L.l3)}</div>`:''}</div></div>`;
+  return`<div class="lh"><img src="${LGU(L.logo)}" style="height:${h}mm;width:auto"><div class="t"><div class="l1">${E(L.l1)}</div>${L.l2?`<div>${E(L.l2)}</div>`:''}${L.l3?`<div>${E(L.l3)}</div>`:''}</div></div>`;
 }
 function qHtml(q,i){
   if(q.image_path)return`<div class="q"><b>${i+1}.</b><img src="${IMG}${encodeURI(q.image_path)}"></div>`;
@@ -791,7 +792,7 @@ function idTable(e){
 }
 function cuadSpec(e){
   const J=D.job.job,Lh=LH(),qs=D.job.qs;
-  return{titulo:J.title,tipo:'Examen',colegio:Lh.l1,logo:Lh.logo?LOGO+encodeURI(Lh.logo):'',asignatura:J.subject,curso:D.job.cname,fecha:J.exam_date?fch(J.exam_date):'',estudiante:e.roster?.full_name,documento:e.roster?.document||'',codigo:e.code,version:vl(e.version),vIdx:(e.version||1)-1,preguntas:e.question_ids.map(id=>qs[id]).filter(Boolean)};
+  return{titulo:J.title,tipo:'Examen',colegio:Lh.l1,logo:LGU(Lh.logo),asignatura:J.subject,curso:D.job.cname,fecha:J.exam_date?fch(J.exam_date):'',estudiante:e.roster?.full_name,documento:e.roster?.document||'',codigo:e.code,version:vl(e.version),vIdx:(e.version||1)-1,preguntas:e.question_ids.map(id=>qs[id]).filter(Boolean)};
 }
 async function previewJob(){
   if(!D.job)return;
@@ -806,7 +807,7 @@ function examHtml(e){
 }
 function sheetHtml(e){
   const J=D.job.job,Lh=LH();
-  return HOJA.html(HOJA.layout(J.n_questions),{titulo:J.title+' · '+J.subject,colegio:Lh.l1,nombre:e.roster?.full_name,documento:e.roster?.document||'',curso:D.job.cname,fecha:J.exam_date?fch(J.exam_date):'',version:(e.version||1)-1,codigo:e.code,logo:Lh.logo?LOGO+encodeURI(Lh.logo):''});
+  return HOJA.html(HOJA.layout(J.n_questions),{titulo:J.title+' · '+J.subject,colegio:Lh.l1,nombre:e.roster?.full_name,documento:e.roster?.document||'',curso:D.job.cname,fecha:J.exam_date?fch(J.exam_date):'',version:(e.version||1)-1,codigo:e.code,logo:LGU(Lh.logo)});
 }
 function keyHtml(ex){
   const J=D.job.job;

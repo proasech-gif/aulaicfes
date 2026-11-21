@@ -100,3 +100,9 @@ Pestaña «📄 Informe de un colegio» del auditor: reutiliza el análisis Sabe
 
 ## Saber: años subidos manualmente
 saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y saber-sync lo ponen en false al cargar datos oficiales, así se actualiza solo). RPC saber_manual(dane). El análisis muestra el año como «✍️ subido manualmente», incluye ese año en el informe y avisa que se actualizará. Respaldos: BACKUP_zip/*.pre_manual.
+
+## Roles, logo y auditoría del rector (noviembre 2026)
+- Informe Saber (analisis.js): rector y coordinador solo crean el de su propia institución (caja fija, bloqueo también en servidor con `saber_mi_colegio`/`saber_manual`); docentes y estudiantes no pueden. Años subidos por el propio colegio salen con la marca "✍️ subido manualmente".
+- Logo: `LGU()` en index.html devuelve el logo de la institución si lo subió, si no el de AULA360; lo usan encabezados, exámenes, constancias, periodos y el informe.
+- Revisión (revision.js v2): el rector elige coordinador o docente, el coordinador elige docentes. Además de planeador/observador/ficha/plan, hay secciones de actividad (cursos, evaluación, laboratorios, impresiones, trabajos, talleres, clase con IA, clases en aula, reuniones, registro de documentos) con vista previa, imprimir y nota. No entra al entorno de la persona; los mensajes privados no se muestran.
+- Base de datos: funciones `rev_personas()` y `rev_actividad(persona, sección, desde, hasta)` (SECURITY DEFINER, solo mismo colegio y jerarquía).

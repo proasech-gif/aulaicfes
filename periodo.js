@@ -36,7 +36,7 @@ function seleccionadas(){return Z.banco.filter(q=>Z.sel.has(q.id))}
 function specDe(p,preguntas){
   const L=typeof LH==='function'?LH():{l1:'',logo:''};
   const cs=(D.courses||[]).filter(c=>(p.cursos||[]).includes(c.id)).map(c=>c.grade+'° '+c.name).join(', ');
-  return{titulo:p.titulo,tipo:'Prueba de periodo '+p.periodo,colegio:L.l1,logo:L.logo?LOGO+encodeURI(L.logo):'',asignatura:p.asig,curso:cs,fecha:p.cierra?new Date(p.cierra).toLocaleDateString('es-CO'):'',minutos:p.min,preguntas,codigo:'P'+p.periodo};
+  return{titulo:p.titulo,tipo:'Prueba de periodo '+p.periodo,colegio:L.l1,logo:LGU(L.logo),asignatura:p.asig,curso:cs,fecha:p.cierra?new Date(p.cierra).toLocaleDateString('es-CO'):'',minutos:p.min,preguntas,codigo:'P'+p.periodo};
 }
 function validar(){
   const f=Z.f;

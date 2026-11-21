@@ -22,7 +22,7 @@ let Z={estilo:'clasico',aut:'',tdoc:'T.I.',expd:'',folio:'',libro:'',acta:'',nr:
   mc:{persona:'estudiantes',motivo:MOTIVOS.estudiantes[0],otro:'',nombres:'',staff:[]},busy:false};
 const inp='style="width:100%;border:1.5px solid #cbd5e1;border-radius:10px;padding:9px;font-size:14px;background:#fff"';
 function ctx(){const L=(typeof LH==='function')?LH():{l1:'',l2:'',l3:'',logo:''};
-  return{l1:L.l1||(M&&M.school_name)||'',l2:L.l2||'',l3:L.l3||'',logo:L.logo&&typeof LOGO!=='undefined'?LOGO+encodeURI(L.logo):'',hoja:!!L.hoja}}
+  return{l1:L.l1||(M&&M.school_name)||'',l2:L.l2||'',l3:L.l3||'',logo:LGU(L.logo),hoja:!!L.hoja}}
 async function load(t){
   Z.t=t==='mencion'?'menc':(Z.t==='menc'&&t!=='mencion'?'dipl':Z.t);
   if(!Z.rector&&M&&M.role==='rector')Z.rector=M.full_name||'';

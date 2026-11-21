@@ -42,7 +42,7 @@ async function abrir(id){
 function itemsDe(cu){return (Z.cont.items||[]).filter(i=>i.cuad===cu).map(i=>({...i.q,area:i.area,_gr:i.grado_ref}))}
 function cuadsDe(){return [...new Set((Z.cont.items||[]).map(i=>i.cuad))].sort()}
 function etiqueta(cu){return Z.cont.imp.kind==='diagnostico'?'Cuadernillo diagnóstico':'Cuadernillo '+CUADS[cu]}
-function logoInfo(){const L=typeof LH==='function'?LH():{l1:'',logo:''};return{colegio:L.l1||'',logo:L.logo?LOGO+encodeURI(L.logo):''}}
+function logoInfo(){const L=typeof LH==='function'?LH():{l1:'',logo:''};return{colegio:L.l1||'',logo:LGU(L.logo)}}
 function specCuad(cu){
   const imp=Z.cont.imp,li=logoInfo(),dg=imp.kind==='diagnostico';
   const dur=dg?'Tiene una duración de 90 minutos.':cu===1?'Sesión 1: duración total de 4 horas y 30 minutos (270 minutos).':cu===2?'Sesión 2: Sección 2 e Inglés se presentan en una sola sesión de 4 horas y 30 minutos (270 minutos).':'Sesión 2: este cuadernillo se presenta junto con la Sección 2, en 4 horas y 30 minutos en total.';
