@@ -3,7 +3,7 @@
    Todo queda acumulado: lo ve el rector, el coordinador y cada docente (solo lo suyo). */
 window.ASIS=(function(){
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const REVF=async(m,...a)=>{if(!window.REV)await loadScript('revision.js?v=2');return REV[m](...a)};
+const REVF=async(m,...a)=>{if(!window.REV)await loadScript('revision.js?v=3');return REV[m](...a)};
 const isDir=()=>M&&(M.role==='rector'||M.role==='coordinador');
 const hoy=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'});
 const hora=d=>new Date(d).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'America/Bogota'});

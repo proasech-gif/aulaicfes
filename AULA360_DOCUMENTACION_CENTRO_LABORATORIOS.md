@@ -106,3 +106,10 @@ saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y 
 - Logo: `LGU()` en index.html devuelve el logo de la institución si lo subió, si no el de AULA360; lo usan encabezados, exámenes, constancias, periodos y el informe.
 - Revisión (revision.js v2): el rector elige coordinador o docente, el coordinador elige docentes. Además de planeador/observador/ficha/plan, hay secciones de actividad (cursos, evaluación, laboratorios, impresiones, trabajos, talleres, clase con IA, clases en aula, reuniones, registro de documentos) con vista previa, imprimir y nota. No entra al entorno de la persona; los mensajes privados no se muestran.
 - Base de datos: funciones `rev_personas()` y `rev_actividad(persona, sección, desde, hasta)` (SECURITY DEFINER, solo mismo colegio y jerarquía).
+
+## Cambios de noviembre 21 (informe, paneles, datos de prueba)
+- Informe Saber (analisis_motor.js v4): letra más grande, etiquetas del gráfico principal quitadas (los valores están en la tabla), etiquetas de gráficos pequeños con borde blanco, páginas ya no recortan contenido largo.
+- Rector: sin «Laboratorios»; «Listados de estudiantes» → «Consultar grupos» (consulta_grupos.js, RPC grupo_opciones/grupo_consulta, solo lectura). Rector y coordinador: «Revisión docente» → «Auditoría docente» (+ pestaña Horario) y «Horarios» → «Crear horarios» (botón «Crear horario con IA»: es el generador automático de la plataforma, no un modelo de lenguaje).
+- Docente: «Centro de evaluación» → «Crear examen con IA» (pantalla de inicio con diagnóstico, examen de clase, periodo, simulacro, recuperación, taller con IA).
+- Datos de prueba en I.E. Prueba (id 2084, marcada permanente): 20 docentes (docente01..20.prueba@aula360.test), estudiantes est{grado}-{grupo}-{n}@aula360.test, cursos 6° a 11° (grupos 01 y 02), listado 5° a 11°, asistencia, notas y datos de horario sin generar. Clave Prueba2026*.
+- Limitación de la plataforma: cursos y cuentas de estudiante solo existen de 6° a 11° (restricción de la base de datos).

@@ -140,7 +140,7 @@ async function generar(){
   }catch(x){Z.msg=x.message||String(x);toast('⚠️','No se pudo crear el análisis',Z.msg)}
   Z.busy=false;R();
 }
-async function prep(){if(!window.INF)await loadScript('informes.js?v=2');if(!window.ANAM)await loadScript('analisis_motor.js?v=3')}
+async function prep(){if(!window.INF)await loadScript('informes.js?v=2');if(!window.ANAM)await loadScript('analisis_motor.js?v=4')}
 const by=(arr,a)=>arr.find(x=>x.anio===a)||{};
 function slope(vs,an){const p=an.map((a,i)=>[a,vs[i]]).filter(x=>x[1]!=null);if(p.length<2)return null;const n=p.length,sx=p.reduce((s,x)=>s+x[0],0),sy=p.reduce((s,x)=>s+x[1],0),sxy=p.reduce((s,x)=>s+x[0]*x[1],0),sxx=p.reduce((s,x)=>s+x[0]*x[0],0);const d=n*sxx-sx*sx;if(!d)return null;const m=(n*sxy-sx*sy)/d;return{m,b:(sy-m*sx)/n}}
 function ctxDoc(){const L=(typeof LH==='function')?LH():{l1:'',l2:'',l3:'',logo:''};

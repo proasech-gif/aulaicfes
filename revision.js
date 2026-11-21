@@ -11,7 +11,7 @@ const ACT=[['cursos','📚 Cursos'],['evaluacion','📝 Evaluación'],['labs','�
 const AN={};ACT.forEach(x=>AN[x[0]]=x[1]);
 const NOM={planeador:'Planeador',observador:'Observador del estudiante',ficha:'Ficha de seguimiento',plan:'Plan de área',asistencia:'Asistencia'};
 const COD={planeador:'PLA',observador:'OBS',ficha:'FIC',plan:'PLA',asistencia:'ASI'};
-const TABS=()=>TABS0.slice(0,5).concat(ACT,[TABS0[5]]);
+const TABS=()=>TABS0.slice(0,5).concat([['horario','🗓 Horario']],ACT,[TABS0[5]]);
 let Z={docs:[],doc:'',tab:'planeador',d:mas(hoy(),-30),h:hoy(),rows:[],gu:[],busy:false,ok:false};
 const R=()=>render();
 const btn=c=>`style="background:${c};color:#fff;padding:7px 11px;border-radius:9px;font-weight:700;font-size:13px"`;
@@ -26,6 +26,7 @@ async function cargaGu(){const r=await sb.from('doc_guardados').select('id,docen
 const nomDoc=()=>((Z.docs.find(x=>x.id===Z.doc)||{}).full_name)||'';
 async function buscar(quiet){
   Z.rows=[];if(!Z.doc||['asist','guardados'].includes(Z.tab)){if(!quiet)R();return}
+  if(Z.tab==='horario'){Z.busy=true;R();try{await loadScript('horarios.js?v=5');await HZUI.cargaAud()}catch(x){err(x)}Z.busy=false;R();return}
   Z.busy=true;R();
   try{
     if(AN[Z.tab]){const r=await sb.rpc('rev_actividad',{p_persona:Z.doc,p_seccion:Z.tab,p_desde:Z.d,p_hasta:Z.h});if(r.error)throw r.error;Z.rows=r.data||[]}else
@@ -46,6 +47,7 @@ function acciones2(i){return`<button onclick="REV.ver(${i})" ${btn('#1e63e9')}>�
 function actHtml(x){const d=x.detalle||{};const f=v=>/^\d{4}-\d\d-\d\dT/.test(String(v))?new Date(v).toLocaleString('es-CO',{timeZone:'America/Bogota'}):v;
   return`<div style="font-family:Arial,sans-serif"><h2 style="margin:0 0 4px">${e(x.titulo||'')}</h2><p style="color:#475569;margin:0 0 10px">${e(AN[Z.tab]||'')} · ${e(nomDoc())}${x.fecha?' · '+e(fF(x.fecha)):''}${x.estado?' · '+e(x.estado):''}</p><table style="border-collapse:collapse;width:100%">${Object.keys(d).filter(k=>d[k]!=null&&d[k]!=='').map(k=>`<tr><td style="border:1px solid #94a3b8;padding:6px 8px;font-weight:700;width:34%">${e(k)}</td><td style="border:1px solid #94a3b8;padding:6px 8px">${e(f(d[k]))}</td></tr>`).join('')}</table></div>`}
 function lista(){
+  if(Z.doc&&!Z.busy&&Z.tab==='horario'&&window.HZUI)return HZUI.docHtml(Z.doc);
   if(Z.doc&&!Z.busy&&AN[Z.tab]){if(!Z.rows.length)return'<p style="font-size:14px;color:#b45309;margin-top:14px">Esta persona no tiene registros en esta sección en esas fechas.</p>';
     return`<div class="aic-table-wrap" style="margin-top:12px"><table style="min-width:640px"><thead><tr><th>FECHA</th><th>TÍTULO</th><th>ESTADO</th><th></th></tr></thead><tbody>${Z.rows.map((x,i)=>`<tr><td>${fF(x.fecha)}</td><td>${e(x.titulo||'')}</td><td>${e(x.estado||'')}</td><td>${acciones2(i)}</td></tr>`).join('')}</tbody></table></div>`}
   if(!Z.doc)return'<p style="font-size:14px;color:#64748b;margin-top:14px">Elige un docente para ver sus documentos.</p>';

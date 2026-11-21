@@ -5,7 +5,7 @@
 (function(){
 'use strict';
 const DN=['','Lun','Mar','Mié','Jue','Vie','Sáb'],DL=['','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-const SEC=[['archivo','📎 Cargar archivo'],['jornada','⏰ Jornada'],['grupos','🏫 Grupos'],['asigs','📚 Asignaturas'],['docs','👩‍🏫 Docentes'],['aulas','🚪 Aulas'],['asign','🔗 Asignaciones'],['restr','📏 Restricciones'],['gen','⚡ Generar'],['vers','🗂️ Versiones']];
+const SEC=[['archivo','📎 Cargar archivo'],['jornada','⏰ Jornada'],['grupos','🏫 Grupos'],['asigs','📚 Asignaturas'],['docs','👩‍🏫 Docentes'],['aulas','🚪 Aulas'],['asign','🔗 Asignaciones'],['restr','📏 Restricciones'],['gen','🤖 Crear con IA'],['vers','🗂️ Versiones']];
 const S={sec:'archivo',colegio:'',dias:[1,2,3,4,5],franjas:[],grupos:[],docentes:[],asigs:[],aulas:[],asigns:[],nd:[],restr:[],vers:[],
   imp:null,regs:[],impMsg:'',visto:false,gen:null,rev:null,busy:false,vw:{clases:[],titulo:''},verId:'',modo:'grupo',item:'',dispDoc:'',pubOk:false,miDoc:null,iniMi:false,pegarMsg:'',
   nivel:'colegio',tipoH:'regular',em:{desde:'',hasta:'',motivo:'',ausentes:[],maxH:0},base:[]};
@@ -246,8 +246,8 @@ function vGen(){
       <div class="flex flex-wrap gap-2 hz-end hz-mt3"><input id="hz_vn" class="${IN}" value="Horario ${new Date().toLocaleDateString('es-CO')}" maxlength="80" style="min-width:14rem">${btn('HZUI.guardar(0)','💾 Guardar como borrador')}${btn('HZUI.guardar(1)','📢 Guardar y publicar',BTN)}</div>
       ${falta?`<p class="text-xs hz-amber mt-2">Faltan ${falta} hora(s) por ubicar. Puedes ajustar restricciones o disponibilidad y volver a generar.</p>`:''}`)}${vGrid()}`;
   }
-  return`<div class="space-y-4">${vOpc()}${card(`<h3 class="font-semibold hz-mb1">⚡ Generar el horario</h3><p class="text-sm text-slate-600">${S.grupos.length} grupos · ${S.docentes.length} docentes · ${S.asigns.length} asignaciones · ${total} horas por ubicar · ${S.restr.length} restricciones</p>
-    <div class="flex flex-wrap gap-2 hz-mt3">${btn('HZUI.revisar()','🔍 Revisar antes de generar')}${btn('HZUI.generar()','⚡ Generar horario',BTN)}</div>${rev?`<div class="hz-mt3">${rev}</div>`:''}`)}${res}</div>`;
+  return`<div class="space-y-4">${vOpc()}${card(`<h3 class="font-semibold hz-mb1">🤖 Crear el horario con IA</h3><p class="text-sm text-slate-600">${S.grupos.length} grupos · ${S.docentes.length} docentes · ${S.asigns.length} asignaciones · ${total} horas por ubicar · ${S.restr.length} restricciones</p>
+    <div class="flex flex-wrap gap-2 hz-mt3">${btn('HZUI.revisar()','🔍 Revisar antes de generar')}${btn('HZUI.generar()','🤖 Crear horario con IA',BTN)}</div>${rev?`<div class="hz-mt3">${rev}</div>`:''}`)}${res}</div>`;
 }
 function vVers(){
   const l=S.vers.map(v=>`<tr class="border-t"><td class="py-1">${E(v.nombre)}<div class="text-xs text-slate-500">${v.tipo==='emergente'?'🚨 Emergente · '+fd(v.desde+'T12:00:00')+' → '+fd(v.hasta+'T12:00:00')+(v.motivo?' · '+E(v.motivo):''):'Regular'} · ${NIV[v.nivel||'colegio']}</div></td><td>${v.estado==='publicado'?'<b style="color:#059669">Publicado</b>':v.estado==='archivado'?'Archivado':'Borrador'}</td><td>${v.puntuacion==null?'—':v.puntuacion}</td><td>${fd(v.created_at)}</td><td><div class="flex hz-gap1 flex-wrap">${btn(`HZUI.verVersion('${v.id}')`,'Ver')}${v.estado!=='publicado'?btn(`HZUI.publicar('${v.id}')`,'Publicar','bg-emerald-600 text-white'):''}${v.estado!=='publicado'?btn(`HZUI.borrarVersion('${v.id}')`,'Borrar'):''}</div></td></tr>`).join('');
@@ -257,7 +257,7 @@ function vHor(){
   if(!M.colegio_id)return card('<h2 class="text-xl font-bold">🗓 Horarios</h2><p class="text-sm text-red-600">Tu cuenta no tiene un colegio del catálogo. Escribe al administrador para vincularla.</p>');
   const nav=SEC.map(([k,l])=>`<button onclick="HZUI.sec('${k}')" class="px-3 py-2 rounded-lg text-sm whitespace-nowrap shadow-sm ${S.sec===k?'on':'bg-white'}">${l}</button>`).join('');
   const body=({archivo:vArchivo,jornada:vJornada,grupos:vGrupos,asigs:vAsigs,docs:vDocs,aulas:vAulas,asign:vAsign,restr:vRestr,gen:vGen,vers:vVers}[S.sec]||vJornada)();
-  return`<div class="space-y-4">${card(`<h2 class="text-xl font-bold">🗓 Horarios del colegio</h2><p class="text-sm text-slate-600">${E(S.colegio)}</p><p class="text-xs text-slate-500 mt-1">Sigue los pasos en orden: arma la jornada, los grupos, las asignaturas, los docentes y las asignaciones; agrega restricciones si quieres; y genera el horario.</p>`)}<nav class="aic-tabs">${nav}</nav>${body}</div>`;
+  return`<div class="space-y-4">${card(`<h2 class="text-xl font-bold">🗓 Crear horarios</h2><p class="text-sm text-slate-600">${E(S.colegio)}</p><p class="text-xs text-slate-500 mt-1">Sigue los pasos en orden: arma la jornada, los grupos, las asignaturas, los docentes y las asignaciones; agrega restricciones si quieres; y crea el horario con IA.</p>`)}<nav class="aic-tabs">${nav}</nav>${body}</div>`;
 }
 function vMi(){
   if(!M.colegio_id)return card('<h2 class="text-xl font-bold">🗓 Mi horario</h2><p class="text-sm text-slate-600">Tu cuenta no tiene un colegio del catálogo, así que no hay horario para mostrar.</p>');
@@ -387,6 +387,13 @@ window.HZUI={
     else if(t==='dhor'){await cargarRegs();if(!S.visto){S.visto=true;if(S.franjas.length||S.grupos.length||S.docentes.length)S.sec='gen'}}},
   preparar(tablas,nombre){preparar(tablas,nombre)},
   view(t){return t==='mhor'?vMi():vHor()},
+  async cargaAud(){await cargar();await cargarPublicado()},
+  docHtml(uid){
+    if(!S.pubOk)return'<p style="font-size:14px;color:#b45309;margin-top:14px">Todavía no hay un horario publicado en el colegio.</p>';
+    const d=S.docentes.find(x=>x.user_id===uid);
+    if(!d)return'<p style="font-size:14px;color:#b45309;margin-top:14px">Esta persona todavía no está vinculada a un docente del horario. En «Crear horarios → Docentes» usa «Traer docentes registrados».</p>';
+    return`<div style="margin-top:12px"><p class="text-sm"><b>Horario de ${E(d.nombre)}</b> · ${E(S.vw.titulo||'')}</p><div class="overflow-x-auto">${tabla('docente',d.id)}</div><div style="margin-top:8px">${btn('HZUI.printDoc(\''+d.id+'\')','🖨️ Imprimir este horario')}</div></div>`},
+  printDoc(id){S.modo='docente';S.item=id;this.print(0)},
   sec(k){S.sec=k;S.dispDoc='';render()},
   setModo(m){S.modo=m;S.item='';render()},
   setItem(i){S.item=i;render()},

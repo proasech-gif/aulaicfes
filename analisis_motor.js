@@ -156,25 +156,25 @@ function lc(o){
   if(!ys.length)return'';
   const step=o.step||10;let lo=o.ymin!=null?o.ymin:Math.floor((Math.min(...ys)-step*.6)/step)*step,hi=o.ymax!=null?o.ymax:Math.ceil((Math.max(...ys)+step*.6)/step)*step;if(hi===lo)hi=lo+step;
   const x0=o.x0,x1=o.x1,X=x=>L+(x-x0)/(x1-x0)*(W-L-R),Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
-  let g='';const nt=4;for(let i=0;i<=nt;i++){const v=lo+(hi-lo)*i/nt;g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.line}"/><text x="${L-6}" y="${Y(v)+3.5}" text-anchor="end" font-size="9.5" fill="${C.mut}">${Math.round(v)}</text>`}
+  let g='';const nt=4;for(let i=0;i<=nt;i++){const v=lo+(hi-lo)*i/nt;g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.line}"/><text x="${L-6}" y="${Y(v)+3.5}" text-anchor="end" font-size="10.5" fill="${C.mut}">${Math.round(v)}</text>`}
   (o.miss||[]).forEach(y=>{g+=`<rect x="${X(y-.35)}" y="${T}" width="${X(y+.35)-X(y-.35)}" height="${H-T-B}" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="3 3"/><text x="${X(y)}" y="${T+12}" text-anchor="middle" font-size="8.5" fill="${C.mut}">sin datos</text>`});
   (o.bands||[]).forEach(b=>{g+=`<polygon points="${b.pts.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="${b.c}" opacity=".16"/>`});
   (o.vlines||[]).forEach(v=>{g+=`<line x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H-B}" stroke="${C.mut}" stroke-dasharray="4 3"/>`});
-  (o.ticks||[]).forEach(y=>{g+=`<text x="${X(y)}" y="${H-B+14}" text-anchor="middle" font-size="9.5" fill="${C.gray}">${y}</text>`});
+  (o.ticks||[]).forEach(y=>{g+=`<text x="${X(y)}" y="${H-B+14}" text-anchor="middle" font-size="10.5" fill="${C.gray}">${y}</text>`});
   let ln='';
   o.series.forEach(s=>{
     const P=s.pts.filter(p=>p[1]!=null);
     for(let i=1;i<P.length;i++){const gap=P[i][0]-P[i-1][0]>1&&!s.nogap;ln+=`<line x1="${X(P[i-1][0])}" y1="${Y(P[i-1][1])}" x2="${X(P[i][0])}" y2="${Y(P[i][1])}" stroke="${s.c}" stroke-width="${s.w||2}" ${s.dash||gap?`stroke-dasharray="${gap?'2 4':s.dash}"`:''} stroke-linecap="round"/>`}
     if(!s.noDots)P.forEach(p=>{ln+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="${s.w>2?3.6:2.6}" fill="${s.hollow?'#fff':s.c}" stroke="${s.c}" stroke-width="1.6"/>`});
-    if(s.lab)P.forEach(p=>{ln+=`<text x="${X(p[0])}" y="${Y(p[1])-9}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${s.c}">${num(p[1],s.dec==null?1:s.dec)}</text>`});
+    if(s.lab)P.forEach(p=>{ln+=`<text x="${X(p[0])}" y="${Y(p[1])-11}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${s.c}" stroke="#fff" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round">${num(p[1],s.dec==null?1:s.dec)}</text>`});
   });
-  let lg='';if(o.leg!==false){let x=L;o.series.filter(s=>s.l).forEach(s=>{lg+=`<g transform="translate(${x},27)"><line x1="0" x2="16" y1="0" y2="0" stroke="${s.c}" stroke-width="${s.w||2}" ${s.dash?`stroke-dasharray="${s.dash}"`:''}/><circle cx="8" cy="0" r="2.6" fill="${s.hollow?'#fff':s.c}" stroke="${s.c}"/><text x="21" y="3.5" font-size="9.5" fill="${C.ink}">${e(s.l)}</text></g>`;x+=26+s.l.length*5.4})}
+  let lg='';if(o.leg!==false){let x=L;o.series.filter(s=>s.l).forEach(s=>{lg+=`<g transform="translate(${x},27)"><line x1="0" x2="16" y1="0" y2="0" stroke="${s.c}" stroke-width="${s.w||2}" ${s.dash?`stroke-dasharray="${s.dash}"`:''}/><circle cx="8" cy="0" r="2.6" fill="${s.hollow?'#fff':s.c}" stroke="${s.c}"/><text x="21" y="3.5" font-size="10.5" fill="${C.ink}">${e(s.l)}</text></g>`;x+=30+s.l.length*6})}
   return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="${FONT};display:block" role="img" aria-label="${e(o.alt||o.titulo||'Gráfico')}">${o.titulo?`<text x="${L}" y="11" font-size="10.5" font-weight="700" fill="${C.navy}">${e(o.titulo)}</text>`:''}${g}${ln}${lg}</svg>`;
 }
 function gGlobal(A,o){
   o=o||{};const r=A.r,an=A.an;
   const mk=(arr)=>an.map(y=>[y,by(arr,y).global]);
-  const s=[{l:A.colego?'Institución':'Territorio',pts:mk(r.pri),c:C.navy,w:3.2,lab:true}];
+  const s=[{l:A.colego?'Institución':'Territorio',pts:mk(r.pri),c:C.navy,w:3.2}];
   if(A.colego&&r.mun&&r.mun.length)s.push({l:'Municipio',pts:mk(r.mun),c:C.teal,w:2});
   s.push({l:'Departamento',pts:mk(r.dep),c:C.amber,w:2,dash:'6 3'},{l:'País',pts:mk(r.pais),c:C.gray,w:2,dash:'2 3',hollow:true});
   if(o.tend&&A.tg.m){const m=A.tg.m;s.push({l:'Tendencia',pts:[[an[0],m.a+m.b*an[0]],[A.ult,m.a+m.b*A.ult]],c:C.red,w:1.4,dash:'4 3',noDots:true,nogap:true})}
@@ -240,8 +240,8 @@ function geometria(){
 
 /* ============ 4. DOCUMENTO A4 ============ */
 const CSS=`@page{size:A4;margin:0}*{box-sizing:border-box}html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;background:#cbd5e1;font:9.6pt/1.5 'Segoe UI',Arial,Helvetica,sans-serif;color:${C.ink}}
-.sheet{width:210mm;height:296mm;margin:0 auto 6mm;background:#fff;position:relative;padding:24mm 17mm 20mm;overflow:hidden;page-break-after:always;break-after:page}
+body{margin:0;background:#cbd5e1;font:10.6pt/1.5 'Segoe UI',Arial,Helvetica,sans-serif;color:${C.ink}}
+.sheet{width:210mm;min-height:296mm;margin:0 auto 6mm;background:#fff;position:relative;padding:24mm 17mm 24mm;overflow:visible;page-break-after:always;break-after:page}
 .sheet:last-child{page-break-after:auto;break-after:auto;margin-bottom:0}
 @media print{body{background:#fff}.sheet{margin:0}}
 .hd{position:absolute;left:17mm;right:17mm;top:9mm;display:flex;justify-content:space-between;align-items:flex-end;font-size:7.8pt;color:${C.mut};border-bottom:1.2pt solid ${C.navy};padding-bottom:2mm}
@@ -249,22 +249,22 @@ body{margin:0;background:#cbd5e1;font:9.6pt/1.5 'Segoe UI',Arial,Helvetica,sans-
 .ft{position:absolute;left:17mm;right:17mm;bottom:8mm;display:flex;justify-content:space-between;font-size:7.6pt;color:${C.mut};border-top:.6pt solid ${C.line};padding-top:2mm}
 h1{font-size:21pt;color:${C.navy};margin:0 0 2mm;line-height:1.15}
 h2{font-size:15pt;color:${C.navy};margin:0 0 1mm;border-left:3mm solid ${C.teal};padding-left:3mm;line-height:1.2}
-h3{font-size:10.8pt;color:${C.navy};margin:4mm 0 1.5mm}
-p{margin:0 0 2.2mm;text-align:justify}.sub{color:${C.mut};font-size:8.8pt;margin:0 0 4mm 6mm}
-table{border-collapse:collapse;width:100%;font-size:8.6pt;margin:1.5mm 0 3mm}
+h3{font-size:11.8pt;color:${C.navy};margin:4mm 0 1.5mm}
+p{margin:0 0 2.2mm;text-align:justify}.sub{color:${C.mut};font-size:9.6pt;margin:0 0 4mm 6mm}
+table{border-collapse:collapse;width:100%;font-size:9.4pt;margin:1.5mm 0 3mm}
 th{background:${C.navy};color:#fff;text-align:left;padding:1.6mm 2mm;font-weight:600}
 td{padding:1.5mm 2mm;border-bottom:.6pt solid ${C.line};vertical-align:top}
 tr:nth-child(even) td{background:#f8fafc}
 td.n,th.n{text-align:right;white-space:nowrap}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin:3mm 0 4mm}
 .kpi{border:.8pt solid ${C.line};border-top:2.2mm solid ${C.navy};border-radius:2mm;padding:2.5mm 3mm;background:#fff}
-.kpi b{display:block;font-size:16pt;color:${C.navy};line-height:1.15}.kpi span{font-size:7.8pt;color:${C.mut}}
-.box{border-left:2.4mm solid ${C.teal};background:#f0fdfa;padding:2.5mm 3.5mm;margin:2mm 0 3mm;border-radius:0 2mm 2mm 0;font-size:9pt}
+.kpi b{display:block;font-size:16pt;color:${C.navy};line-height:1.15}.kpi span{font-size:8.6pt;color:${C.mut}}
+.box{border-left:2.4mm solid ${C.teal};background:#f0fdfa;padding:2.5mm 3.5mm;margin:2mm 0 3mm;border-radius:0 2mm 2mm 0;font-size:10pt}
 .box.w{border-color:${C.amber};background:#fffbeb}.box.r{border-color:${C.red};background:#fef2f2}.box.b{border-color:${C.blue};background:#eff6ff}
 ul{margin:0 0 2.5mm;padding-left:5mm}li{margin-bottom:1.3mm;text-align:justify}
 .tag{display:inline-block;color:#fff;border-radius:2mm;padding:.4mm 2mm;font-size:7.8pt;font-weight:700;white-space:nowrap}
-.note{font-size:7.9pt;color:${C.mut}}
-.cover{padding:0;background:${C.navy};color:#fff}
+.note{font-size:8.6pt;color:${C.mut}}
+.cover{height:296mm;overflow:hidden;padding:0;background:${C.navy};color:#fff}
 .cover .top{position:absolute;left:17mm;right:17mm;top:12mm;display:flex;gap:4mm;align-items:center;color:#fff}
 .cover .top img{height:17mm;background:#fff;border-radius:2mm;padding:1mm}
 .cover .art{position:absolute;left:0;right:0;top:34mm}
@@ -305,7 +305,7 @@ function build(r,ctx){
   /* --- Ficha técnica y metodología --- */
   if(on('ficha')){
     const f=r.ficha||{};
-    P('ficha',`<h2>Ficha técnica y metodología</h2><p class="sub">Qué datos se usaron y cómo se calcularon las cifras</p>
+    P('ficha',`<div style="font-size:9.4pt"><h2>Ficha técnica y metodología</h2><p class="sub">Qué datos se usaron y cómo se calcularon las cifras</p>
     <table><tr><td style="width:32mm"><b>${A.colego?'Institución':'Territorio'}</b></td><td colspan="3">${e(nm)}</td></tr>
     ${A.colego?`<tr><td><b>Código DANE</b></td><td>${e(r.dane||'—')}</td><td><b>Sector</b></td><td>${e(f.sector||'—')}</td></tr><tr><td><b>Municipio</b></td><td>${e(f.mcpio||'—')}</td><td><b>Departamento</b></td><td>${e(f.depto||'—')}</td></tr>`:''}
     ${A.colego?`<tr><td><b>Zona</b></td><td colspan="3">${e(r.zona||'Sin dato (el colegio no la ha registrado)')}</td></tr>`:''}<tr><td><b>Calendario</b></td><td>${r.cal||'A'}</td><td><b>Años analizados</b></td><td>${A.an.join(', ')}</td></tr>
@@ -319,7 +319,7 @@ function build(r,ctx){
     <li><b>Tendencia:</b> con 4 o más observaciones se ajusta una recta de mínimos cuadrados sobre los años reales; con menos, se usa el cambio acumulado dividido por los años transcurridos. Se considera «estable» un cambio menor a ±0,3 puntos por año en las pruebas y ±1,5 en el global.</li>
     <li><b>Proyección:</b> la recta se extiende con un intervalo de incertidumbre del 95 %. Si hay menos de 4 observaciones <b>no</b> se proyecta tendencia. Es un ejercicio estadístico, no un resultado oficial.</li>
     <li><b>Prioridad:</b> regla fija y pública: brecha relativa ≤ −10 % y tendencia a la baja = Crítica; ≤ −10 % sin descenso o ≤ −5 % con descenso = Alta; hasta −2 % = Media; mejor que −2 % = Seguimiento.</li></ul>
-    <div class="box w"><b>Alcance y limitaciones</b><ul style="margin:1mm 0 0"><li>Las fuentes agregadas no incluyen desviación estándar, niveles de desempeño ni resultados por competencia: por eso este informe <b>no</b> analiza competencias ni dispersión.</li><li>Los datos de 2019–2022 y los de 2023 en adelante provienen de publicaciones distintas (precisión de decimales diferente); las diferencias menores a 1 punto en un área pueden deberse a este redondeo.</li><li>Un resultado de una cohorte pequeña varía por azar; las causas de los cambios no se pueden determinar con estos datos.</li></ul></div>`);
+    <div class="box w"><b>Alcance y limitaciones</b><ul style="margin:1mm 0 0"><li>Las fuentes agregadas no incluyen desviación estándar, niveles de desempeño ni resultados por competencia: por eso este informe <b>no</b> analiza competencias ni dispersión.</li><li>Los datos de 2019–2022 y los de 2023 en adelante provienen de publicaciones distintas (precisión de decimales diferente); las diferencias menores a 1 punto en un área pueden deberse a este redondeo.</li><li>Un resultado de una cohorte pequeña varía por azar; las causas de los cambios no se pueden determinar con estos datos.</li></ul></div></div>`);
   }
   /* --- Evolución --- */
   if(on('evolucion')){
