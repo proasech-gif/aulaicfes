@@ -501,7 +501,7 @@ E.intermol=(el,cfg,ctx)=>{const RT=cfg.retos||[];const S={g:16,k:0,ok:0};
 
 /* ========== helpers etapa 3b ========== */
 const dsub=s=>String(s).replace(/([A-Za-z)])(\d+)/g,(m,a,d)=>a+d.split('').map(c=>'₀₁₂₃₄₅₆₇₈₉'[+c]).join(''));
-const mkRetoUI=(el,RT,ctx,P,onDone)=>{/* reto de opción múltiple genérico: P = prefijo de ids */const S={k:0,ok:0};
+const mkRetoUI=(el,RT,ctx,P,onDone)=>{/* reto de opción múltiple genérico: P = prefijo de ids */const S={k:0,ok:0};el.__rt=RT;
  const draw=()=>{const d=$(el,'#'+P+'_rt'),r=RT[S.k];if(!d)return;if(!r){d.innerHTML='🏁 <b>¡Retos completados!</b> '+S.ok+' de '+RT.length;return}
   d.innerHTML=`<b>Reto ${S.k+1}/${RT.length}:</b> ${r.q}<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${r.o.map((o,i)=>`<button data-o="${i}" class="sim-btn" style="background:#7c3aed">${dsub(esc(o))}</button>`).join('')}</div>`;
   d.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{const ok=+b.dataset.o===r.ok,f=$(el,'#'+P+'_fb');if(ok){S.ok++;ctx.act('reto_ok',{});f.style.color='#16a34a';f.textContent='✅ '+(r.why||'')}else{f.style.color='#dc2626';f.textContent='❌ '+(r.why||'')}
@@ -661,6 +661,171 @@ E.cinetica=(el,cfg,ctx)=>{const RXS=cfg.rxs;const COL=['#2563eb','#dc2626','#16a
   if(prev){const d=['conc','T','sa','cat'].filter(k=>String(prev[k])!==String(c[k]));if(d.length===1)ctx.act('un_cambio',{});if(d.length===1)ctx.act('var_'+d[0],{});if(d.length>=1&&c.k>prev.k)ctx.act('mas_rapida',{})}
   ctx.obs('Corrida '+(c.id+1)+': '+c.txt+' → velocidad inicial '+fm(R().vmax*c.k,2)+' mL/s');draw()};
  ctl();draw();U.draw();return{reset(){S.runs=[];draw();U.reset()}}};
+
+
+/* ========== helpers etapa 4 ========== */
+const NA_=6.022e23;
+const SUPD='⁰¹²³⁴⁵⁶⁷⁸⁹';
+const sciU=x=>{if(!isFinite(x)||x===0)return'0';const e=Math.floor(Math.log10(Math.abs(x))+1e-12),m=x/Math.pow(10,e);return fm(m,2)+' × 10'+String(Math.abs(e)).split('').map(c=>SUPD[+c]).join('').replace(/^/,e<0?'⁻':'')};
+const numReto=(q,c,w,u,d,why,seed)=>{const f=x=>u==='sci'?sciU(x):fm(x,d)+' '+u;const o=[c],fs=[f(c)];
+ w.forEach(x=>{if(isFinite(x)&&x>=0&&!fs.includes(f(x))){o.push(x);fs.push(f(x))}});
+ let k=2;while(o.length<4){const x=c*k;if(!fs.includes(f(x))){o.push(x);fs.push(f(x))}k+=1}
+ const lst=shuf(o.slice(0,4),seed);return{q:dsub(q),o:lst.map(f),ok:lst.indexOf(c),why}};
+const NAMEF={H2O:'Agua',NaCl:'Cloruro de sodio',CO2:'Dióxido de carbono',C6H12O6:'Glucosa',CaCO3:'Carbonato de calcio',NH3:'Amoníaco',O2:'Oxígeno',Fe:'Hierro',Al:'Aluminio',Cu:'Cobre',H2SO4:'Ácido sulfúrico',NaOH:'Hidróxido de sodio',CuSO4:'Sulfato de cobre',KMnO4:'Permanganato de potasio',CH4:'Metano',N2:'Nitrógeno',H2:'Hidrógeno',Mg:'Magnesio',MgO:'Óxido de magnesio',Zn:'Zinc',HCl:'Ácido clorhídrico',ZnCl2:'Cloruro de zinc',Na:'Sodio',Cl2:'Cloro'};
+const mixc=(a,b,t)=>{const h=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16)),A=h(a),B=h(b),t_=Math.max(0,Math.min(1,t));return'#'+A.map((x,i)=>Math.round(x+(B[i]-x)*t_).toString(16).padStart(2,'0')).join('')};
+const genR=(list,mk)=>list.map((r,i)=>r.t?mk(r,i):r);
+
+/* ========== MOL: mol, masa molar y conversiones ========== */
+E.mol=(el,cfg,ctx)=>{const SU_=cfg.sust,M_=f=>mmF(f);const S={f:SU_[0],u:cfg.unidad||'g',v:cfg.unidad==='mol'?1:36,calc:0};
+ const RT=genR(cfg.retos||[],(r,i)=>{const M=M_(r.f),nm=NAMEF[r.f]||r.f;
+  if(r.t==='M')return numReto(`¿Cuál es la masa molar de <b>${r.f}</b> (${nm})?`,M,[M*2,M/2,M+1.008*2,M-16],'g/mol',1,`Suma las masas atómicas de todos los átomos: ${r.f} = ${fm(M,2)} g/mol.`,i+1);
+  if(r.t==='g2mol'){const n=r.v/M;return numReto(`¿Cuántos mol hay en <b>${r.v} g</b> de ${r.f}?`,n,[r.v*M,M/r.v,r.v/M/2],'mol',2,`n = m / M = ${r.v} g / ${fm(M,2)} g/mol = ${fm(n,2)} mol.`,i+2)}
+  if(r.t==='mol2g'){const m=r.v*M;return numReto(`¿Cuántos gramos son <b>${r.v} mol</b> de ${r.f}?`,m,[r.v/M,M/r.v,m/2],'g',1,`m = n × M = ${r.v} mol × ${fm(M,2)} g/mol = ${fm(m,1)} g.`,i+3)}
+  if(r.t==='mol2p'){const N=r.v*NA_;return numReto(`¿Cuántas partículas hay en <b>${r.v} mol</b> de ${r.f}?`,N,[N/6.022e23*1e22,N*10,N/10],'sci',2,`N = n × 6,022 × 10²³ = ${sciU(N)}.`,i+4)}
+  if(r.t==='g2p'){const N=r.v/M*NA_;return numReto(`¿Cuántas moléculas o unidades hay en <b>${r.v} g</b> de ${r.f}?`,N,[N/NA_,r.v*NA_,N*M],'sci',2,`Primero n = ${r.v}/${fm(M,2)} = ${fm(r.v/M,3)} mol; luego N = n × 6,022 × 10²³ = ${sciU(N)}.`,i+5)}
+  return r});
+ const rg=()=>S.u==='g'?[1,300,1]:S.u==='mol'?[0.1,5,0.1]:[1,30,0.5];
+ const sl=()=>{const r=rg();S.v=Math.min(r[1],Math.max(r[0],S.v));$(el,'#o_vw').innerHTML=rng('o_v',S.u==='g'?'Masa (g)':S.u==='mol'?'Cantidad (mol)':'Partículas (× 10²³)',r[0],r[1],S.v,r[2]);$(el,'#o_v').oninput=e=>{S.v=+e.target.value;$(el,'#o_vv').textContent=S.v;ctx.act('cambia',{});out()}};
+ el.innerHTML=grid(panel('🎛️ Muestra',lab('Sustancia')+sel('o_s',SU_.map(f=>[f,(NAMEF[f]||f)+' — '+f]),S.f)+lab('Cantidad conocida')+sel('o_u',[['g','Masa en gramos'],['mol','Cantidad en mol'],['p','Número de partículas']],S.u)+'<div id="o_vw"></div>'+`<div style="margin-top:10px">${btn('o_c','🧮 Mostrar el cálculo','#0d9488')}</div>`+(RT.length?rhold('o'):'<div id="o_rt"></div><div id="o_fb"></div>')),
+  panel('📋 Resultados','<div id="o_out"></div>')+'<div id="o_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'o');
+ const get=()=>{const M=M_(S.f);let n;if(S.u==='g')n=S.v/M;else if(S.u==='mol')n=S.v;else n=S.v*1e23/NA_;return{M,n,m:n*M,N:n*NA_}};
+ const out=()=>{const g=get(),at=parseF(S.f);const comp=Object.keys(at).map(e=>`${at[e]} × ${fm(EL(e).m,3)}`).join(' + ');
+  $(el,'#o_out').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:5px;font-weight:700">Fórmula</td><td><b>${dsub(S.f)}</b></td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">Masa molar</td><td>${comp} = <b>${fm(g.M,2)} g/mol</b></td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">Masa</td><td><b>${fm(g.m,2)} g</b></td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">Cantidad</td><td><b>${fm(g.n,3)} mol</b></td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">Partículas</td><td><b>${sciU(g.N)}</b></td></tr></table><div id="o_cc" style="margin-top:8px;font-size:13px;background:#f8fafc;border-radius:10px;padding:8px;display:${S.calc?'block':'none'}">${S.calc?cc(g):''}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Un mol contiene 6,022 × 10²³ partículas (número de Avogadro); su masa en gramos es la masa molar.</div>`;
+  $(el,'#o_tl').innerHTML=tiles([['Masa molar',fm(g.M,2)+' g/mol','#2563eb'],['Moles',fm(g.n,3),'#16a34a']])};
+ const cc=g=>S.u==='g'?`n = m / M = ${fm(S.v,1)} g / ${fm(g.M,2)} g/mol = <b>${fm(g.n,3)} mol</b><br>N = n × N<sub>A</sub> = ${fm(g.n,3)} × 6,022 × 10²³ = <b>${sciU(g.N)}</b>`:S.u==='mol'?`m = n × M = ${fm(S.v,2)} mol × ${fm(g.M,2)} g/mol = <b>${fm(g.m,2)} g</b><br>N = n × N<sub>A</sub> = <b>${sciU(g.N)}</b>`:`n = N / N<sub>A</sub> = ${sciU(g.N)} / 6,022 × 10²³ = <b>${fm(g.n,3)} mol</b><br>m = n × M = <b>${fm(g.m,2)} g</b>`;
+ $(el,'#o_s').onchange=e=>{S.f=e.target.value;ctx.act('cambia',{});out()};
+ $(el,'#o_u').onchange=e=>{S.u=e.target.value;S.v=S.u==='g'?36:S.u==='mol'?1:6;sl();ctx.act('cambia',{});out()};
+ $(el,'#o_c').onclick=()=>{S.calc=1;ctx.act('calcula',{});const g=get();ctx.obs(`${S.f}: M = ${fm(g.M,2)} g/mol; ${fm(g.n,3)} mol; ${fm(g.m,2)} g; ${sciU(g.N)} partículas`);out()};
+ sl();out();U.draw();return{reset(){S.calc=0;out();U.reset()}}};
+
+/* ========== ESTEQUIO: estequiometría, reactivo limitante y rendimiento ========== */
+const RXN=[{n:'Formación de agua',L:[[2,'H2'],[1,'O2']],R:[[2,'H2O']]},{n:'Síntesis del amoníaco',L:[[1,'N2'],[3,'H2']],R:[[2,'NH3']]},{n:'Combustión del metano',L:[[1,'CH4'],[2,'O2']],R:[[1,'CO2'],[2,'H2O']]},{n:'Combustión del magnesio',L:[[2,'Mg'],[1,'O2']],R:[[2,'MgO']]},{n:'Zinc con ácido clorhídrico',L:[[1,'Zn'],[2,'HCl']],R:[[1,'ZnCl2'],[1,'H2']]},{n:'Sodio con cloro',L:[[2,'Na'],[1,'Cl2']],R:[[2,'NaCl']]}];
+const eqS=r=>dsub(r.L.map(x=>(x[0]>1?x[0]+' ':'')+x[1]).join(' + ')+' → '+r.R.map(x=>(x[0]>1?x[0]+' ':'')+x[1]).join(' + '));
+const rxCalc=(r,mA,mB)=>{const a=r.L[0],b=r.L[1],nA=mA/mmF(a[1]),nB=mB==null?Infinity:mB/mmF(b[1]),xA=nA/a[0],xB=nB/b[0],x=Math.min(xA,xB),lim=xA<=xB?0:1;
+ const prods=r.R.map(p=>({f:p[1],n:x*p[0],m:x*p[0]*mmF(p[1])}));const ex=lim===0?(xB===Infinity?null:{f:b[1],m:(xB-x)*b[0]*mmF(b[1])}):{f:a[1],m:(xA-x)*a[0]*mmF(a[1])};return{nA,nB,xA,xB,x,lim,prods,ex}};
+E.estequio=(el,cfg,ctx)=>{const modo=cfg.modo;const S={i:0,a:20,b:20,real:0,calc:0};
+ const RT=genR(cfg.retos||[],(r,i)=>{const rx=RXN[r.rx],A=rx.L[0][1],B=rx.L[1]?rx.L[1][1]:'',c=rxCalc(rx,r.a,r.t==='prod'?null:r.b),P=rx.R[0][1];
+  if(r.t==='prod'){const p=c.prods[0],nA=c.nA;return numReto(`En <b>${rx.n}</b> (${eqS(rx)}) reaccionan ${r.a} g de ${A} con exceso del otro reactivo. ¿Cuántos gramos de <b>${P}</b> se forman?`,p.m,[nA*mmF(P),r.a,p.m*2,p.m/2],'g',1,`${fm(nA,3)} mol de ${A} → ${fm(p.n,3)} mol de ${P} → ${fm(p.m,1)} g (usa los coeficientes de la ecuación).`,i+1)}
+  if(r.t==='lim'){const L=c.lim;const o=[dsub(A),dsub(B)];return{q:`<b>${rx.n}</b> (${eqS(rx)}): se mezclan ${r.a} g de ${dsub(A)} con ${r.b} g de ${dsub(B)}. ¿Cuál es el reactivo limitante?`,o,ok:L,why:`Compara moles ÷ coeficiente: ${dsub(A)} = ${fm(c.xA,3)}, ${dsub(B)} = ${fm(c.xB,3)}. El menor se acaba primero.`}}
+  if(r.t==='rend'){const th=c.prods[0].m,pc=r.real/th*100;return numReto(`En <b>${rx.n}</b> se mezclan ${r.a} g de ${A} con ${r.b} g de ${B}. El rendimiento teórico de ${P} es ${fm(th,1)} g y en el laboratorio se obtienen ${r.real} g. ¿Cuál es el rendimiento porcentual?`,pc,[th/r.real*100,r.real,100-pc],'%',1,`% = real / teórico × 100 = ${r.real} / ${fm(th,1)} × 100 = ${fm(pc,1)} %.`,i+3)}
+  return r});
+ const two=modo!=='est';
+ el.innerHTML=grid(panel('🎛️ Reacción',lab('Reacción')+sel('s_r',RXN.map((r,i)=>[i,r.n]),0)+`<div id="s_eq" style="font-weight:800;margin-top:6px"></div><div id="s_sl"></div>`+`<div style="margin-top:10px">${btn('s_c','🧮 Calcular','#0d9488')}</div>`+(RT.length?rhold('s'):'<div id="s_rt"></div><div id="s_fb"></div>')),
+  panel('📋 Cálculo paso a paso','<div id="s_out"></div>')+panel('📊 Moles ÷ coeficiente (el menor es el limitante)','<div id="s_bar"></div>')+'<div id="s_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'s');
+ const rx=()=>RXN[S.i];
+ const sliders=()=>{const r=rx();$(el,'#s_eq').innerHTML=eqS(r);$(el,'#s_sl').innerHTML=rng('s_a','Masa de '+dsub(r.L[0][1])+' (g)',1,100,S.a,1)+(two?rng('s_b','Masa de '+dsub(r.L[1][1])+' (g)',1,100,S.b,1):'<div style="font-size:12px;color:#64748b;margin-top:6px">El otro reactivo está en exceso.</div>')+(modo==='rend'?rng('s_x','Masa obtenida en el laboratorio (g)',0,150,S.real,0.5):'');
+  $(el,'#s_a').oninput=e=>{S.a=+e.target.value;$(el,'#s_av').textContent=S.a;ctx.act('cambia',{});out()};
+  if(two)$(el,'#s_b').oninput=e=>{S.b=+e.target.value;$(el,'#s_bv').textContent=S.b;ctx.act('cambia',{});out()};
+  if(modo==='rend')$(el,'#s_x').oninput=e=>{S.real=+e.target.value;$(el,'#s_xv').textContent=S.real;out()}};
+ const out=()=>{const r=rx(),c=rxCalc(r,S.a,two?S.b:null),A=r.L[0][1],B=r.L[1][1];
+  if(!S.calc){$(el,'#s_out').innerHTML='<div style="color:#64748b;font-size:13px">Ajusta las masas y pulsa <b>Calcular</b> para ver el procedimiento.</div>';$(el,'#s_bar').innerHTML='';return}
+  let h=`<div style="font-size:13.5px;line-height:1.7">1) Moles: ${dsub(A)}: ${fm(S.a,1)} g / ${fm(mmF(A),2)} g/mol = <b>${fm(c.nA,3)} mol</b>`+(two?` · ${dsub(B)}: ${fm(S.b,1)} g / ${fm(mmF(B),2)} g/mol = <b>${fm(c.nB,3)} mol</b>`:'')+'<br>';
+  if(two)h+=`2) Moles ÷ coeficiente: ${dsub(A)} = ${fm(c.xA,3)} · ${dsub(B)} = ${fm(c.xB,3)} → <b>limitante: ${dsub(c.lim===0?A:B)}</b><br>`;else h+=`2) Se usa ${dsub(A)} como base de cálculo (el otro está en exceso).<br>`;
+  h+=`3) Producto(s): ${c.prods.map(p=>`${dsub(p.f)}: ${fm(p.n,3)} mol = <b>${fm(p.m,2)} g</b>`).join(' · ')}<br>`;
+  if(c.ex&&two)h+=`4) Sobra de ${dsub(c.ex.f)}: <b>${fm(c.ex.m,2)} g</b><br>`;
+  if(modo==='rend'){const th=c.prods[0].m,pc=S.real/th*100;h+=`5) Rendimiento teórico de ${dsub(c.prods[0].f)}: ${fm(th,2)} g · obtenido: ${fm(S.real,1)} g → <b>${fm(pc,1)} %</b>${pc>100.001?' ⚠️ no puede ser mayor que 100 %: revisa la medición (producto húmedo o impuro).':''}`}
+  $(el,'#s_out').innerHTML=h+'</div>';
+  const mx=Math.max(c.xA,two?c.xB:c.xA);$(el,'#s_bar').innerHTML=[[A,c.xA,c.lim===0||!two]].concat(two?[[B,c.xB,c.lim===1]]:[]).map(x=>`<div style="margin:6px 0"><div style="font-size:12px;font-weight:700">${dsub(x[0])} ${x[2]?'⬅ limitante':''}</div><div style="background:#e2e8f0;border-radius:6px;height:16px"><div style="width:${Math.max(3,x[1]/mx*100)}%;height:16px;border-radius:6px;background:${x[2]?'#dc2626':'#2563eb'}"></div></div><div style="font-size:11px;color:#64748b">${fm(x[1],3)}</div></div>`).join('');
+  $(el,'#s_tl').innerHTML=tiles([['Producto teórico',fm(c.prods[0].m,2)+' g','#16a34a']].concat(modo==='rend'&&c.prods[0].m>0?[['Rendimiento',fm(S.real/c.prods[0].m*100,1)+' %','#f59e0b']]:[]))};
+ $(el,'#s_r').onchange=e=>{S.i=+e.target.value;S.calc=0;sliders();out();ctx.act('cambia',{})};
+ $(el,'#s_c').onclick=()=>{S.calc=1;const r=rx(),c=rxCalc(r,S.a,two?S.b:null);ctx.act('calcula',{});if(two)ctx.act('limitante',{});if(modo==='rend'&&S.real>0)ctx.act('rend',{});ctx.obs(r.n+': '+fm(c.prods[0].m,2)+' g de '+c.prods[0].f+(two?'; limitante '+r.L[c.lim][1]:''));out()};
+ sliders();out();U.draw();return{reset(){S.calc=0;out();U.reset()}}};
+
+/* ========== SOLUCION: preparación, % , molaridad y diluciones ========== */
+const SOLS={NaCl:'#bfdbfe',NaOH:'#bfdbfe',C6H12O6:'#e0f2fe',CuSO4:'#3b82f6',KMnO4:'#a21caf'};
+E.solucion=(el,cfg,ctx)=>{const modo=cfg.modo,SL=cfg.solutos||['NaCl'];const S={f:SL[0],m:10,V:250,mw:90,C1:6,C2:1,V2:250,calc:0};
+ const RT=genR(cfg.retos||[],(r,i)=>{const M=mmF(r.f||'NaCl');
+  if(r.t==='M'){const c=r.m/M/(r.V/1000);return numReto(`Se disuelven ${r.m} g de ${r.f} en agua hasta completar ${r.V} mL de solución. ¿Cuál es la molaridad?`,c,[r.m/M,r.m/M*(r.V/1000),r.m/(r.V/1000)/M/2],'mol/L',2,`n = ${r.m}/${fm(M,2)} = ${fm(r.m/M,3)} mol; M = n / V(L) = ${fm(c,2)} mol/L.`,i+1)}
+  if(r.t==='g'){const m=r.C*(r.V/1000)*M;return numReto(`¿Cuántos gramos de ${r.f} se necesitan para preparar ${r.V} mL de solución ${fm(r.C,2)} mol/L?`,m,[r.C*M,m*2,m/(r.V/1000)],'g',1,`n = M × V = ${fm(r.C,2)} × ${r.V/1000} L = ${fm(r.C*r.V/1000,3)} mol; m = n × M = ${fm(m,1)} g.`,i+2)}
+  if(r.t==='V1'){const v=r.C2*r.V2/r.C1;return numReto(`Con una solución madre ${fm(r.C1,1)} mol/L se quieren preparar ${r.V2} mL de solución ${fm(r.C2,2)} mol/L. ¿Qué volumen de la madre se toma?`,v,[r.V2-v,r.C1*r.V2/r.C2,r.V2],'mL',1,`C₁V₁ = C₂V₂ → V₁ = ${fm(r.C2,2)} × ${r.V2} / ${fm(r.C1,1)} = ${fm(v,1)} mL.`,i+3)}
+  if(r.t==='pct'){const p=r.m/(r.m+r.mw)*100;return numReto(`Se disuelven ${r.m} g de ${r.f} en ${r.mw} g de agua. ¿Cuál es el porcentaje en masa (% m/m)?`,p,[r.m/r.mw*100,100-p,r.m],'%',1,`% m/m = soluto / (soluto + disolvente) × 100 = ${r.m} / ${r.m+r.mw} × 100 = ${fm(p,1)} %.`,i+4)}
+  return r});
+ const ctl=()=>{let h=lab('Soluto')+sel('c_s',SL.map(f=>[f,(NAMEF[f]||f)+' — '+f]),S.f);
+  if(modo==='prep')h+=rng('c_m','Masa de soluto (g)',0.5,100,S.m,0.5)+rng('c_V','Volumen final de la solución (mL)',100,1000,S.V,50);
+  if(modo==='pct')h+=rng('c_m','Masa de soluto (g)',1,100,S.m,1)+rng('c_w','Masa de agua (g)',20,500,S.mw,10)+rng('c_V','Volumen de la solución (mL) para % m/v',50,500,S.V,10);
+  if(modo==='molar')h+=rng('c_m','Masa de soluto (g)',0.5,100,S.m,0.5)+rng('c_V','Volumen de la solución (mL)',100,1000,S.V,50);
+  if(modo==='dilu')h+=rng('c_1','Concentración de la solución madre (mol/L)',1,12,S.C1,0.5)+rng('c_2','Concentración final deseada (mol/L)',0.1,5,S.C2,0.1)+rng('c_3','Volumen final (mL)',50,1000,S.V2,50);
+  $(el,'#c_ct').innerHTML=h;
+  const hk=(id,k,lb)=>{const x=$(el,'#'+id);if(x)x.oninput=e=>{S[k]=+e.target.value;$(el,'#'+id+'v').textContent=S[k];ctx.act('cambia',{});out()}};hk('c_m','m');hk('c_V','V');hk('c_w','mw');hk('c_1','C1');hk('c_2','C2');hk('c_3','V2');
+  $(el,'#c_s').onchange=e=>{S.f=e.target.value;ctx.act('cambia',{});out()}};
+ el.innerHTML=grid(panel('🎛️ Preparación','<div id="c_ct"></div>'+`<div style="margin-top:10px">${btn('c_c','🧮 Mostrar el cálculo','#0d9488')}</div>`+(RT.length?rhold('c'):'<div id="c_rt"></div><div id="c_fb"></div>')),
+  panel('🧪 Balón aforado','<svg id="c_sv" viewBox="0 0 220 220" style="width:100%;max-width:240px;display:block;margin:auto"></svg>')+panel('📋 Resultados','<div id="c_out"></div>')+'<div id="c_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'c');
+ const flask=(frac,col,op)=>{$(el,'#c_sv').innerHTML=`<path d="M90 10 L90 70 Q30 110 30 160 Q30 205 110 205 Q190 205 190 160 Q190 110 130 70 L130 10" fill="#f8fafc" stroke="#475569" stroke-width="3"/><path d="M${40+(1-frac)*10} ${210-frac*115} L${180-(1-frac)*10} ${210-frac*115} L180 160 Q180 200 110 200 Q40 200 40 160 Z" fill="${col}" opacity="${op}"/><line x1="90" y1="40" x2="130" y2="40" stroke="#dc2626" stroke-width="2"/><text x="136" y="44" font-size="10" fill="#dc2626">aforo</text>`};
+ const out=()=>{const M=mmF(S.f),col=SOLS[S.f]||'#93c5fd';let h='',op=0.5,tiles_;
+  if(modo==='prep'||modo==='molar'){const n=S.m/M,C=n/(S.V/1000);op=Math.min(.9,.2+C/2*.7);flask(S.V/1000*0.8+.2,col,op);
+   h=`<table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:5px;font-weight:700">Masa molar</td><td>${fm(M,2)} g/mol</td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">Moles de soluto</td><td>${fm(n,3)} mol</td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">Concentración</td><td><b>${fm(C,3)} mol/L</b> · ${fm(S.m/(S.V/1000),1)} g/L · ${fm(S.m/S.V*100,2)} % m/v</td></tr></table>`;
+   if(S.calc)h+=`<div style="margin-top:8px;font-size:13px;background:#f8fafc;border-radius:10px;padding:8px">n = m / M = ${fm(S.m,1)} / ${fm(M,2)} = ${fm(n,3)} mol<br>M = n / V = ${fm(n,3)} mol / ${fm(S.V/1000,3)} L = <b>${fm(C,3)} mol/L</b></div>`;
+   if(modo==='prep')h+='<div style="font-size:12.5px;margin-top:6px;color:#475569"><b>Cómo se prepara:</b> 1) pesa el soluto; 2) disuélvelo en un poco de agua; 3) pásalo al balón aforado; 4) completa con agua hasta la marca de aforo; 5) mezcla.</div>';
+   tiles_=[['Molaridad',fm(C,3)+' mol/L','#2563eb'],['g/L',fm(S.m/(S.V/1000),1),'#16a34a']]}
+  if(modo==='pct'){const t=S.m+S.mw,p=S.m/t*100,pv=S.m/S.V*100;op=Math.min(.9,.15+p/30);flask(.6,col,op);
+   h=`<table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:5px;font-weight:700">% m/m</td><td><b>${fm(p,2)} %</b> = ${fm(S.m,1)} / (${fm(S.m,1)} + ${fm(S.mw,0)}) × 100</td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">% m/v</td><td><b>${fm(pv,2)} %</b> = ${fm(S.m,1)} g / ${S.V} mL × 100</td></tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:700">ppm (mg/kg)</td><td>${fm(S.m/t*1e6,0)}</td></tr></table><div style="font-size:12px;color:#64748b;margin-top:6px">% m/m compara masas; % m/v compara masa de soluto con volumen de solución.</div>`;
+   tiles_=[['% m/m',fm(p,2)+' %','#2563eb'],['% m/v',fm(pv,2)+' %','#16a34a']]}
+  if(modo==='dilu'){const v1=S.C2*S.V2/S.C1,ok=S.C2<=S.C1;op=Math.min(.9,.15+S.C2/5*.75);flask(S.V2/1000*0.8+.2,col,op);
+   h=ok?`<div style="font-size:14px;line-height:1.7">C₁V₁ = C₂V₂<br>V₁ = C₂ × V₂ / C₁ = ${fm(S.C2,2)} × ${S.V2} / ${fm(S.C1,1)} = <b>${fm(v1,1)} mL</b> de solución madre<br>Agua que se agrega: ${S.V2} − ${fm(v1,1)} = <b>${fm(S.V2-v1,1)} mL</b> (aprox., volúmenes aditivos)</div><div style="font-size:12px;color:#475569;margin-top:6px">En diluciones de ácidos concentrados se agrega siempre el ácido al agua, nunca al revés.</div>`:'<div style="color:#b45309;font-weight:700">La solución final no puede ser más concentrada que la madre: eso sería concentrar, no diluir.</div>';
+   tiles_=[['Volumen de madre',ok?fm(v1,1)+' mL':'—','#2563eb'],['Agua',ok?fm(S.V2-v1,1)+' mL':'—','#16a34a']]}
+  $(el,'#c_out').innerHTML=h;$(el,'#c_tl').innerHTML=tiles(tiles_)};
+ $(el,'#c_c').onclick=()=>{S.calc=1;ctx.act('calcula',{});ctx.obs('Cálculo mostrado ('+modo+') con '+S.f);out()};
+ ctl();out();U.draw();return{reset(){S.calc=0;out();U.reset()}}};
+
+/* ========== SOLUB: solubilidad y curvas de solubilidad ========== */
+const SOLU={KNO3:{n:'KNO₃',c:'#dc2626',T:[0,20,40,60,80,100],s:[13.3,31.6,63.9,110,169,246]},NaCl:{n:'NaCl',c:'#2563eb',T:[0,20,40,60,80,100],s:[35.7,35.9,36.4,37.1,38.0,39.2]},KCl:{n:'KCl',c:'#16a34a',T:[0,20,40,60,80,100],s:[28.0,34.0,40.0,45.5,51.1,56.7]},NH4Cl:{n:'NH₄Cl',c:'#f59e0b',T:[0,20,40,60,80,100],s:[29.4,37.2,45.8,55.3,65.6,77.3]},NaNO3:{n:'NaNO₃',c:'#7c3aed',T:[0,20,40,60,80,100],s:[73,88,104,124,148,180]}};
+const sInt=(k,t)=>{const d=SOLU[k];for(let i=0;i<d.T.length-1;i++)if(t<=d.T[i+1])return d.s[i]+(d.s[i+1]-d.s[i])*(t-d.T[i])/(d.T[i+1]-d.T[i]);return d.s[d.s.length-1]};
+E.solub=(el,cfg,ctx)=>{const SL=cfg.sales,S={k:SL[0],T:20,m:20,T2:20};
+ const RT=genR(cfg.retos||[],(r,i)=>{const s=sInt(r.sal,r.T);
+  if(r.t==='s')return numReto(`Según la curva, ¿cuántos gramos de ${SOLU[r.sal].n} se disuelven como máximo en 100 g de agua a ${r.T} °C?`,s,[s*2,s/2,sInt(r.sal,r.T+20)],'g',1,`Se lee en la curva: ${fm(s,1)} g por 100 g de agua.`,i+1);
+  if(r.t==='est'){const sat=r.m>s;return{q:`A ${r.T} °C se agregan ${r.m} g de ${SOLU[r.sal].n} a 100 g de agua. ¿Qué se observa?`,o:['Todo se disuelve (solución no saturada)','Queda sólido sin disolver (solución saturada)','Se evapora el agua','Se forma otro compuesto'],ok:sat?1:0,why:`La solubilidad a ${r.T} °C es ${fm(s,1)} g/100 g; ${r.m} g ${sat?'supera':'no supera'} ese valor.`}}
+  if(r.t==='cool'){const x=Math.max(0,Math.min(r.m,sInt(r.sal,r.T))-sInt(r.sal,r.T2));return numReto(`Una solución saturada de ${SOLU[r.sal].n} con ${r.m} g disueltos en 100 g de agua a ${r.T} °C se enfría hasta ${r.T2} °C. ¿Cuántos gramos cristalizan?`,x,[x*2,sInt(r.sal,r.T2),r.m-x],'g',1,`Disuelto a ${r.T2} °C como máximo ${fm(sInt(r.sal,r.T2),1)} g; cristaliza la diferencia: ${fm(x,1)} g.`,i+3)}
+  return r});
+ el.innerHTML=grid(panel('🎛️ Controles',lab('Sal')+sel('u_k',SL.map(k=>[k,SOLU[k].n]),S.k)+rng('u_t','Temperatura (°C)',0,100,S.T,5)+rng('u_m','Sal agregada a 100 g de agua (g)',0,250,S.m,1)+(cfg.enfria?rng('u_2','Enfriar hasta (°C)',0,100,S.T2,5):'')+'<div id="u_st" style="margin-top:8px;font-size:14px;font-weight:800"></div>'+(RT.length?rhold('u'):'<div id="u_rt"></div><div id="u_fb"></div>')),
+  panel('📈 Curvas de solubilidad (g de sal por 100 g de agua)','<canvas id="u_cv" style="width:100%;display:block"></canvas>')+'<div id="u_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'u');
+ const draw=()=>{const s=sInt(S.k,S.T),dis=Math.min(S.m,s),exc=Math.max(0,S.m-s);
+  SIM.plot($(el,'#u_cv'),{h:290,xmin:0,xmax:100,ymin:0,ymax:260,xl:'Temperatura (°C)',yl:'Solubilidad (g / 100 g de agua)',series:SL.map(k=>({pts:SOLU[k].T.map((t,i)=>[t,SOLU[k].s[i]]),color:SOLU[k].c,name:SOLU[k].n})),pts:[{x:S.T,y:S.m,r:7,fill:'#fff',color:'#0f172a',label:'tu mezcla'}],vlines:[{x:S.T,color:'#94a3b8',label:''}]});
+  const st=exc>0.05?`⚠️ Saturada: se disuelven ${fm(s,1)} g y quedan ${fm(exc,1)} g sin disolver.`:Math.abs(S.m-s)<=0.05?'✅ Justo saturada.':`✅ No saturada: todo se disuelve (puedes disolver ${fm(s-S.m,1)} g más).`;
+  let t2='';if(cfg.enfria){const s2=sInt(S.k,S.T2),cr=Math.max(0,dis-s2);t2=` · Al enfriar a ${S.T2} °C cristalizan ${fm(cr,1)} g.`}
+  $(el,'#u_st').textContent=st+t2;$(el,'#u_tl').innerHTML=tiles([['Solubilidad a '+S.T+' °C',fm(s,1)+' g','#2563eb'],['Sin disolver',fm(exc,1)+' g','#dc2626']])};
+ const hk=(id,k)=>{const x=$(el,'#'+id);if(x)x.oninput=e=>{S[k]=+e.target.value;$(el,'#'+id+'v').textContent=S[k];ctx.act('cambia',{});if(k==='m'||k==='T'){if(S.m>sInt(S.k,S.T))ctx.act('satura',{})}if(k==='T2')ctx.act('enfria',{});draw()}};hk('u_t','T');hk('u_m','m');hk('u_2','T2');
+ $(el,'#u_k').onchange=e=>{S.k=e.target.value;ctx.act('sal',{});draw()};
+ draw();U.draw();return{reset(){draw();U.reset()}}};
+
+/* ========== PH: escala, indicadores y neutralización ========== */
+const PHS=[['Ácido de batería',0.5],['Jugo gástrico',1.5],['Jugo de limón',2.3],['Vinagre',2.9],['Gaseosa',3.0],['Café',5.0],['Lluvia normal',5.6],['Leche',6.6],['Agua pura',7.0],['Sangre',7.4],['Bicarbonato',8.3],['Jabón de manos',10.0],['Amoníaco casero',11.5],['Blanqueador',12.5],['Destapacaños (NaOH)',13.5]];
+const UNIV=['#dc2626','#ea580c','#f59e0b','#facc15','#84cc16','#22c55e','#16a34a','#0d9488','#3b82f6','#6366f1','#7c3aed','#7c3aed','#6d28d9','#581c87','#3b0764'];
+const phCol=p=>{const i=Math.max(0,Math.min(13.999,p)),a=Math.floor(i);return mixc(UNIV[a],UNIV[a+1],i-a)};
+const IND={fenolftaleina:{n:'Fenolftaleína',lo:8.2,hi:10,c1:'#f1f5f9',c2:'#db2777',t:'incolora (pH < 8,2) → rosa/fucsia (pH > 10)'},bromotimol:{n:'Azul de bromotimol',lo:6.0,hi:7.6,c1:'#facc15',c2:'#2563eb',t:'amarillo (pH < 6) → azul (pH > 7,6)'},rojometilo:{n:'Rojo de metilo',lo:4.4,hi:6.2,c1:'#dc2626',c2:'#facc15',t:'rojo (pH < 4,4) → amarillo (pH > 6,2)'},naranjametilo:{n:'Naranja de metilo',lo:3.1,hi:4.4,c1:'#dc2626',c2:'#f59e0b',t:'rojo (pH < 3,1) → naranja-amarillo (pH > 4,4)'}};
+const indCol=(k,p)=>{const d=IND[k];return mixc(d.c1,d.c2,(p-d.lo)/(d.hi-d.lo))};
+const titpH=(Ca,Va,Cb,Vb)=>{const n=Ca*Va-Cb*Vb,V=Va+Vb;if(Math.abs(n)<1e-9)return 7;return n>0?-Math.log10(n/V):14+Math.log10(-n/V)};
+E.ph=(el,cfg,ctx)=>{const modo=cfg.modo;const S={i:8,p:7,ind:{},Ca:0.1,Va:25,Cb:0.1,Vb:0,k:'fenolftaleina',eq:0};
+ const RT=genR(cfg.retos||[],(r,i)=>{if(r.t==='veq'){const v=r.Ca*r.Va/r.Cb;return numReto(`Se titulan ${r.Va} mL de HCl ${fm(r.Ca,2)} mol/L con NaOH ${fm(r.Cb,2)} mol/L. ¿Qué volumen de NaOH se necesita para neutralizar?`,v,[v*2,v/2,r.Va],'mL',1,`En el punto de equivalencia moles de ácido = moles de base: ${fm(r.Ca,2)} × ${r.Va} = ${fm(r.Cb,2)} × V → V = ${fm(v,1)} mL.`,i+1)}return r});
+ const ctl={escala:()=>lab('Sustancia')+sel('h_s',PHS.map((x,i)=>[i,x[0]]),S.i)+'<div style="font-size:12px;color:#64748b;margin-top:6px">Valores típicos aproximados: el pH real varía con la marca y la preparación.</div>',
+  indic:()=>rng('h_p','pH de la muestra',0,14,S.p,0.5)+lab('Indicador')+sel('h_k',Object.keys(IND).map(k=>[k,IND[k].n]),S.k)+`<div style="margin-top:8px">${btn('h_a','💧 Agregar gotas del indicador','#0d9488')}${btn('h_u','🌈 Indicador universal','#7c3aed')}</div>`,
+  neutral:()=>rng('h_ca','Concentración del ácido HCl (mol/L)',0.05,0.2,S.Ca,0.05)+rng('h_va','Volumen de ácido (mL)',10,50,S.Va,5)+rng('h_cb','Concentración de la base NaOH (mol/L)',0.05,0.2,S.Cb,0.05)+lab('Indicador')+sel('h_k',Object.keys(IND).map(k=>[k,IND[k].n]),S.k)+`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${btn('h_1','+0,1 mL','#2563eb')}${btn('h_2','+1 mL','#2563eb')}${btn('h_3','+5 mL','#2563eb')}${btn('h_r','↺ Vaciar','#64748b')}</div>`}[modo]();
+ el.innerHTML=grid(panel('🎛️ Controles',ctl+(RT.length?rhold('h'):'<div id="h_rt"></div><div id="h_fb"></div>')),panel(modo==='neutral'?'🧪 Matraz y curva de titulación':'🔬 Vista','<div id="h_vw"></div>')+'<div id="h_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'h');
+ const beaker=(col,txt)=>`<svg viewBox="0 0 200 140" style="width:100%;max-width:230px;display:block;margin:auto"><path d="M50 15 L55 120 Q100 135 145 120 L150 15" fill="none" stroke="#475569" stroke-width="3"/><path d="M54 55 L57 118 Q100 131 143 118 L146 55 Z" fill="${col}" opacity=".9"/><text x="100" y="95" text-anchor="middle" font-size="12" font-weight="800" fill="#0f172a">${txt}</text></svg>`;
+ const draw=()=>{
+  if(modo==='escala'){const x=PHS[S.i],p=x[1],H=Math.pow(10,-p),OH=Math.pow(10,-(14-p));
+   $(el,'#h_vw').innerHTML=beaker(phCol(p),'pH '+fm(p,1))+`<div style="position:relative;height:26px;border-radius:13px;margin:10px 4px;background:linear-gradient(90deg,${UNIV.join(',')})"><div style="position:absolute;left:${p/14*100}%;top:-6px;width:4px;height:38px;background:#0f172a;border-radius:2px"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:#475569"><span>0 ácido</span><span>7 neutro</span><span>14 básico</span></div><table style="width:100%;font-size:14px;margin-top:8px"><tr><td><b>Carácter</b></td><td>${p<6.95?'Ácido':p>7.05?'Básico':'Neutro'}</td></tr><tr><td><b>[H⁺]</b></td><td>${sciU(H)} mol/L</td></tr><tr><td><b>[OH⁻]</b></td><td>${sciU(OH)} mol/L</td></tr></table>`;
+   $(el,'#h_tl').innerHTML=tiles([['pH',fm(p,1),'#2563eb'],['pH + pOH','14','#64748b']])}
+  if(modo==='indic'){const d=IND[S.k];
+   $(el,'#h_vw').innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">${Object.keys(IND).map(k=>`<div style="text-align:center;font-size:11px;font-weight:700"><div style="width:54px;height:54px;border-radius:12px;border:2px solid #cbd5e1;background:${S.ind[k]?indCol(k,S.p):'#f8fafc'}"></div>${IND[k].n.split(' ')[0]}</div>`).join('')}${S.univ?`<div style="text-align:center;font-size:11px;font-weight:700"><div style="width:54px;height:54px;border-radius:12px;border:2px solid #cbd5e1;background:${phCol(S.p)}"></div>Universal</div>`:''}</div><div style="margin-top:8px;font-size:13px;background:#f8fafc;border-radius:10px;padding:8px"><b>${d.n}:</b> ${d.t}.</div><div style="font-size:12px;color:#64748b;margin-top:6px">pH de la muestra oculto en el análisis: agrega indicadores y deduce el rango.</div>`;
+   $(el,'#h_tl').innerHTML=tiles([['pH de la muestra',fm(S.p,1),'#2563eb'],['Indicadores usados',Object.keys(S.ind).length,'#16a34a']])}
+  if(modo==='neutral'){const pH=titpH(S.Ca,S.Va,S.Cb,S.Vb),veq=S.Ca*S.Va/S.Cb,col=indCol(S.k,pH);
+   $(el,'#h_vw').innerHTML=beaker(col,'pH '+fm(pH,2))+'<canvas id="h_cv" style="width:100%;display:block"></canvas>';
+   const vmax=veq*2;SIM.plot($(el,'#h_cv'),{h:240,xmin:0,xmax:vmax,ymin:0,ymax:14,xl:'Volumen de NaOH agregado (mL)',yl:'pH',series:[{f:v=>titpH(S.Ca,S.Va,S.Cb,v),x0:0,x1:vmax,color:'#2563eb',name:'Curva de titulación'}],pts:[{x:Math.min(S.Vb,vmax),y:pH,r:6,fill:'#f59e0b',color:'#b45309'}],vlines:[{x:veq,color:'#16a34a',label:'equivalencia '+fm(veq,1)+' mL'}]});
+   $(el,'#h_tl').innerHTML=tiles([['NaOH agregado',fm(S.Vb,1)+' mL','#2563eb'],['pH',fm(pH,2),'#f59e0b'],['Equivalencia',fm(veq,1)+' mL','#16a34a']]);
+   if(Math.abs(S.Vb-veq)<=0.25&&!S.eq){S.eq=1;ctx.act('equivalencia',{});ctx.obs('Llegaste al punto de equivalencia: '+fm(S.Vb,1)+' mL de NaOH; pH = '+fm(pH,2))}}};
+ const hk=(id,k)=>{const x=$(el,'#'+id);if(x)x.oninput=e=>{S[k]=+e.target.value;$(el,'#'+id+'v').textContent=S[k];if(k!=='p'){S.Vb=0;S.eq=0}ctx.act('cambia',{});draw()}};hk('h_p','p');hk('h_ca','Ca');hk('h_va','Va');hk('h_cb','Cb');
+ const sS=$(el,'#h_s');if(sS)sS.onchange=e=>{S.i=+e.target.value;ctx.act('elige',{});ctx.obs(PHS[S.i][0]+': pH '+PHS[S.i][1]);draw()};
+ const sK=$(el,'#h_k');if(sK)sK.onchange=e=>{S.k=e.target.value;ctx.act('indicador',{});draw()};
+ const ba=$(el,'#h_a');if(ba)ba.onclick=()=>{S.ind[S.k]=1;ctx.act('agrega',{});ctx.obs(IND[S.k].n+' en pH '+fm(S.p,1));draw()};
+ const bu=$(el,'#h_u');if(bu)bu.onclick=()=>{S.univ=1;ctx.act('universal',{});draw()};
+ [['h_1',0.1],['h_2',1],['h_3',5]].forEach(([id,v])=>{const b=$(el,'#'+id);if(b)b.onclick=()=>{S.Vb=Math.round((S.Vb+v)*10)/10;ctx.act('agrega',{});draw()}});
+ const br=$(el,'#h_r');if(br)br.onclick=()=>{S.Vb=0;S.eq=0;draw()};
+ draw();U.draw();return{reset(){S.Vb=0;S.eq=0;S.ind={};S.univ=0;draw();U.reset()}}};
 
 E._ELEM=ELEM;E._shells=shells;
 return E;})();

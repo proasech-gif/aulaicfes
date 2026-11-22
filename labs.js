@@ -397,7 +397,7 @@ async function sdGen(){const v=i=>(document.getElementById(i)||{}).value||'';Z.g
     toast(m2?'Borrador generado, pero necesita un ajuste':'✨ Borrador generado. Revísalo y pruébalo como estudiante.')}
   catch(er){render();toast(er.message)}}
 /* ---------- Catálogo de 100 laboratorios de Química (quimica_ui.js) ---------- */
-async function qInit(){if(!window.QUI)await loadScript('quimica_ui.js?v=3');QUI.init({M,sb,toast,err,render:()=>render(),isProf,volver(x){if(x&&Z.cur)LAB.abrir(Z.cur.id);else{Z.v='lab';render()}},assign:qAsignar});await QUI.load()}
+async function qInit(){if(!window.QUI)await loadScript('quimica_ui.js?v=4');QUI.init({M,sb,toast,err,render:()=>render(),isProf,volver(x){if(x&&Z.cur)LAB.abrir(Z.cur.id);else{Z.v='lab';render()}},assign:qAsignar});await QUI.load()}
 async function qcat(code,back){try{Z.lab='quimica';await qInit();Z.v='qcat';if(code){QUI.abrir(code,back)}else render()}catch(x){toast('No se pudo abrir el catálogo de Química');console.warn(x)}}
 async function qAsignar(code){await qInit();const i=QUI.info(code);if(!i)return;Z.ed={...nuevaEd(),lab:'quimica',titulo:i.t,descripcion:i.d,objetivos:i.d,competencias:i.comp,sim:'q:'+code};Z.v='build';render()}
 function qNom(id){return window.QUI&&QUI.info(id.slice(2))?QUI.info(id.slice(2)).t:'Laboratorio del catálogo de Química'}
