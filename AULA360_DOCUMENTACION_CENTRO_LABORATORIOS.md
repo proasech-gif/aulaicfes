@@ -131,8 +131,3 @@ saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y 
 - Motores nuevos en quimica_motor.js: enlace, metalico, molecula, vsepr, polar, intermol, nomen, labrx, balanceo, desplaza, cinetica (más clasif reutilizado en 44 y 47).
 - Límites declarados en cada lab. Velocidad de reacción: modelo empírico (regla práctica ×2 por cada 10 °C), no ley medida. Polaridad: dipolos calculados con electronegatividad y geometría de referencia.
 - Sin tablas nuevas: el progreso usa lab_practica. DBA y estándares siguen «por verificar».
-
-## Química · Etapa 4 — Noveno (laboratorios 50–66) · 22 nov 2026
-- Archivo quimica_g9.js, códigos Q09-001…017 (no = 50…66): 50 Mol y Avogadro, 51 Masa molar, 52 Conversión masa–mol–partículas, 53 Estequiometría, 54 Reactivo limitante, 55 Rendimiento, 56 Preparación de soluciones, 57 Concentración porcentual, 58 Molaridad, 59 Diluciones, 60 Solubilidad, 61 Curvas de solubilidad, 62 Escala de pH, 63 Indicadores, 64 Neutralización (titulación), 65 Química del agua, 66 Contaminación química ambiental.
-- Motores nuevos en quimica_motor.js: mol, estequio, solucion, solub, ph (65 y 66 reutilizan clasif).
-- Cálculos reales con masas atómicas de la tabla; solubilidad con datos de referencia interpolados; titulación solo ácido fuerte–base fuerte a 25 °C. Muestras de agua y valores de referencia (Res. 2115/2007) por verificar. Sin tablas nuevas. DBA/estándares «por verificar».
