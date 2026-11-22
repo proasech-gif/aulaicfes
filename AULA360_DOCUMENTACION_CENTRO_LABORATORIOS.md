@@ -125,3 +125,9 @@ saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y 
 - Séptimo (17–32), archivo quimica_g7.js, códigos Q07-001…016: construcción del átomo, modelos atómicos (dispersión de Rutherford), número atómico y masa, isótopos, distribución electrónica, tabla periódica (explorador, familias, metales/no metales/metaloides, radio atómico, electronegatividad), formación de iones, elementos cotidianos, símbolos y nombres, clasificación de sustancias, lenguaje químico, estructura de materiales.
 - Motores nuevos en quimica_motor.js: tabla (elementos 1–36), atomo, rutherford, isotopos, formula.
 - DBA y estándares: siguen «por verificar» (no se inventan códigos).
+
+## Química · Etapa 3 — Octavo (laboratorios 33–49) · 22 nov 2026
+- Archivo quimica_g8.js, códigos Q08-001…017 (no = 33…49): 33 Enlace iónico, 34 Enlace covalente, 35 Enlace metálico, 36 Formación de moléculas, 37 Geometría molecular, 38 Polaridad molecular, 39 Fuerzas intermoleculares, 40 Fórmulas químicas, 41 Compuestos binarios, 42 Nomenclatura química básica, 43 Reacciones químicas, 44 Evidencias de cambios químicos, 45 Balanceo de ecuaciones, 46 Conservación de la masa, 47 Síntesis y descomposición, 48 Reacciones de desplazamiento, 49 Velocidad de reacción introductoria.
+- Motores nuevos en quimica_motor.js: enlace, metalico, molecula, vsepr, polar, intermol, nomen, labrx, balanceo, desplaza, cinetica (más clasif reutilizado en 44 y 47).
+- Límites declarados en cada lab. Velocidad de reacción: modelo empírico (regla práctica ×2 por cada 10 °C), no ley medida. Polaridad: dipolos calculados con electronegatividad y geometría de referencia.
+- Sin tablas nuevas: el progreso usa lab_practica. DBA y estándares siguen «por verificar».
