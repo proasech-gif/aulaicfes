@@ -1342,5 +1342,103 @@ E.integra=(el,cfg,ctx)=>{const CS=cfg.casos;const S={i:0,done:{}};
  $(el,'#in_s').onchange=e=>{S.i=+e.target.value;$(el,'#in2_fb').textContent='';mk();ctx.act('caso_visto',{})};
  mk();return{reset(){S.done={};$(el,'#in2_fb').textContent='';mk()}}};
 
+/* ========== MESA DE LABORATORIO VIRTUAL: instrumentos con reglas de uso reales ========== */
+const MS_COL={agua:'#bfdbfe',acid:'#fecaca',base:'#ddd6fe',sal:'#e2e8f0',liq:'#fde68a',indic:'#fbcfe8'};
+const msF=(x,d)=>fm(x,d);
+E.mesa=(el,cfg,ctx)=>{
+ const RE={};(cfg.reag||[]).forEach(r=>RE[r.id]=r);
+ const VS=cfg.vasos.map(v=>Object.assign({tara:v.tara!=null?v.tara:(v.tipo==='probeta'?95:v.tipo==='aforado'?55:v.tipo==='tubo'?8:v.tipo==='erlen'?85:v.tipo==='vaso'?60:v.tipo==='capsula'?40:70),tol:v.tol!=null?v.tol:(v.cap>=100?0.5:0.3),V:0,liq:[],solid:{},nm:{},T:cfg.T0||22,ind:0,disuelto:true},v));
+ const BY={};VS.forEach(v=>BY[v.id]=v);const seed=()=>VS.forEach(v=>{(v.init||[]).forEach(i=>addLiq(v,i.r,i.V))});
+ const INST=cfg.inst||['verter','balanza'];const BAL=cfg.bal||{res:0.01,n:'Balanza granataria'};
+ const PIP=cfg.pipetas||[];const BU=cfg.bureta||null;
+ const S={act:VS[0].id,pan:null,off:0,reag:(cfg.reag||[]).find(r=>r.tipo==='liq')?(cfg.reag||[]).find(r=>r.tipo==='liq').id:'',sol:(cfg.reag||[]).find(r=>r.tipo==='sol')?(cfg.reag||[]).find(r=>r.tipo==='sol').id:'',
+  pip:PIP[0]?PIP[0].id:'',pipV:1,src:'',dst:'',buV:0,buR:BU?BU.reag:'',buFill:false,cal:false,tab:INST[0],ok:{},msg:'',errs:{},ti:0,rd:{},heat:30,derr:0};
+ /* ---- modelo ---- */
+ const liqMass=v=>v.liq.reduce((a,l)=>a+l.V*(RE[l.r].rho||1),0),solidMass=v=>Object.values(v.solid).reduce((a,x)=>a+x,0);
+ const mass=v=>v.tara+liqMass(v)+solidMass(v);
+ const nTot=(v,k)=>(v.nm[k]||0);
+ const conc=(v,k)=>v.V>0?nTot(v,k)/(v.V/1000):0;
+ const neut=v=>{const m=Math.min(v.nm.HCl||0,v.nm.NaOH||0);if(m>0){v.nm.HCl-=m;v.nm.NaOH-=m}};
+ const addLiq=(v,r,dV)=>{if(dV<=0)return 0;const room=v.cap-v.V,d=Math.min(dV,room);if(d<dV-1e-9){S.derr++;S.msg='⚠️ Se derramó líquido: el recipiente tiene capacidad de '+v.cap+' mL.'}
+  const l=v.liq.find(x=>x.r===r);if(l)l.V+=d;else v.liq.push({r,V:d});v.V+=d;const R=RE[r];if(R.solute){v.nm[R.solute]=(v.nm[R.solute]||0)+(R.c||0)*d/1000;neut(v)}return d};
+ const takeLiq=(v,dV)=>{const d=Math.min(dV,v.V);if(d<=0)return[];const f=d/v.V,out=v.liq.map(l=>({r:l.r,V:l.V*f})),nn={};Object.keys(v.nm).forEach(k=>{nn[k]=v.nm[k]*f;v.nm[k]-=nn[k]});v.liq.forEach(l=>l.V-=l.V*f);v.V-=d;v.liq=v.liq.filter(l=>l.V>1e-9);return{out,nn,d}};
+ const giveLiq=(v,t)=>{if(!t||!t.d)return;const room=v.cap-v.V,d=Math.min(t.d,room);if(d<t.d-1e-9){S.derr++;S.msg='⚠️ Se derramó líquido.'}const f=d/t.d;t.out.forEach(l=>{const x=v.liq.find(y=>y.r===l.r);if(x)x.V+=l.V*f;else v.liq.push({r:l.r,V:l.V*f})});Object.keys(t.nn).forEach(k=>v.nm[k]=(v.nm[k]||0)+t.nn[k]*f);neut(v);v.V+=d};
+ const disolver=v=>{let any=false;Object.keys(v.solid).forEach(k=>{if(v.solid[k]>0&&v.V>0){const R=RE[k];v.nm[R.solute]=(v.nm[R.solute]||0)+v.solid[k]/R.M;v.solid[k]=0;any=true}});return any};
+ const molesAc=v=>(v.nm.HCl||0)+(v.nm.H2SO4||0)*2+(v.nm.CH3COOH||0);const molesBa=v=>(v.nm.NaOH||0);
+ const pH=v=>{if(v.V<=0)return null;const net=((v.nm.HCl||0)-(v.nm.NaOH||0))/(v.V/1000);if(Math.abs(net)<1e-9)return 7;return net>0?-Math.log10(net):14+Math.log10(-net)};
+ const phRead=v=>{const p=pH(v);return p==null?null:p+(S.cal?0:0.35)};
+ const fenol=v=>v.ind&&pH(v)>=8.2;
+ /* ---- tareas ---- */
+ seed();const ds=v=>{v.disuelto=!Object.keys(v.solid).some(k=>v.solid[k]>0)};const T=cfg.tareas||[];const nOk=()=>Object.keys(S.ok).length;
+ const check=(t)=>{const v=BY[t.vaso];let ok=false,msg='';
+  if(t.t==='vol'){const d=Math.abs(v.V-t.V);ok=d<=t.tol&&(!t.r||(v.liq.length===1&&v.liq[0].r===t.r));msg=ok?'Medida correcta: '+msF(v.V,2)+' mL.':'Tienes '+msF(v.V,2)+' mL y se pedían '+msF(t.V,2)+' ± '+msF(t.tol,2)+' mL.'}
+  else if(t.t==='masa'){const g=v.solid[t.r]||0;ok=Math.abs(g-t.g)<=t.tol;msg=ok?'Masa correcta: '+msF(g,3)+' g.':'Hay '+msF(g,3)+' g de '+RE[t.r].n+' y se pedían '+msF(t.g,t.g<1?3:2)+' ± '+msF(t.tol,3)+' g.'}
+  else if(t.t==='conc'){const k=t.sol,c=conc(v,k),good=Math.abs(c-t.c)/t.c<=(t.rel||0.02),vv=Math.abs(v.V-t.V)<=(t.tolV||0.2);ok=good&&vv&&v.disuelto;msg=ok?'Solución correcta: '+msF(c,4)+' M en '+msF(v.V,1)+' mL.':'Tu solución tiene '+msF(c,4)+' M en '+msF(v.V,1)+' mL; se pedía '+msF(t.c,3)+' M en '+msF(t.V,0)+' mL (error permitido '+msF((t.rel||0.02)*100,0)+' %).'}
+  else if(t.t==='temp'){ok=Math.abs(v.T-t.T)<=t.tol;msg=ok?'Temperatura correcta: '+msF(v.T,1)+' °C.':'El termómetro marca '+msF(v.T,1)+' °C y se pedían '+msF(t.T,0)+' ± '+msF(t.tol,0)+' °C.'}
+  else if(t.t==='titul'){const r=S.rd['t'+S.ti],ca=t.c,Vb=(BU.used||0);const real=t.Ca||ca;const ent=r;ok=!!fenol(v)&&ent!=null&&Math.abs(ent-real)/real<=(t.rel||0.03);msg=!fenol(v)?'Aún no llegas al punto final (el indicador no está rosa).':ent==null?'Escribe la concentración que calculaste.':ok?'Concentración correcta: '+msF(real,3)+' M.':'Tu valor '+msF(ent,3)+' M no coincide con el real (revisa V = '+msF(Vb,2)+' mL).'}
+  else if(t.t==='dens'){const r=S.rd['t'+S.ti];ok=r!=null&&Math.abs(r-t.rho)/t.rho<=(t.rel||0.03);msg=r==null?'Escribe la densidad que calculaste (g/mL).':ok?'Densidad correcta: '+msF(t.rho,2)+' g/mL.':'Tu valor '+msF(r,3)+' g/mL no coincide: mide masa y volumen con cuidado y calcula ρ = m/V.'}
+  else if(t.t==='lectura'){const r=S.rd['t'+S.ti],real=v.V;ok=r!=null&&Math.abs(r-real)<=(t.tol||0.5);msg=r==null?'Escribe tu lectura.':ok?'Lectura correcta: '+msF(real,2)+' mL.':'Tu lectura fue '+msF(r,2)+' mL y el menisco indica '+msF(real,2)+' mL. Lee con el ojo a la altura del menisco, en su parte baja.'}
+  return{ok,msg}};
+ const RTS=(cfg.retos||[]);
+ el.innerHTML=`<div id="ms_w"></div>`+rhold('ms2');
+ const U=mkRetoUI(el,RTS,ctx,'ms2');
+ /* ---- dibujo ---- */
+ const glass=v=>{const W=96,H=190,x0=30,x1=66,y0=24,y1=168,hh=y1-y0,lvl=y1-Math.min(1,v.V/v.cap)*hh,col=v.liq.length?(RE[v.liq[v.liq.length-1].r].kind==='acid'?MS_COL.acid:RE[v.liq[v.liq.length-1].r].kind==='base'?MS_COL.base:MS_COL.agua):MS_COL.agua;
+  const ticks=[];const nt=v.tipo==='probeta'||v.tipo==='bureta'?10:4;for(let i=0;i<=nt;i++){const y=y1-i/nt*hh;ticks.push(`<line x1="${x0}" x2="${x0+(i%2?7:12)}" y1="${y}" y2="${y}" stroke="#475569" stroke-width="1"/>${i%2===0||nt===4?`<text x="${x0-3}" y="${y+3}" font-size="8" text-anchor="end" fill="#475569">${fm(v.cap*i/nt,v.cap<20?1:0)}</text>`:''}`)}
+  const shape=v.tipo==='aforado'?`<path d="M ${x0+8} ${y0} L ${x0+8} ${y0+50} Q ${x0-14} ${y0+75} ${x0-14} ${y1-24} Q ${x0-14} ${y1} ${x0+4} ${y1} L ${x1-4} ${y1} Q ${x1+14} ${y1} ${x1+14} ${y1-24} Q ${x1+14} ${y0+75} ${x1-8} ${y0+50} L ${x1-8} ${y0}" fill="none" stroke="#334155" stroke-width="2.4"/>`:v.tipo==='erlen'?`<path d="M ${x0+8} ${y0} L ${x0+8} ${y0+40} L ${x0-12} ${y1} L ${x1+12} ${y1} L ${x1-8} ${y0+40} L ${x1-8} ${y0}" fill="none" stroke="#334155" stroke-width="2.4"/>`:v.tipo==='tubo'?`<path d="M ${x0+10} ${y0} L ${x0+10} ${y1-14} Q ${x0+10} ${y1} ${x0+18} ${y1} Q ${x1-10} ${y1} ${x1-10} ${y1-14} L ${x1-10} ${y0}" fill="none" stroke="#334155" stroke-width="2.4"/>`:`<path d="M ${x0} ${y0} L ${x0} ${y1} L ${x1} ${y1} L ${x1} ${y0}" fill="none" stroke="#334155" stroke-width="2.4"/>`;
+  const fill=v.V>0?`<clipPath id="cl_${v.id}">${shape.replace('fill="none"','').replace(/stroke[^/]*\/>/,'/>')}</clipPath><rect x="0" y="${lvl}" width="${W}" height="${y1-lvl+2}" fill="${col}" opacity=".85" clip-path="url(#cl_${v.id})"/><line x1="${x0-12}" x2="${x1+12}" y1="${lvl}" y2="${lvl}" stroke="#1d4ed8" stroke-width="1.4"/>`:'';
+  const aforo=v.aforo?`<line x1="${x0-6}" x2="${x1+6}" y1="${y1-v.aforo/v.cap*hh}" y2="${y1-v.aforo/v.cap*hh}" stroke="#dc2626" stroke-width="2"/>`:'';
+  const solid=solidMass(v)>0?`<ellipse cx="${(x0+x1)/2}" cy="${y1-4}" rx="14" ry="4" fill="#cbd5e1" stroke="#64748b"/>`:'';
+  return`<svg viewBox="0 0 ${W} ${H}" width="96" height="140" style="display:block;margin:auto">${v.tipo==='probeta'||v.tipo==='aforado'?ticks.join(''):''}${fill}${shape}${aforo}${solid}${S.pan===v.id?'<rect x="14" y="172" width="68" height="6" rx="3" fill="#64748b"/>':''}</svg>`};
+ const vdesc=v=>{const ks=Object.keys(v.nm).filter(k=>v.nm[k]>1e-12),ss=Object.keys(v.solid).filter(k=>v.solid[k]>0);if(v.oculto)return '¿? mL (léelo en la escala)';return `${msF(v.V,v.cap<=25?2:1)} mL`+(ks.length?' · '+ks.map(k=>k+' '+msF(conc(v,k),4)+' M').join(', '):'')+(ss.length?' · sólido '+ss.map(k=>msF(v.solid[k],3)+' g').join(', '):'')+' · '+msF(v.T,1)+' °C'};
+ const tabsL={verter:'💧 Verter',balanza:'⚖️ Balanza',pipeta:'🧪 Pipeta',bureta:'🧴 Bureta',termo:'🌡️ Calentar y medir T',ph:'📟 pH-metro',agitar:'🥄 Agitar'};
+ const draw=()=>{const a=BY[S.act],t=T[S.ti];
+  const rows=VS.map(v=>`<div data-v="${v.id}" style="cursor:pointer;border:2px solid ${v.id===S.act?'#1e63e9':'#e2e8f0'};border-radius:12px;padding:6px;background:${v.id===S.act?'#eff6ff':'#fff'};width:150px"><div style="font-size:11.5px;font-weight:800;text-align:center">${esc(v.n)}</div>${glass(v)}<div style="font-size:11px;color:#475569;margin-top:2px;text-align:center">${esc(vdesc(v))}</div></div>`).join('');
+  let tool='';
+  if(S.tab==='verter'){const liqs=(cfg.reag||[]).filter(r=>r.tipo==='liq');tool=`${lab('Frasco de reactivo')}${sel('ms_r',liqs.map(r=>[r.id,r.n]),S.reag)}${lab('Trasvasar todo el contenido de este recipiente a')}${sel('ms_tvd',VS.filter(v=>v.id!==a.id).map(v=>[v.id,v.n]),S.tvd||'')}${btn('ms_tv','↪ Trasvasar','#7c3aed')}<div>${btn('ms_p10','+10 mL','#0d9488')}${btn('ms_p1','+1 mL','#0d9488')}${btn('ms_p01','+0,1 mL (gotero)','#0d9488')}${btn('ms_vac','🗑️ Vaciar','#64748b')}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Se vierte en: <b>${esc(a.n)}</b>. Mira la altura del menisco (parte baja de la curva).</div>`}
+  if(S.tab==='balanza'){const sol=(cfg.reag||[]).filter(r=>r.tipo==='sol'),on=S.pan?BY[S.pan]:null,m=on?mass(on)-S.off:0,dd=BAL.res<=0.001?3:BAL.res<=0.01?2:1;
+   tool=`<div style="background:#0f172a;color:#86efac;font-family:ui-monospace,monospace;font-size:26px;text-align:center;border-radius:10px;padding:8px">${on?msF(m,dd):'—'} g</div><div style="font-size:12px;margin:4px 0">${esc(BAL.n)} · resolución ${msF(BAL.res,dd)} g</div>${lab('Recipiente sobre el plato')}${sel('ms_pan',[['','(vacío)']].concat(VS.map(v=>[v.id,v.n])),S.pan||'')}${btn('ms_tara','⏺ Tarar (poner en cero)','#1e63e9')}${sol.length?lab('Reactivo sólido')+sel('ms_s',sol.map(r=>[r.id,r.n]),S.sol)+`<div>${btn('ms_s1','+1 g','#0d9488')}${btn('ms_s01','+0,1 g','#0d9488')}${btn('ms_s001','+0,01 g','#0d9488')}${BAL.res<=0.001?btn('ms_s0001','+0,001 g','#0d9488'):''}${btn('ms_sm','− 0,01 g','#64748b')}</div>`:''}<div style="font-size:12px;color:#64748b;margin-top:6px">Primero coloca el recipiente en el plato y tara; después agrega el sólido con la espátula.</div>`}
+  if(S.tab==='pipeta'){const p=PIP.find(x=>x.id===S.pip)||PIP[0];const srcs=[['R:'+S.reag,'Frasco: '+((RE[S.reag]||{}).n||'')]].concat((cfg.reag||[]).filter(r=>r.tipo==='liq').map(r=>['R:'+r.id,'Frasco: '+r.n])).filter((x,i,a)=>a.findIndex(y=>y[0]===x[0])===i).concat(VS.map(v=>['V:'+v.id,v.n]));
+   tool=`${lab('Pipeta')}${sel('ms_pip',PIP.map(x=>[x.id,x.n]),S.pip)}${p.V?'':lab('Volumen a tomar (mL)')+sel('ms_pv',Array.from({length:Math.round(p.cap/p.div)},(_,i)=>{const x=+((i+1)*p.div).toFixed(3);return[x,msF(x,2)+' mL']}),S.pipV)}${lab('Tomar de')}${sel('ms_src',srcs,S.src||srcs[0][0])}${lab('Descargar en')}${sel('ms_dst',VS.map(v=>[v.id,v.n]),S.dst||a.id)}${btn('ms_pgo','💉 Aspirar y descargar','#0d9488')}<div style="font-size:12px;color:#64748b;margin-top:6px">${p.V?'Pipeta aforada: toma exactamente '+msF(p.V,2)+' mL hasta su marca. Se usa una sola vez por transferencia.':'Pipeta graduada: elige el volumen y lee la escala.'}</div>`}
+  if(S.tab==='bureta'&&BU){const used=BU.used||0,lec=S.buFill?used:null,ph_=fenol(a);
+   tool=`<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:44px;height:150px;border:2px solid #334155;border-radius:4px 4px 12px 12px;position:relative;background:#f8fafc"><div style="position:absolute;left:0;right:0;bottom:0;height:${S.buFill?(1-used/BU.cap)*100:0}%;background:${MS_COL.base};opacity:.85"></div><div style="position:absolute;left:0;right:0;top:0;bottom:0;background:repeating-linear-gradient(to bottom,#47556955 0 1px,transparent 1px 9.9%)"></div></div><div style="flex:1"><div style="background:#0f172a;color:#86efac;font-family:ui-monospace,monospace;font-size:22px;text-align:center;border-radius:10px;padding:6px">${S.buFill?msF(used,2)+' mL':'sin llenar'}</div>${btn('ms_bf','💧 Llenar y enrasar a 0,00','#1e63e9')}<div>${btn('ms_b1','+1 mL','#0d9488')}${btn('ms_b01','+0,1 mL','#0d9488')}${btn('ms_bd','1 gota (0,05 mL)','#0d9488')}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Descarga en: <b>${esc(a.n)}</b>. Cerca del punto final agrega gota a gota y agita. Anota la lectura final menos la inicial.</div></div></div>`}
+  if(S.tab==='termo'){tool=`<div style="background:#0f172a;color:#fbbf24;font-family:ui-monospace,monospace;font-size:26px;text-align:center;border-radius:10px;padding:8px">${a.V>0?msF(a.T,1)+' °C':'—'}</div><div style="font-size:12px;margin:4px 0">Termómetro en <b>${esc(a.n)}</b> (resolución 0,1 °C)</div>${lab('Tiempo sobre la placa calefactora (s)')}${sel('ms_hs',[[10,'10 s'],[30,'30 s'],[60,'60 s'],[120,'120 s']],S.heat)}<div>${btn('ms_ht','🔥 Calentar','#dc2626')}${btn('ms_cool','🧊 Dejar enfriar 5 min','#2563eb')}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Placa de 300 W con 70 % de aprovechamiento. El agua no pasa de 100 °C.</div>`}
+  if(S.tab==='ph'){const p=phRead(a);tool=`<div style="background:#0f172a;color:#67e8f9;font-family:ui-monospace,monospace;font-size:26px;text-align:center;border-radius:10px;padding:8px">${p==null?'—':'pH '+msF(p,2)}</div><div style="font-size:12px;margin:4px 0">Estado: <b style="color:${S.cal?'#16a34a':'#dc2626'}">${S.cal?'calibrado':'SIN calibrar'}</b></div>${btn('ms_cal','🧴 Calibrar con buffer pH 7,00','#1e63e9')}<div style="font-size:12px;color:#64748b;margin-top:6px">Un pH-metro sin calibrar da lecturas desplazadas. Enjuaga el electrodo entre soluciones.</div>`}
+  if(S.tab==='agitar'){tool=`<div>${btn('ms_ag','🥄 Agitar con la varilla','#0d9488')}${(cfg.indicador?btn('ms_ind','💧 Agregar 2 gotas de '+cfg.indicador,'#db2777'):'')}</div><div style="font-size:13px;margin-top:8px">${a.ind?'Indicador agregado.':''}${Object.keys(a.solid).some(k=>a.solid[k]>0)?'<b style="color:#b45309">Hay sólido sin disolver.</b>':''}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Agita para disolver un sólido. En el matraz aforado, agita después de llegar al aforo para que quede homogéneo.</div>`}
+  const tabs=INST.map(k=>`<button data-tab="${k}" class="sim-btn" style="background:${S.tab===k?'#1e63e9':'#94a3b8'}">${tabsL[k]}</button>`).join('');
+  const taskTxt=T.map((x,i)=>`<div style="font-size:13px;padding:4px 0;${i===S.ti?'font-weight:800':''}">${S.ok[i]?'✅':i===S.ti?'👉':'⬜'} ${i+1}. ${x.txt}</div>`).join('');
+  let entry='';if(t&&['titul','dens','lectura'].includes(t.t))entry=`<div style="margin-top:6px">${lab(t.t==='dens'?'Tu densidad (g/mL)':t.t==='lectura'?'Tu lectura (mL)':'Concentración que calculaste (M)')}<input id="ms_in" type="number" step="any" style="width:100%;padding:7px;border:1.5px solid #cbd5e1;border-radius:9px;font-weight:700" value="${S.rd['t'+S.ti]!=null?S.rd['t'+S.ti]:''}"></div>`;
+  $(el,'#ms_w').innerHTML=grid(panel('🧪 Mesa de laboratorio',`<div style="display:flex;flex-wrap:wrap;gap:8px">${rows}</div>`)+panel('📓 Cuaderno de tareas',`${taskTxt}${entry}<div style="margin-top:6px">${t?btn('ms_chk','✔ Comprobar tarea '+(S.ti+1),'#16a34a')+btn('ms_nx','➡ Siguiente tarea','#64748b'):''}</div><div id="ms_msg" style="margin-top:6px;font-size:13px;font-weight:700;color:${/^✅/.test(S.msg)?'#16a34a':/^⚠|^❌/.test(S.msg)?'#dc2626':'#334155'}">${esc(S.msg)}</div>`),
+   panel('🧰 Instrumentos',`<div>${tabs}</div><div style="margin-top:8px">${tool}</div>`)+`<div id="ms_tl">${tiles([['Tareas listas',nOk()+' / '+T.length,'#16a34a'],['Derrames',S.derr,S.derr?'#dc2626':'#64748b']])}</div>`);
+  bind()};
+ const note=m=>{S.msg=m};
+ const bind=()=>{const q=s=>$(el,s);const B=(id,f)=>{const x=q('#'+id);if(x)x.onclick=()=>{f();draw()}};
+  el.querySelectorAll('[data-v]').forEach(c=>c.onclick=()=>{S.act=c.dataset.v;if(S.tab==='pipeta')S.dst=S.act;draw()});
+  el.querySelectorAll('[data-tab]').forEach(c=>c.onclick=()=>{S.tab=c.dataset.tab;draw()});
+  const on=(id,f)=>{const x=q('#'+id);if(x)x.onchange=e=>{f(e.target.value);draw()}};
+  on('ms_r',v=>S.reag=v);on('ms_s',v=>S.sol=v);on('ms_pan',v=>{S.pan=v||null;S.off=0});on('ms_pip',v=>S.pip=v);on('ms_pv',v=>S.pipV=+v);on('ms_src',v=>S.src=v);on('ms_dst',v=>S.dst=v);on('ms_hs',v=>S.heat=+v);on('ms_tvd',v=>S.tvd=v);B('ms_tv',()=>{const a=BY[S.act],d=BY[S.tvd||(VS.find(v=>v.id!==a.id)||{}).id];if(!d||a.V<=0){note('⚠️ Elige un destino y que haya líquido para pasar.');return}giveLiq(d,takeLiq(a,a.V));d.disuelto=true;if(a.ind){d.ind=1}note('Contenido trasvasado a '+d.n+'.');ctx.act('trasvasa',{})});
+  const pour=d=>()=>{const a=BY[S.act];if(!S.reag)return;note('');addLiq(a,S.reag,d);ds(a);ctx.act('verter',{})};
+  B('ms_p10',pour(10));B('ms_p1',pour(1));B('ms_p01',pour(0.1));
+  B('ms_vac',()=>{const a=BY[S.act];a.V=0;a.liq=[];a.nm={};a.solid={};a.ind=0;note('Recipiente vaciado.')});
+  B('ms_tara',()=>{if(!S.pan){note('⚠️ Coloca primero un recipiente en el plato.');return}S.off=mass(BY[S.pan]);note('Balanza en cero con el recipiente.');ctx.act('tarar',{})});
+  const addS=g=>()=>{if(!S.pan){note('⚠️ Pon un recipiente sobre la balanza para agregar el sólido.');return}const v=BY[S.pan];S.act=S.pan;const R=RE[S.sol];if(g>0)v.solid[S.sol]=(v.solid[S.sol]||0)+g;else v.solid[S.sol]=Math.max(0,(v.solid[S.sol]||0)+g);ds(v);note('');ctx.act('pesar',{});if(S.off===0&&mass(v)>v.tara+0.0001)ctx.act('sin_tara',{})};
+  B('ms_s1',addS(1));B('ms_s01',addS(0.1));B('ms_s001',addS(0.01));B('ms_s0001',addS(0.001));B('ms_sm',addS(-0.01));
+  B('ms_pgo',()=>{const p=PIP.find(x=>x.id===S.pip)||PIP[0],dv=BY[S.dst||S.act],src=S.src||('R:'+S.reag),V=p.V||S.pipV;if(!dv)return;
+   if(src.startsWith('R:')){addLiq(dv,src.slice(2),V)}else{const sv=BY[src.slice(2)];if(sv===dv){note('⚠️ Origen y destino son el mismo recipiente.');return}if(sv.V<V-1e-9){note('⚠️ No hay suficiente líquido en el origen.');return}giveLiq(dv,takeLiq(sv,V))}
+   ds(dv);note('Transferidos '+msF(V,2)+' mL con '+p.n+'.');ctx.act('pipetea',{})});
+  B('ms_bf',()=>{BU.used=0;S.buFill=true;note('Bureta llena y enrasada a 0,00 mL.');ctx.act('llena_bureta',{})});
+  const bur=d=>()=>{if(!S.buFill){note('⚠️ Llena y enrasa la bureta primero.');return}const a=BY[S.act];if(BU.used+d>BU.cap){note('⚠️ La bureta no tiene más líquido.');return}BU.used=+(BU.used+d).toFixed(3);addLiq(a,BU.reag,d);ds(a);note('');ctx.act('dispensa',{});if(fenol(a))ctx.act('punto_final',{})};
+  B('ms_b1',bur(1));B('ms_b01',bur(0.1));B('ms_bd',bur(0.05));
+  B('ms_ht',()=>{const a=BY[S.act];if(a.V<=0){note('⚠️ El recipiente está vacío: no lo calientes.');return}const m=liqMass(a),dT=300*0.7*S.heat/(Math.max(m,1)*4.184);a.T=Math.min(100,+(a.T+dT).toFixed(2));note('Calentaste '+S.heat+' s.');ctx.act('calienta',{})});
+  B('ms_cool',()=>{const a=BY[S.act];a.T=+(cfg.T0||22)+(a.T-(cfg.T0||22))*0.8;note('El líquido se enfrió un poco.')});
+  B('ms_cal',()=>{S.cal=true;note('pH-metro calibrado con buffer pH 7,00.');ctx.act('calibra',{})});
+  B('ms_ag',()=>{const a=BY[S.act];if(disolver(a))note('El sólido se disolvió al agitar.');else note('Agitaste. No había sólido.');a.disuelto=true;ctx.act('agita',{})});
+  B('ms_ind',()=>{BY[S.act].ind=1;note('Indicador agregado.');ctx.act('indicador',{})});
+  const inp=q('#ms_in');if(inp)inp.onchange=e=>{S.rd['t'+S.ti]=e.target.value===''?null:+e.target.value};
+  B('ms_chk',()=>{const t=T[S.ti];if(!t)return;const inp2=$(el,'#ms_in');if(inp2&&inp2.value!=='')S.rd['t'+S.ti]=+inp2.value;const r=check(t);note((r.ok?'✅ ':'❌ ')+r.msg);if(r.ok&&!S.ok[S.ti]){S.ok[S.ti]=1;ctx.act('tarea_ok',{});if(t.t==='lectura')ctx.act('lectura_ok',{});ctx.obs('Tarea '+(S.ti+1)+': '+r.msg);if(nOk()>=T.length)ctx.act('todo_tareas',{})}else if(!r.ok)ctx.act('intento_mal',{})});
+  B('ms_nx',()=>{S.ti=(S.ti+1)%T.length;S.msg='';const t=T[S.ti];if(t&&t.vaso){S.act=t.vaso}if(t&&t.tab&&INST.includes(t.tab))S.tab=t.tab})};
+ draw();U.draw();
+ return{reset(){VS.forEach(v=>{v.V=0;v.liq=[];v.solid={};v.nm={};v.T=cfg.T0||22;v.ind=0;v.disuelto=true});seed();if(BU)BU.used=0;S.ok={};S.ti=0;S.msg='';S.derr=0;S.buFill=false;S.cal=false;S.pan=null;S.off=0;draw();U.reset()}}};
+
 E._ELEM=ELEM;E._shells=shells;
 return E;})();

@@ -50,7 +50,7 @@ const HASH0=location.hash,REDIR=()=>location.origin+location.pathname;
 let sb=supabase.createClient('https://pmigzkhhqxzhspqmkbvf.supabase.co','sb_publishable_GZT40D67S2ICeD1LWOxbEQ_mimJCWlu');
 const IMG='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/question-images/';
 const LOGO='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/school-logos/';
-const LGU=p=>p?LOGO+encodeURI(p):location.origin+'/aula360-logo-vertical.png'; /* logo del colegio; si no lo ha subido, el de AULA360 */
+const LGU=p=>p?LOGO+encodeURI(p):''; /* logo del colegio; si nadie lo ha subido NO se muestra ninguno */
 const MEDALS={first:['🥇','Primer Paso','Completar tu primer simulacro'],perfect:['🧠','Mente Brillante','100% de respuestas correctas'],clock:['⏱️','Contra el Reloj','Terminar con más de la mitad del tiempo restante'],streak:['🔥','Constante','Completar 3 simulacros'],high:['⭐','Alto Puntaje','Obtener 80 o más']};
 const isDir=()=>!!M&&(M.role==='rector'||M.role==='coordinador');
 const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -403,7 +403,7 @@ async function go(t){
     if(t==='saber'){await loadScript('saber.js?v=1');await SABER.load()}
     if(t==='clase'&&M.role==='prof'){await loadScript('aulavirtual.js?v=2')}
     if(t==='miasis'){await loadScript('estmis.js?v=1');await EMI.load()}
-    if(t==='labs'){await loadScript('labs.js?v=17');await LAB.load()}
+    if(t==='labs'){await loadScript('labs.js?v=18');await LAB.load()}
     if(t==='docped'){await loadScript('docped.js?v=1');await DPD.load()}
     if(t==='revdoc'){await loadScript('revision.js?v=4');await REV.load()}
     if(t==='obsv'||t==='fseg'){await loadScript('observador.js?v=2');await OBS.load(t)}
@@ -415,7 +415,7 @@ async function go(t){
     if(t==='guias'||t==='guiasadm'){await loadScript('guias.js?v=1');await GUI.load(t)}
     if(t==='infs'){await loadScript('periodos.js?v=1');await PRD.load()}
     if(t==='icfes'){await loadScript('icfes.js?v=1');await ICF.load()}
-    if(t==='anal'){await loadScript('analisis.js?v=9');await ANA.load()}
+    if(t==='anal'){await loadScript('analisis.js?v=10');await ANA.load()}
     if(t==='aud'){await loadScript('auditor.js?v=12');await AUD.load()}
     if(t==='msus'||t==='pcu'){await loadScript('suscripcion.js?v=4');if(t==='msus')await SUB.recargar()}
     if(t==='sop'){await loadScript('soporte.js?v=1');await SUP.load()}
@@ -783,7 +783,7 @@ const fch=d=>new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',m
 const vl=n=>'ABCDEF'[n-1]||String(n);
 function lhHtml(h){
   const L=LH();if(L.hoja)return'';
-  return`<div class="lh"><img src="${LGU(L.logo)}" style="height:${h}mm;width:auto"><div class="t"><div class="l1">${E(L.l1)}</div>${L.l2?`<div>${E(L.l2)}</div>`:''}${L.l3?`<div>${E(L.l3)}</div>`:''}</div></div>`;
+  return`<div class="lh">${L.logo?`<img src="${LGU(L.logo)}" style="height:${h}mm;width:auto">`:''}<div class="t"><div class="l1">${E(L.l1)}</div>${L.l2?`<div>${E(L.l2)}</div>`:''}${L.l3?`<div>${E(L.l3)}</div>`:''}</div></div>`;
 }
 function qHtml(q,i){
   if(q.image_path)return`<div class="q"><b>${i+1}.</b><img src="${IMG}${encodeURI(q.image_path)}"></div>`;
