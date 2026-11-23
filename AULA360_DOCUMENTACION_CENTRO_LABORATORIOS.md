@@ -136,3 +136,10 @@ saber_agg.manual (true cuando el auditor sube un colegio a mano; saber-ingest y 
 - Archivo quimica_g9.js, códigos Q09-001…017 (no = 50…66): 50 Mol y Avogadro, 51 Masa molar, 52 Conversión masa–mol–partículas, 53 Estequiometría, 54 Reactivo limitante, 55 Rendimiento, 56 Preparación de soluciones, 57 Concentración porcentual, 58 Molaridad, 59 Diluciones, 60 Solubilidad, 61 Curvas de solubilidad, 62 Escala de pH, 63 Indicadores, 64 Neutralización (titulación), 65 Química del agua, 66 Contaminación química ambiental.
 - Motores nuevos en quimica_motor.js: mol, estequio, solucion, solub, ph (65 y 66 reutilizan clasif).
 - Cálculos reales con masas atómicas de la tabla; solubilidad con datos de referencia interpolados; titulación solo ácido fuerte–base fuerte a 25 °C. Muestras de agua y valores de referencia (Res. 2115/2007) por verificar. Sin tablas nuevas. DBA/estándares «por verificar».
+
+## Química · Etapas 5 y 6 (décimo y undécimo, laboratorios 67–100)
+- **Etapa 5 (décimo, 67–83)** — archivo `quimica_g10.js` (códigos Q10-001…017). Motores: config, cuantico, orbital, propiedad, lewis, geom, nombra, redox, termo, calor, gases, incognita (+ clasif y balanceo reutilizados).
+- **Etapa 6 (undécimo, 84–100)** — archivo `quimica_g11.js` (códigos Q11-001…017). Motores nuevos: velocidad (órdenes de reacción), colision, arrhenius (perfil de energía), equil (3 modos: dinámico, Le Châtelier, constante/ICE), acidob, buffer, valora (curva exacta por balance de cargas), galv (Nernst), electro (Faraday), integra (4 casos aplicados). Reutiliza clasif (91, 97, 98, 99) y nombra (96).
+- Versiones: quimica_motor.js?v=6, quimica_ui.js?v=6, labs.js?v=17, service worker `aulaicfes-v69`.
+- Progreso: tabla `lab_practica` existente (sin tablas ni migraciones nuevas). DBA y estándares: «por verificar».
+- Límites declarados en cada laboratorio (datos didácticos redondeados; K, Ea y constantes de velocidad de los modelos no son mediciones reales).

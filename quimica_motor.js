@@ -1071,5 +1071,276 @@ E.incognita=(el,cfg,ctx)=>{const CS=cfg.casos;const S={c:0,obs:{},id:{},ok:{},so
   if(n===cs.length){S.solved[S.c]=1;ctx.act('caso_ok',{});f.style.color='#16a34a';f.textContent='✅ ¡Caso resuelto! Identificaste los 4 frascos.';if(Object.keys(S.solved).length>=CS.length)ctx.act('todo_ok',{})}else{f.style.color='#dc2626';f.textContent='❌ '+n+' de 4 correctos. Haz más pruebas: el indicador separa ácidos, bases y neutros; AgNO₃ detecta cloruros y carbonatos.'}draw()};
  draw();return{reset(){S.obs={};S.id={};S.ok={};S.solved={};draw()}}};
 
+/* ========== etapa 6a: cinética, colisiones, energía de activación y equilibrio químico ========== */
+const RGJ=8.314,COLS=['#2563eb','#dc2626','#16a34a','#f59e0b','#7c3aed','#0d9488'];
+const kU=n=>n===0?'M·s⁻¹':n===1?'s⁻¹':'M⁻'+SUPD[n-1]+'·s⁻¹';
+const lnA=x=>Math.log(Math.max(x,1e-300));
+/* VELOCIDAD: método de las velocidades iniciales */
+E.velocidad=(el,cfg,ctx)=>{const SS=cfg.sist;const S={i:0,a:0,b:0,ok:{},A:0.2,B:0.2};
+ const rate=(s,A,B)=>s.k*Math.pow(A,s.ord.a)*Math.pow(B,s.ord.b);
+ const RT=genR(cfg.retos||[],(r,i)=>{const s=SS[r.i];
+  if(r.t==='dup'){const o=s.ord[r.sp.toLowerCase()],f=Math.pow(r.f,o);return numReto(`En el sistema «${s.n}», si se multiplica por ${r.f} la concentración de <b>${r.sp}</b> (la otra no cambia), ¿por cuántas veces se multiplica la velocidad?`,f,[r.f,r.f*r.f*r.f,r.f*2,1],'veces',0,`Velocidad ∝ [${r.sp}]^${o}: ${r.f}^${o} = ${f}.`,i+2)}
+  if(r.t==='v'){const v=rate(s,r.A,r.B);return numReto(`En «${s.n}» (v = k·[A]${SUPD[s.ord.a]}·[B]${SUPD[s.ord.b]}, k = ${fm(s.k,2)} ${kU(s.ord.a+s.ord.b)}), ¿cuál es la velocidad (M/s) con [A] = ${fm(r.A,2)} M y [B] = ${fm(r.B,2)} M?`,v,[v*2,v/2,s.k*(r.A+r.B),s.k*r.A*r.B],'sci',0,`v = ${fm(s.k,2)} × ${fm(r.A,2)}^${s.ord.a} × ${fm(r.B,2)}^${s.ord.b} = ${sciU(v)} M/s.`,i+3)}
+  if(r.t==='ord'){const n=s.ord.a+s.ord.b;return numReto(`¿Cuál es el orden total de la reacción «${s.n}»?`,n,[n+1,Math.max(0,n-1),n+2,0],'',0,`Orden total = suma de los órdenes: ${s.ord.a} + ${s.ord.b} = ${n}.`,i+4)}
+  return r});
+ el.innerHTML=grid(panel('🎛️ Sistema de estudio',lab('Reacción (datos de un modelo didáctico)')+sel('vl_s',SS.map((s,i)=>[i,s.n]),0)+'<div id="vl_eq" style="margin-top:6px;font-size:13px"></div>'+lab('Orden respecto a A')+sel('vl_a',[[0,'0'],[1,'1'],[2,'2']],0)+lab('Orden respecto a B')+sel('vl_b',[[0,'0'],[1,'1'],[2,'2']],0)+btn('vl_ok','✔️ Comprobar órdenes','#0d9488')+'<div id="vl_fb" style="margin-top:8px;font-size:13px;font-weight:700"></div>'+rng('vl_A','[A] para tu experimento (M)',0.1,0.5,S.A,0.1)+rng('vl_B','[B] para tu experimento (M)',0.1,0.5,S.B,0.1)+btn('vl_x','🧪 Hacer mi experimento','#1e63e9')+(RT.length?rhold('vl2'):'<div id="vl2_rt"></div><div id="vl2_fb"></div>')),
+  panel('📋 Experimentos (velocidad inicial)','<div id="vl_tb" style="overflow:auto"></div>')+'<div id="vl_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'vl2');S.mine=[];
+ const draw=()=>{const s=SS[S.i];$(el,'#vl_eq').innerHTML='<b>'+dsub(esc(s.eq))+'</b><br><span style="color:#64748b">Compara experimentos en los que solo cambia una concentración.</span>';
+  const rows=s.exps.map((e,j)=>({n:j+1,A:e[0],B:e[1],v:rate(s,e[0],e[1])})).concat(S.mine.filter(m=>m.s===S.i).map((m,j)=>({n:'★'+(j+1),A:m.A,B:m.B,v:rate(s,m.A,m.B)})));
+  $(el,'#vl_tb').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#f1f5f9"><th style="padding:5px">Exp.</th><th>[A] (M)</th><th>[B] (M)</th><th>Velocidad inicial (M/s)</th></tr>${rows.map(r=>`<tr style="border-top:1px solid #e2e8f0;text-align:center"><td style="padding:5px">${r.n}</td><td>${fm(r.A,2)}</td><td>${fm(r.B,2)}</td><td>${sciU(r.v)}</td></tr>`).join('')}</table>`+(S.ok[S.i]?`<div style="margin-top:8px;background:#f0fdf4;border-radius:10px;padding:8px;font-size:13.5px"><b>Ley de velocidad:</b> v = k·[A]${SUPD[s.ord.a]}·[B]${SUPD[s.ord.b]}<br><b>k</b> = v ÷ ([A]${SUPD[s.ord.a]}[B]${SUPD[s.ord.b]}) = ${fm(rate(s,s.exps[0][0],s.exps[0][1])/(Math.pow(s.exps[0][0],s.ord.a)*Math.pow(s.exps[0][1],s.ord.b)),2)} ${kU(s.ord.a+s.ord.b)}<br>Orden total = ${s.ord.a+s.ord.b}</div>`:'');
+  $(el,'#vl_tl').innerHTML=tiles([['Sistemas resueltos',Object.keys(S.ok).length+' / '+SS.length,'#16a34a'],['Mis experimentos',S.mine.length,'#2563eb']])};
+ $(el,'#vl_s').onchange=e=>{S.i=+e.target.value;$(el,'#vl_fb').textContent='';draw()};
+ $(el,'#vl_A').oninput=e=>{S.A=+e.target.value;$(el,'#vl_Av').textContent=fm(S.A,1)};$(el,'#vl_B').oninput=e=>{S.B=+e.target.value;$(el,'#vl_Bv').textContent=fm(S.B,1)};
+ $(el,'#vl_x').onclick=()=>{S.mine.push({s:S.i,A:S.A,B:S.B});ctx.act('experimento',{});ctx.obs('Experimento propio: [A]='+fm(S.A,1)+', [B]='+fm(S.B,1));draw()};
+ $(el,'#vl_ok').onclick=()=>{const s=SS[S.i],f=$(el,'#vl_fb'),a=+$(el,'#vl_a').value,b=+$(el,'#vl_b').value;
+  if(a===s.ord.a&&b===s.ord.b){f.style.color='#16a34a';f.textContent='✅ Correcto: orden '+a+' en A y orden '+b+' en B.';S.ok[S.i]=1;ctx.act('orden_ok',{});ctx.obs(s.n+': órdenes '+a+' y '+b);if(Object.keys(S.ok).length>=SS.length)ctx.act('todo_orden',{})}
+  else{f.style.color='#dc2626';f.textContent='❌ Compara dos experimentos donde solo cambie '+(a!==s.ord.a?'[A]':'[B]')+': si al duplicarla la velocidad se duplica, el orden es 1; si se cuadruplica, es 2; si no cambia, es 0.'}draw()};
+ draw();U.draw();return{reset(){S.ok={};S.mine=[];draw();U.reset()}}};
+
+/* COLISIÓN: frecuencia de choques y fracción con energía suficiente */
+E.colision=(el,cfg,ctx)=>{const S={T:300,n:20,Ea:50,rows:[],a:0};const N=40,r=rnd(77),P=Array.from({length:N},()=>({x:r()*400+10,y:r()*230+10,a:r()*6.283}));
+ const frac=(T,Ea)=>Math.exp(-Ea*1000/(RGJ*T));const rel=(T,n,Ea)=>Math.pow(n/20,2)*Math.sqrt(T/300)*Math.exp(-Ea*1000/RGJ*(1/T-1/300));
+ const RT=genR(cfg.retos||[],(q,i)=>{
+  if(q.t==='frac'){const c=frac(q.T,q.Ea);return numReto(`Si la energía de activación es ${q.Ea} kJ/mol y T = ${q.T} K, ¿qué fracción de los choques tiene energía suficiente? (e^(−Ea/RT))`,c,[frac(q.T+100,q.Ea),c*1000,frac(q.T,q.Ea/2),Math.exp(-q.Ea/(RGJ*q.T))],'sci',0,`e^(−${q.Ea*1000}/(8,314 × ${q.T})) = ${sciU(c)}.`,i+2)}
+  if(q.t==='tr'){const c=Math.exp(q.Ea*1000/RGJ*(1/q.T1-1/q.T2));return numReto(`Con Ea = ${q.Ea} kJ/mol, ¿cuántas veces aumenta la fracción de choques efectivos al subir de ${q.T1} K a ${q.T2} K?`,c,[q.T2/q.T1,Math.pow(q.T2/q.T1,2),c*2,1/c],'veces',2,`Razón = e^[(Ea/R)(1/T₁ − 1/T₂)] = ${fm(c,2)}.`,i+3)}
+  if(q.t==='conc'){const c=q.f*q.f;return numReto(`En una reacción entre dos moléculas distintas A + B, si se multiplica por ${q.f} la concentración de ambas, ¿por cuántas veces aumenta la frecuencia de choques?`,c,[q.f,q.f*q.f*q.f,q.f*2,1],'veces',0,`Los choques A–B dependen de [A]·[B]: ${q.f} × ${q.f} = ${c}.`,i+4)}return q});
+ el.innerHTML=grid(panel('🎛️ Condiciones',rng('co_T','Temperatura (K)',250,600,S.T,10)+rng('co_n','Partículas en la caja (concentración)',10,40,S.n,2)+rng('co_E','Energía de activación (kJ/mol)',20,100,S.Ea,5)+btn('co_r','📌 Registrar estas condiciones','#0d9488')+'<div id="co_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('co2'):'<div id="co2_rt"></div><div id="co2_fb"></div>')),
+  panel('⚛️ Caja de partículas (ilustrativa)','<canvas id="co_cv" width="420" height="250" style="width:100%;background:#0f172a;border-radius:10px"></canvas>')+panel('📋 Registro','<div id="co_tb" style="overflow:auto"></div>')+'<div id="co_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'co2');
+ const out=()=>{const f=frac(S.T,S.Ea),rl=rel(S.T,S.n,S.Ea);$(el,'#co_o').innerHTML=`Fracción con energía ≥ Ea: <b>${sciU(f)}</b><br>De cada mil millones de choques, unos <b>${fm(f*1e9,f*1e9<10?2:0)}</b> son efectivos.<br>Velocidad relativa (vs 300 K y 20 partículas): <b>${fm(rl,rl<10?2:1)} ×</b>`;
+  $(el,'#co_tb').innerHTML=S.rows.length?`<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr style="background:#f1f5f9"><th style="padding:4px">T (K)</th><th>Partículas</th><th>Ea</th><th>Fracción</th><th>Vel. rel.</th></tr>${S.rows.map(x=>`<tr style="border-top:1px solid #e2e8f0;text-align:center"><td style="padding:4px">${x.T}</td><td>${x.n}</td><td>${x.Ea}</td><td>${sciU(frac(x.T,x.Ea))}</td><td>${fm(rel(x.T,x.n,x.Ea),2)}</td></tr>`).join('')}</table>`:'<div style="font-size:13px;color:#64748b">Aún no has registrado condiciones.</div>';
+  $(el,'#co_tl').innerHTML=tiles([['Registros',S.rows.length,'#2563eb'],['Fracción efectiva',sciU(f),'#dc2626']])};
+ const fr=frame(el,()=>{const x=$(el,'#co_cv').getContext('2d');x.fillStyle='#0f172a';x.fillRect(0,0,420,250);const sp=0.6+Math.sqrt(S.T/300)*1.6;
+  for(let i=0;i<S.n;i++){const p=P[i];p.x+=Math.cos(p.a)*sp;p.y+=Math.sin(p.a)*sp;if(p.x<8||p.x>412){p.a=Math.PI-p.a;p.x=Math.max(8,Math.min(412,p.x))}if(p.y<8||p.y>242){p.a=-p.a;p.y=Math.max(8,Math.min(242,p.y))}
+   x.fillStyle=i%2?'#38bdf8':'#fb923c';x.beginPath();x.arc(p.x,p.y,7,0,7);x.fill()}
+  x.fillStyle='#e2e8f0';x.font='12px sans-serif';x.fillText('Más T → más rápido; más partículas → más choques',8,244)});
+ [['co_T','T'],['co_n','n'],['co_E','Ea']].forEach(([id,k])=>$(el,'#'+id).oninput=e=>{S[k]=+e.target.value;$(el,'#'+id+'v').textContent=S[k];ctx.act('cambia',{});out()});
+ $(el,'#co_r').onclick=()=>{S.rows.push({T:S.T,n:S.n,Ea:S.Ea});ctx.act('registro',{});ctx.obs('Registro: T='+S.T+' K, n='+S.n+', Ea='+S.Ea+' kJ/mol');out()};
+ out();U.draw();return{reset(){S.rows=[];out();U.reset()},pause(){fr.stop()},start(){fr.run()}}};
+
+/* ARRHENIUS: perfil de energía, catalizador y temperatura */
+E.arrhenius=(el,cfg,ctx)=>{const RX_=cfg.rxs;const S={i:0,T:298,cat:0,rows:[]};
+ const eaOf=()=>S.cat&&RX_[S.i].eac!=null?RX_[S.i].eac:RX_[S.i].ea;
+ const rel=()=>Math.exp(-eaOf()*1000/(RGJ*S.T)+RX_[S.i].ea*1000/(RGJ*298));
+ const RT=genR(cfg.retos||[],(q,i)=>{
+  if(q.t==='ea2'){const e=RGJ*Math.log(q.k2/q.k1)/(1/q.T1-1/q.T2)/1000;return numReto(`La constante de velocidad pasa de ${fm(q.k1,3)} s⁻¹ a ${fm(q.k2,3)} s⁻¹ al subir de ${q.T1} K a ${q.T2} K. ¿Cuál es la energía de activación (kJ/mol)?`,e,[e*2,e/2,RGJ*Math.log(q.k2/q.k1)/1000,e*1.5],'kJ/mol',1,`ln(k₂/k₁) = (Ea/R)(1/T₁ − 1/T₂) → Ea = ${fm(e,1)} kJ/mol.`,i+2)}
+  if(q.t==='cat'){const c=Math.exp((q.ea-q.eac)*1000/(RGJ*q.T));return numReto(`A ${q.T} K un catalizador baja la energía de activación de ${q.ea} a ${q.eac} kJ/mol. ¿Cuántas veces aumenta la velocidad?`,c,[(q.ea/q.eac),Math.exp((q.ea-q.eac)/(RGJ*q.T)),c/10,c*10],'veces',0,`Razón = e^[(Ea − Ea')/(RT)] = ${fm(c,0)}.`,i+3)}
+  if(q.t==='rev'){const e=q.ea-q.dh;return numReto(`Una reacción tiene Ea = ${q.ea} kJ/mol y ΔH = ${q.dh} kJ/mol. ¿Cuál es la energía de activación de la reacción inversa (kJ/mol)?`,e,[q.ea+q.dh,q.ea,Math.abs(q.dh),e+q.ea],'kJ/mol',0,`Ea(inversa) = Ea(directa) − ΔH = ${q.ea} − (${q.dh}) = ${e}.`,i+4)}return q});
+ el.innerHTML=grid(panel('🎛️ Reacción',lab('Reacción modelo')+sel('ar_r',RX_.map((r,i)=>[i,r.n]),0)+rng('ar_T','Temperatura (K)',250,500,S.T,10)+'<label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:800;font-size:13px"><input id="ar_k" type="checkbox"> Añadir catalizador</label>'+btn('ar_g','📌 Registrar','#0d9488')+'<div id="ar_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('ar2'):'<div id="ar2_rt"></div><div id="ar2_fb"></div>')),
+  panel('📈 Perfil de energía (ilustrativo)','<canvas id="ar_cv" style="width:100%;display:block"></canvas>')+'<div id="ar_tb" style="overflow:auto"></div><div id="ar_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'ar2');
+ const draw=()=>{const r=RX_[S.i],ea=eaOf(),dh=r.dh,sm=t=>t*t*(3-2*t),st=x=>sm(Math.max(0,Math.min(1,(x-0.55)/0.4))),prof=(x,E_)=>dh*st(x)+(E_-dh*st(0.4))*Math.exp(-Math.pow((x-0.4)/0.14,2));
+  $(el,'#ar_k').disabled=r.eac==null;
+  SIM.plot($(el,'#ar_cv'),{h:290,xmin:0,xmax:1,ymin:Math.min(0,dh)-10,ymax:r.ea+20,xl:'Avance de la reacción',yl:'Energía (kJ/mol)',series:[{f:x=>prof(x,r.ea),color:'#94a3b8',name:'Sin catalizador',dash:r.eac!=null&&S.cat?[6,4]:[]}].concat(S.cat&&r.eac!=null?[{f:x=>prof(x,r.eac),color:'#16a34a',name:'Con catalizador'}]:[]),hlines:[{y:ea,color:'#dc2626',label:'Ea = '+ea+' kJ/mol'},{y:dh,color:'#2563eb',label:'ΔH = '+dh+' kJ/mol'}]});
+  $(el,'#ar_o').innerHTML=`Energía de activación usada: <b>${ea} kJ/mol</b><br>ΔH: <b>${dh} kJ/mol</b> (${dh<0?'exotérmica':'endotérmica'})<br>Ea de la reacción inversa: <b>${fm(ea-dh,0)} kJ/mol</b><br>Velocidad relativa (vs sin catalizador a 298 K): <b>${rel()<1000?fm(rel(),rel()<10?2:1):sciU(rel())} ×</b>`;
+  $(el,'#ar_tb').innerHTML=S.rows.length?`<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px"><tr style="background:#f1f5f9"><th style="padding:4px;text-align:left">Reacción</th><th>T (K)</th><th>Ea</th><th>Vel. rel.</th></tr>${S.rows.map(x=>`<tr style="border-top:1px solid #e2e8f0;text-align:center"><td style="padding:4px;text-align:left">${esc(x.n)}${x.c?' + cat.':''}</td><td>${x.T}</td><td>${x.ea}</td><td>${x.rel<1000?fm(x.rel,2):sciU(x.rel)}</td></tr>`).join('')}</table>`:'';
+  $(el,'#ar_tl').innerHTML=tiles([['Registros',S.rows.length,'#2563eb']])};
+ $(el,'#ar_r').onchange=e=>{S.i=+e.target.value;S.cat=0;$(el,'#ar_k').checked=false;ctx.act('cambia',{});draw()};
+ $(el,'#ar_T').oninput=e=>{S.T=+e.target.value;$(el,'#ar_Tv').textContent=S.T;ctx.act('cambia',{});draw()};
+ $(el,'#ar_k').onchange=e=>{S.cat=e.target.checked?1:0;if(S.cat)ctx.act('catalizador',{});ctx.act('cambia',{});draw()};
+ $(el,'#ar_g').onclick=()=>{S.rows.push({n:RX_[S.i].n,T:S.T,ea:eaOf(),rel:rel(),c:S.cat&&RX_[S.i].eac!=null});ctx.act('registro',{});ctx.obs('Registro: '+RX_[S.i].n+' a '+S.T+' K, Ea '+eaOf());draw()};
+ draw();U.draw();return{reset(){S.rows=[];S.cat=0;$(el,'#ar_k').checked=false;draw();U.reset()}}};
+
+/* EQUILIBRIO: dinámico, Le Châtelier y constante (ICE) */
+const eqSolve=(sp,c0,K)=>{let lo=-Infinity,hi=Infinity;sp.forEach((s,i)=>{if(s.nu>0)lo=Math.max(lo,-c0[i]/s.nu);else if(s.nu<0)hi=Math.min(hi,c0[i]/(-s.nu))});
+ const lq=x=>sp.reduce((a,s,i)=>a+s.nu*lnA(c0[i]+s.nu*x),0),lk=Math.log(K);let a=lo,b=hi;for(let it=0;it<300;it++){const m=(a+b)/2;if(lq(m)<lk)a=m;else b=m}
+ const x=(a+b)/2;return{x,c:sp.map((s,i)=>Math.max(0,c0[i]+s.nu*x))}};
+const eqQ=(sp,c)=>Math.exp(sp.reduce((a,s,i)=>a+s.nu*lnA(c[i]),0));
+const eqTxt=(sp)=>{const L=sp.filter(s=>s.nu<0).map(s=>(s.nu<-1?-s.nu+' ':'')+s.f).join(' + '),Rr=sp.filter(s=>s.nu>0).map(s=>(s.nu>1?s.nu+' ':'')+s.f).join(' + ');return dsub(L+' ⇌ '+Rr)};
+const kexpr=(sp)=>{const nu=sp.filter(s=>s.nu>0).map(s=>'['+s.f+']'+(s.nu>1?SUPD[s.nu]:'')).join('·'),de=sp.filter(s=>s.nu<0).map(s=>'['+s.f+']'+(-s.nu>1?SUPD[-s.nu]:'')).join('·');return dsub(nu+' ÷ ('+de+')')};
+E.equil=(el,cfg,ctx)=>{const SS=cfg.sist,M_=cfg.modo;const S={i:0};const fc=x=>x>=0.01?fm(x,3):sciU(x);
+ const RTs=(cfg.retos||[]).map((q,i)=>{if(!q.t)return q;const s=SS[q.i||0];
+  if(q.t==='K'){const K=eqQ(s.sp,q.c);return numReto(`Para ${eqTxt(s.sp)}, en equilibrio: ${s.sp.map((x,j)=>'['+x.f+'] = '+fm(q.c[j],2)+' M').join(', ')}. ¿Cuánto vale Kc?`,K,[1/K,K*2,K/2,K*K],'',3,`Kc = ${kexpr(s.sp)} = ${fm(K,3)}.`,i+2)}
+  if(q.t==='Q'){const Q=eqQ(s.sp,q.c),d=Q<s.K?'Q < K: la reacción avanza hacia los productos':Q>s.K?'Q > K: la reacción retrocede hacia los reactivos':'Q = K: ya está en equilibrio',o=['Q < K: la reacción avanza hacia los productos','Q > K: la reacción retrocede hacia los reactivos','Q = K: ya está en equilibrio'];
+   return{q:dsub(`Para ${eqTxt(s.sp)} (K = ${fm(s.K,3)}), la mezcla tiene ${s.sp.map((x,j)=>'['+x.f+'] = '+fm(q.c[j],2)+' M').join(', ')}. Calculas Q = ${fm(Q,3)}. ¿Qué ocurre?`),o,ok:o.indexOf(d),why:`Q = ${fm(Q,3)} frente a K = ${fm(s.K,3)}: ${d}.`}}
+  if(q.t==='ice'){const c0=q.c0,r=eqSolve(s.sp,c0,s.K),j=q.sp;return numReto(`${eqTxt(s.sp)} con Kc = ${fm(s.K,s.K<0.1?4:2)}. Inicialmente ${s.sp.map((x,k)=>'['+x.f+'] = '+fm(c0[k],2)+' M').join(', ')}. ¿Cuál es [${s.sp[j].f}] en el equilibrio (M)?`,r.c[j],[c0[j],r.c[j]*2,r.c[j]/2,Math.abs(c0[j]-r.c[j])],'M',3,`Se plantea la tabla ICE y se resuelve Kc = ${kexpr(s.sp)}: [${s.sp[j].f}] = ${fm(r.c[j],3)} M.`,i+3)}return q});
+ const RT=RTs;
+ if(M_==='dinamico'){const T_=()=>SS[S.i];const NP=200;S.st=0;S.t=0;S.run={};S.starts={};
+  el.innerHTML=grid(panel('🎛️ Sistema',lab('Reacción reversible (modelo)')+sel('eq_s',SS.map((s,i)=>[i,s.n]),0)+lab('Empezar con')+sel('eq_c',[[0,'Solo reactivos'],[1,'Solo productos']],0)+btn('eq_go','▶️ Simular','#0d9488')+rng('eq_t','Tiempo (s del modelo)',0,NP,0,1)+'<div id="eq_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('eq2'):'<div id="eq2_rt"></div><div id="eq2_fb"></div>')),
+   panel('📈 Concentraciones','<canvas id="eq_p1" style="width:100%;display:block"></canvas>')+panel('⚖️ Velocidades directa e inversa','<canvas id="eq_p2" style="width:100%;display:block"></canvas>')+'<div id="eq_tl"></div>');
+  const U=mkRetoUI(el,RT,ctx,'eq2');let TR=null;
+  const sim=()=>{const s=T_(),sp=s.sp,kf=s.kf,kr=kf/s.K,c0=sp.map(x=>S.st?x.cp:x.c0),tm=s.tmax,h=tm/NP/10,rows=[];let xi=0;
+   const cc=x=>sp.map((q,j)=>Math.max(0,c0[j]+q.nu*x)),fw=c=>kf*sp.reduce((a,q,j)=>q.nu<0?a*Math.pow(c[j],-q.nu):a,1),rv=c=>kr*sp.reduce((a,q,j)=>q.nu>0?a*Math.pow(c[j],q.nu):a,1),g=x=>{const c=cc(x);return fw(c)-rv(c)};
+   for(let k=0;k<=NP;k++){const c=cc(xi);rows.push({t:k*tm/NP,c,f:fw(c),r:rv(c)});for(let m=0;m<10;m++){const k1=g(xi),k2=g(xi+h/2*k1),k3=g(xi+h/2*k2),k4=g(xi+h*k3);xi+=h/6*(k1+2*k2+2*k3+k4)}}return rows};
+  const draw=()=>{const s=T_(),sp=s.sp;if(!TR)TR=sim();const k=+$(el,'#eq_t').value,row=TR[k],tm=s.tmax;
+   const ymax=Math.max(...TR.map(r=>Math.max(...r.c)))*1.1,fmx=Math.max(...TR.map(r=>Math.max(r.f,r.r)))*1.1;
+   SIM.plot($(el,'#eq_p1'),{h:240,xmin:0,xmax:tm,ymin:0,ymax,xl:'Tiempo (s)',yl:'Concentración (M)',series:sp.map((q,j)=>({pts:TR.map(r=>[r.t,r.c[j]]),color:COLS[j],name:q.f.replace(/(\d+)/g,m=>'₀₁₂₃₄₅₆₇₈₉'[+m]||m)})),vlines:[{x:row.t,color:'#94a3b8'}],pts:sp.map((q,j)=>({x:row.t,y:row.c[j],color:COLS[j],r:5}))});
+   SIM.plot($(el,'#eq_p2'),{h:200,xmin:0,xmax:tm,ymin:0,ymax:fmx,xl:'Tiempo (s)',yl:'Velocidad (M/s)',series:[{pts:TR.map(r=>[r.t,r.f]),color:'#2563eb',name:'Directa'},{pts:TR.map(r=>[r.t,r.r]),color:'#dc2626',name:'Inversa'}],vlines:[{x:row.t,color:'#94a3b8'}]});
+   const Q=eqQ(sp,row.c),eqn=Math.abs(Math.log(Q/s.K))<0.02;
+   $(el,'#eq_o').innerHTML=`<b>${eqTxt(sp)}</b><br>t = ${fm(row.t,2)} s · Q = ${fc(Q)} · K = ${fc(s.K)}<br>${sp.map(q=>q.f).map((f,j)=>'['+dsub(f)+'] = '+fc(row.c[j])+' M').join('<br>')}<br><span style="color:${eqn?'#16a34a':'#b45309'};font-weight:800">${eqn?'✅ Equilibrio: las dos velocidades son iguales y las concentraciones ya no cambian.':'Todavía no hay equilibrio: Q ≠ K.'}</span>`;
+   if(eqn&&!S.run[S.i+'-'+S.st]){S.run[S.i+'-'+S.st]=1;ctx.act('equilibrio',{});S.starts[S.st]=1;if(S.starts[0]&&S.starts[1])ctx.act('inicio_dos',{});ctx.obs(s.n+': equilibrio alcanzado desde '+(S.st?'productos':'reactivos'))}
+   $(el,'#eq_tl').innerHTML=tiles([['Tiempo',fm(row.t,2)+' s','#2563eb'],['Q / K',fm(Q/s.K,2),eqn?'#16a34a':'#f59e0b']])};
+  $(el,'#eq_s').onchange=e=>{S.i=+e.target.value;TR=null;$(el,'#eq_t').value=0;$(el,'#eq_tv').textContent=0;draw()};
+  $(el,'#eq_c').onchange=e=>{S.st=+e.target.value;TR=null;$(el,'#eq_t').value=0;$(el,'#eq_tv').textContent=0;draw()};
+  $(el,'#eq_go').onclick=()=>{TR=null;$(el,'#eq_t').value=0;$(el,'#eq_tv').textContent=0;ctx.act('corre',{});let k=0;const step=()=>{if(!el.isConnected)return;k=Math.min(NP,k+4);$(el,'#eq_t').value=k;$(el,'#eq_tv').textContent=k;draw();if(k<NP)requestAnimationFrame(step)};step()};
+  $(el,'#eq_t').oninput=e=>{$(el,'#eq_tv').textContent=e.target.value;draw()};
+  draw();U.draw();return{reset(){S.run={};S.starts={};TR=null;draw();U.reset()}}}
+ if(M_==='lechat'){const s0=()=>SS[S.i];S.pert=0;S.n=0;
+  el.innerHTML=grid(panel('🎛️ Sistema en equilibrio',lab('Reacción')+sel('lc_s',SS.map((s,i)=>[i,s.n]),0)+'<div id="lc_eq" style="margin:6px 0;font-size:13.5px;font-weight:700"></div><div id="lc_bt"></div><div id="lc_q" style="margin-top:10px"></div><div id="lc_fb" style="margin-top:8px;font-size:13px;font-weight:700"></div>'+(RT.length?rhold('eq2'):'<div id="eq2_rt"></div><div id="eq2_fb"></div>')),
+   panel('📊 Concentraciones (M)','<div id="lc_bars"></div>')+'<div id="lc_tl"></div>');
+  const U=mkRetoUI(el,RT,ctx,'eq2');
+  const init=()=>{const s=s0();S.T=s.T0||298;S.K=s.K;S.c=eqSolve(s.sp,s.sp.map(x=>x.c0),S.K).c;S.pre=null;S.pend=null;S.after=null;S.V=1};
+  init();S.cnt={n:0,ok:0};
+  const bars=()=>{const s=s0(),sp=s.sp,a=S.pre||S.c,b=S.after||null,mx=Math.max(...a,...(b||[0]))*1.15||1;
+   $(el,'#lc_bars').innerHTML=sp.map((q,j)=>`<div style="margin-bottom:8px"><b style="font-size:13px">${dsub(q.f)}</b><div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="width:${Math.max(1,a[j]/mx*100)}%;height:16px;background:#94a3b8;border-radius:4px"></div><span style="font-size:12px">${fc(a[j])} ${b?'(antes)':''}</span></div>${b?`<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="width:${Math.max(1,b[j]/mx*100)}%;height:16px;background:${COLS[j]};border-radius:4px"></div><span style="font-size:12px">${fc(b[j])} (nuevo equilibrio)</span></div>`:''}</div>`).join('');
+   $(el,'#lc_tl').innerHTML=tiles([['Perturbaciones',S.cnt.n,'#2563eb'],['Predicciones correctas',S.cnt.ok,'#16a34a'],['T actual',S.T+' K','#f59e0b']])};
+  const draw=()=>{const s=s0(),sp=s.sp;$(el,'#lc_eq').innerHTML=eqTxt(sp)+(s.dH!=null?` · ΔH = ${s.dH} kJ (${s.dH>0?'endotérmica':'exotérmica'})`:'');
+   const dn=sp.reduce((a,x)=>a+x.nu,0);
+   $(el,'#lc_bt').innerHTML=sp.map((q,j)=>`<button class="sim-btn" data-p="add${j}" style="background:#0d9488">➕ Agregar ${dsub(q.f)}</button><button class="sim-btn" data-p="del${j}" style="background:#64748b">➖ Quitar ${dsub(q.f)}</button>`).join('')+(s.dH!=null?'<button class="sim-btn" data-p="hot" style="background:#dc2626">🔥 Calentar (+50 K)</button><button class="sim-btn" data-p="cold" style="background:#2563eb">❄️ Enfriar (−50 K)</button>':'')+'<button class="sim-btn" data-p="comp" style="background:#7c3aed">⬇️ Comprimir (V ÷ 2)</button><button class="sim-btn" data-p="exp" style="background:#7c3aed">⬆️ Expandir (V × 2)</button><button class="sim-btn" data-p="rst" style="background:#64748b">↺ Volver al inicio</button>';
+   el.querySelectorAll('#lc_bt [data-p]').forEach(b=>b.onclick=()=>pert(b.dataset.p));bars()};
+  const pert=p=>{const s=s0(),sp=s.sp;if(S.pend)return;const fbk=$(el,'#lc_fb');fbk.textContent='';$(el,'#lc_q').innerHTML='';
+   if(p==='rst'){init();S.cnt.n=S.cnt.n;draw();return}
+   let c=S.c.slice(),K2=S.K,T2=S.T,txt='';
+   if(p.startsWith('add')){const j=+p.slice(3);c[j]+=Math.max(0.05,0.5*c[j]);txt='Agregaste '+sp[j].f}
+   else if(p.startsWith('del')){const j=+p.slice(3);c[j]=c[j]*0.6;txt='Quitaste parte de '+sp[j].f}
+   else if(p==='hot'||p==='cold'){T2=S.T+(p==='hot'?50:-50);K2=S.K*Math.exp(-s.dH*1000/RGJ*(1/T2-1/S.T));txt=p==='hot'?'Calentaste el sistema':'Enfriaste el sistema'}
+   else if(p==='comp'){c=c.map(x=>x*2);txt='Comprimiste el recipiente (el volumen se reduce a la mitad)'}
+   else if(p==='exp'){c=c.map(x=>x/2);txt='Expandiste el recipiente (el volumen se duplica)'}
+   const Q=eqQ(sp,c),d=Math.abs(Math.log(Q/K2))<1e-9?'none':Q<K2?'right':'left';S.pre=c;S.pend={c,K2,T2,d,txt,Q};S.cnt.n++;ctx.act('perturba',{});
+   $(el,'#lc_q').innerHTML=`<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:8px"><b>${txt}.</b> ¿Hacia dónde se desplaza el equilibrio?<div style="margin-top:6px"><button class="sim-btn" data-a="right" style="background:#7c3aed">→ Hacia los productos</button><button class="sim-btn" data-a="left" style="background:#7c3aed">← Hacia los reactivos</button><button class="sim-btn" data-a="none" style="background:#7c3aed">No se desplaza</button></div></div>`;
+   el.querySelectorAll('#lc_q [data-a]').forEach(b=>b.onclick=()=>{const ok=b.dataset.a===d,pd=S.pend;if(ok){S.cnt.ok++;ctx.act('predice_ok',{})}
+    const r=eqSolve(sp,pd.c,pd.K2);S.after=r.c;S.c=r.c;S.K=pd.K2;S.T=pd.T2;S.pend=null;const nm={right:'hacia los productos →',left:'hacia los reactivos ←',none:'no se desplaza'}[d];
+    fbk.style.color=ok?'#16a34a':'#dc2626';fbk.textContent=(ok?'✅ ':'❌ ')+'El equilibrio se desplaza '+nm+(d==='none'?'':' (Q '+(d==='right'?'<':'>')+' K). ')+(d==='none'?' Al comprimir o expandir con igual número de moles de gas a cada lado, Q no cambia.':'');
+    ctx.obs(pd.txt+' → '+nm+(ok?' (acierto)':' (error)'));$(el,'#lc_q').innerHTML='';bars();
+    const dn2=sp.reduce((a,x)=>a+x.nu,0);if(dn2===0&&(p==='comp'||p==='exp'))fbk.textContent+=' (aquí Δn de gases = 0)'})};
+  $(el,'#lc_s').onchange=e=>{S.i=+e.target.value;init();$(el,'#lc_fb').textContent='';$(el,'#lc_q').innerHTML='';draw()};
+  draw();U.draw();return{reset(){S.cnt={n:0,ok:0};init();draw();U.reset()}}}
+ if(M_==='k'){const s0=()=>SS[S.i];S.c0=SS[0].sp.map(x=>x.c0);S.seen={};
+  el.innerHTML=grid(panel('🎛️ Condiciones iniciales',lab('Reacción')+sel('ek_s',SS.map((s,i)=>[i,s.n]),0)+'<div id="ek_sl"></div>'+(RT.length?rhold('eq2'):'<div id="eq2_rt"></div><div id="eq2_fb"></div>')),panel('🧮 Tabla ICE','<div id="ek_tb" style="overflow:auto"></div>')+'<div id="ek_tl"></div>');
+  const U=mkRetoUI(el,RT,ctx,'eq2');
+  const sl=()=>{const s=s0();$(el,'#ek_sl').innerHTML=s.sp.map((q,j)=>rng('ek_'+j,'Inicial de '+dsub(q.f)+' (M)',0,2,S.c0[j],0.05)).join('');s.sp.forEach((q,j)=>$(el,'#ek_'+j).oninput=e=>{S.c0[j]=+e.target.value;$(el,'#ek_'+j+'v').textContent=fm(S.c0[j],2);ctx.act('cambia',{});draw()})};
+  const draw=()=>{const s=s0(),sp=s.sp;if(!sp.some(q=>q.nu<0&&S.c0[sp.indexOf(q)]>0)&&!sp.some(q=>q.nu>0&&S.c0[sp.indexOf(q)]>0)){$(el,'#ek_tb').innerHTML='<div style="color:#b45309;font-weight:700">Pon alguna concentración inicial mayor que cero.</div>';return}
+   const r=eqSolve(sp,S.c0,s.K),zp=sp.some((q,j)=>q.nu>0&&S.c0[j]===0),zr=sp.some((q,j)=>q.nu<0&&S.c0[j]===0),Q0=eqQ(sp,S.c0.map(x=>Math.max(x,1e-12)));S.seen[S.i]=1;
+   $(el,'#ek_tb').innerHTML=`<div style="font-size:14px;font-weight:800;margin-bottom:6px">${eqTxt(sp)}</div><table style="width:100%;border-collapse:collapse;font-size:13px;text-align:center"><tr style="background:#f1f5f9"><th style="padding:5px"></th>${sp.map(q=>`<th>${dsub(q.f)}</th>`).join('')}</tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:800">Inicial</td>${S.c0.map(x=>`<td>${fm(x,3)}</td>`).join('')}</tr><tr style="border-top:1px solid #e2e8f0"><td style="padding:5px;font-weight:800">Cambio</td>${sp.map(q=>`<td>${q.nu>0?'+':'−'}${Math.abs(q.nu)==1?'':Math.abs(q.nu)}x</td>`).join('')}</tr><tr style="border-top:1px solid #e2e8f0;background:#f0fdf4"><td style="padding:5px;font-weight:800">Equilibrio</td>${r.c.map(x=>`<td><b>${fm(x,3)}</b></td>`).join('')}</tr></table><div style="margin-top:8px;font-size:13.5px;line-height:1.6">x = <b>${fm(r.x,4)}</b> M<br>Kc = ${kexpr(sp)} = <b>${fc(s.K)}</b><br>Q inicial = <b>${zp&&!zr?'0 (todavía no hay algún producto)':zr&&!zp?'muy grande (falta algún reactivo)':fc(Q0)}</b> → ${zp&&!zr?'avanza hacia los productos':zr&&!zp?'retrocede hacia los reactivos':Q0<s.K?'avanza hacia los productos':Q0>s.K?'retrocede hacia los reactivos':'ya está en equilibrio'}<br>Comprobación: Q en el equilibrio = ${fc(eqQ(sp,r.c))}</div>`;
+   if(Object.keys(S.seen).length>=2)ctx.act('sistema_nuevo',{});$(el,'#ek_tl').innerHTML=tiles([['Sistemas vistos',Object.keys(S.seen).length,'#2563eb'],['Kc',fc(s.K),'#16a34a']])};
+  $(el,'#ek_s').onchange=e=>{S.i=+e.target.value;S.c0=SS[S.i].sp.map(x=>x.c0);sl();ctx.act('cambia',{});draw()};
+  sl();draw();U.draw();return{reset(){S.seen={};S.c0=s0().sp.map(x=>x.c0);sl();draw();U.reset()}}}
+ throw new Error('modo de equilibrio desconocido')};
+
+/* ========== etapa 6b: ácido-base, buffer, valoración, electroquímica, integrador ========== */
+const lg=Math.log10,KW=1e-14,FAR=96485;
+const phW=(x)=>x===0?7:x>0?-lg(x/100):14+lg(-x/100);
+/* ACIDOB: equilibrio de un ácido o base débil */
+E.acidob=(el,cfg,ctx)=>{const AS=cfg.sust;const S={i:2,pc:1,seen:{}};
+ const calc=(a,C)=>{const K=a.Ka||a.Kb,x=(-K+Math.sqrt(K*K+4*K*C))/2,pH=a.Ka?-lg(x):14+lg(x);return{x,pH,pct:x/C*100,pOH:14-pH}};
+ const RT=genR(cfg.retos||[],(q,i)=>{const a=AS[q.i||0],C=Math.pow(10,-(q.pc||0)),r=q.t==='Ka'?null:calc(a,C);
+  if(q.t==='pH')return numReto(`¿Cuál es el pH de una solución ${fm(C,C<0.01?3:2)} M de ${a.n} (${a.Ka?'Ka':'Kb'} = ${sciU(a.Ka||a.Kb)})?`,r.pH,[a.Ka?-lg(C):14+lg(C),r.pH+1,r.pH-1,7],'',2,`x = (−K + √(K² + 4KC))/2 = ${sciU(r.x)} M → pH = ${fm(r.pH,2)}.`,i+2)
+  if(q.t==='pct')return numReto(`¿Qué porcentaje de ${a.n} está ionizado en una solución ${fm(C,C<0.01?3:2)} M?`,r.pct,[r.pct*10,r.pct/10,100,r.pct*2],'%',2,`% = x/C × 100 = ${sciU(r.x)} / ${fm(C,C<0.01?3:2)} × 100 = ${fm(r.pct,2)} %.`,i+3)
+  if(q.t==='Ka'){const x=Math.pow(10,-q.pH),K=x*x/(q.C-x);return numReto(`Una solución ${fm(q.C,2)} M de un ácido débil HA tiene pH = ${fm(q.pH,2)}. ¿Cuánto vale Ka?`,K,[x*x/q.C*10,x/q.C,K*10,K/10],'sci',0,`[H⁺] = 10^(−${fm(q.pH,2)}) = ${sciU(x)} M; Ka = x²/(C − x) = ${sciU(K)}.`,i+4)}return q});
+ el.innerHTML=grid(panel('🎛️ Ácido o base débil',lab('Sustancia')+sel('ab_s',AS.map((a,i)=>[i,a.n+' ('+(a.Ka?'Ka':'Kb')+' = '+sciU(a.Ka||a.Kb)+')']),S.i)+rng('ab_c','Concentración: 10^(−x) M, con x =',0,3,S.pc,0.25)+'<div id="ab_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('ab2'):'<div id="ab2_rt"></div><div id="ab2_fb"></div>')),
+  panel('🔬 100 moléculas disueltas (ilustrativo)','<div id="ab_g"></div>')+'<div id="ab_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'ab2');
+ const draw=()=>{const a=AS[S.i],C=Math.pow(10,-S.pc),r=calc(a,C),n=Math.max(r.pct>0?1:0,Math.round(r.pct));S.seen[S.i]=1;
+  $(el,'#ab_o').innerHTML=`C = <b>${fm(C,C<0.01?4:3)} M</b><br>[${a.Ka?'H⁺':'OH⁻'}] = <b>${sciU(r.x)} M</b><br>pH = <b>${fm(r.pH,2)}</b> · pOH = ${fm(r.pOH,2)}<br>Ionización: <b>${fm(r.pct,r.pct<1?3:1)} %</b><br><span style="font-size:12px;color:#64748b">Si fuera un ${a.Ka?'ácido':'base'} fuerte de la misma concentración, el pH sería ${fm(a.Ka?-lg(C):14+lg(C),2)}.</span>`;
+  $(el,'#ab_g').innerHTML=`<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px;max-width:340px">${Array.from({length:100},(_,k)=>`<div style="aspect-ratio:1;border-radius:50%;background:${k<n?'#f59e0b':'#cbd5e1'}"></div>`).join('')}</div><div style="font-size:12px;margin-top:6px"><span style="color:#f59e0b">●</span> ionizadas (${n} de 100) · <span style="color:#94a3b8">●</span> sin ionizar</div>`;
+  $(el,'#ab_tl').innerHTML=tiles([['pH',fm(r.pH,2),'#2563eb'],['% ionizado',fm(r.pct,r.pct<1?2:1),'#f59e0b'],['Sustancias vistas',Object.keys(S.seen).length,'#16a34a']])};
+ $(el,'#ab_s').onchange=e=>{S.i=+e.target.value;ctx.act('cambia',{});if(Object.keys(S.seen).length>=2)ctx.act('compara',{});draw()};
+ $(el,'#ab_c').oninput=e=>{S.pc=+e.target.value;$(el,'#ab_cv').textContent=fm(S.pc,2);ctx.act('cambia',{});draw()};
+ draw();U.draw();return{reset(){S.seen={};draw();U.reset()}}};
+
+/* BUFFER: Henderson–Hasselbalch y capacidad amortiguadora */
+E.buffer=(el,cfg,ctx)=>{const SS=cfg.sist;const S={i:0,ha:20,a:20,add:0,seen:{}};
+ const phB=(s,ha,a,add)=>{if(add>=0){const A=a-add,H=ha+add;if(A>0)return{pH:s.pKa+lg(A/H),ex:0};return{pH:-lg((add-a)/100),ex:1}}const b=-add,H=ha-b,A=a+b;if(H>0)return{pH:s.pKa+lg(A/H),ex:0};return{pH:14+lg((b-ha)/100),ex:1}};
+ const RT=genR(cfg.retos||[],(q,i)=>{const s=SS[q.i];
+  if(q.t==='hh'){const p=s.pKa+lg(q.a/q.ha);return numReto(`Un buffer de ${s.n} tiene ${q.ha} mmol de ${s.ha} y ${q.a} mmol de ${s.a}. ¿Cuál es su pH? (pKa = ${fm(s.pKa,2)})`,p,[s.pKa,p+1,p-1,s.pKa+lg(q.ha/q.a)],'',2,`pH = pKa + log([base]/[ácido]) = ${fm(s.pKa,2)} + log(${q.a}/${q.ha}) = ${fm(p,2)}.`,i+2)}
+  if(q.t==='add'){const r=phB(s,q.ha,q.a,q.add),w=phW(q.add);return numReto(`Al buffer de ${s.n} (${q.ha} mmol de ${s.ha} y ${q.a} mmol de ${s.a}, 100 mL) se le agregan ${Math.abs(q.add)} mmol de ${q.add>0?'ácido fuerte (HCl)':'base fuerte (NaOH)'}. ¿Cuál es el nuevo pH?`,r.pH,[w,s.pKa,r.pH+(q.add>0?-1:1),s.pKa+lg(q.a/q.ha)],'',2,`${q.add>0?'El ácido consume base':'La base consume ácido'}: ácido = ${q.ha+q.add} mmol, base = ${q.a-q.add} mmol → pH = ${fm(r.pH,2)}.`,i+3)}
+  if(q.t==='ratio'){const r=Math.pow(10,q.pH-s.pKa);return numReto(`Para tener un buffer de ${s.n} con pH = ${fm(q.pH,2)} (pKa = ${fm(s.pKa,2)}), ¿qué relación [${s.a}]/[${s.ha}] se necesita?`,r,[1/r,r*10,q.pH/s.pKa,r/10],'',2,`[base]/[ácido] = 10^(pH − pKa) = 10^(${fm(q.pH-s.pKa,2)}) = ${fm(r,2)}.`,i+4)}return q});
+ el.innerHTML=grid(panel('🎛️ Buffer (100 mL)',lab('Sistema amortiguador')+sel('bf_s',SS.map((s,i)=>[i,s.n]),0)+rng('bf_h','Ácido débil (mmol)',5,50,S.ha,1)+rng('bf_a','Base conjugada (mmol)',5,50,S.a,1)+rng('bf_d','Agregado (mmol): negativo = NaOH, positivo = HCl',-40,40,0,1)+'<div id="bf_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('bf2'):'<div id="bf2_rt"></div><div id="bf2_fb"></div>')),
+  panel('📈 pH al agregar ácido o base','<canvas id="bf_cv" style="width:100%;display:block"></canvas>')+'<div id="bf_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'bf2');
+ const draw=()=>{const s=SS[S.i],r=phB(s,S.ha,S.a,S.add),w=phW(S.add);S.seen[S.i]=1;
+  SIM.plot($(el,'#bf_cv'),{h:290,xmin:-40,xmax:40,ymin:0,ymax:14,xl:'Agregado (mmol): ← NaOH · HCl →',yl:'pH',series:[{f:x=>phB(s,S.ha,S.a,x).pH,color:'#16a34a',name:'Buffer'},{f:x=>phW(x),color:'#dc2626',name:'Agua pura'}],hlines:[{y:s.pKa,color:'#94a3b8',label:'pKa = '+fm(s.pKa,2)}],pts:[{x:S.add,y:Math.max(0,Math.min(14,r.pH)),color:'#16a34a',fill:'#16a34a',label:'buffer '+fm(r.pH,2)},{x:S.add,y:Math.max(0,Math.min(14,w)),color:'#dc2626',fill:'#dc2626',label:'agua '+fm(w,2),below:1}]});
+  $(el,'#bf_o').innerHTML=`pH del buffer: <b>${fm(r.pH,2)}</b>${r.ex?' <span style="color:#dc2626">(¡el buffer se agotó!)</span>':''}<br>pH del agua con lo mismo: <b>${fm(w,2)}</b><br>Relación base/ácido: ${r.ex?'—':fm((S.a-S.add)/(S.ha+S.add),2)}<br><span style="font-size:12px;color:#64748b">El buffer resiste cambios mientras queden ácido y base en cantidad suficiente.</span>`;
+  $(el,'#bf_tl').innerHTML=tiles([['pH buffer',fm(r.pH,2),'#16a34a'],['pH agua',fm(w,2),'#dc2626'],['Sistemas vistos',Object.keys(S.seen).length,'#2563eb']])};
+ $(el,'#bf_s').onchange=e=>{S.i=+e.target.value;ctx.act('cambia',{});draw()};
+ [['bf_h','ha'],['bf_a','a']].forEach(([id,k])=>$(el,'#'+id).oninput=e=>{S[k]=+e.target.value;$(el,'#'+id+'v').textContent=S[k];ctx.act('cambia',{});draw()});
+ $(el,'#bf_d').oninput=e=>{S.add=+e.target.value;$(el,'#bf_dv').textContent=S.add;ctx.act('agrega',{});if(S.add!==0){const r=phB(SS[S.i],S.ha,S.a,S.add);if(!r.ex)ctx.act('resiste',{});else ctx.act('agota',{})}draw()};
+ draw();U.draw();return{reset(){S.seen={};draw();U.reset()}}};
+
+/* VALORA: valoración ácido-base con curva exacta */
+const INDS=[['Fenolftaleína',8.2,10.0],['Azul de bromotimol',6.0,7.6],['Rojo de metilo',4.4,6.2],['Naranja de metilo',3.1,4.4]];
+const phTit=(s,Vb)=>{const Vt=s.Va+Vb,CA=s.Ca*s.Va/Vt,Na=s.Cb*Vb/Vt,f=h=>h+Na-KW/h-(s.Ka?CA*s.Ka/(s.Ka+h):CA);let a=-14,b=0;for(let i=0;i<100;i++){const m=(a+b)/2;if(f(Math.pow(10,m))>0)b=m;else a=m}return-(a+b)/2};
+E.valora=(el,cfg,ctx)=>{const SS=cfg.sist;const S={i:0,Vb:0,ind:0,ok:{},eq:{}};
+ const veq=s=>s.Ca*s.Va/s.Cb;
+ const RT=genR(cfg.retos||[],(q,i)=>{const s=SS[q.i],v=veq(s);
+  if(q.t==='veq')return numReto(`Se valoran ${s.Va} mL de ácido ${fm(s.Ca,2)} M con NaOH ${fm(s.Cb,2)} M. ¿Qué volumen de base (mL) se necesita para llegar al punto de equivalencia?`,v,[v*2,v/2,s.Va*s.Cb/s.Ca+s.Va,s.Va],'mL',1,`n(ácido) = ${fm(s.Ca,2)} × ${s.Va} mL = ${fm(s.Ca*s.Va,2)} mmol → V(base) = ${fm(s.Ca*s.Va,2)} ÷ ${fm(s.Cb,2)} = ${fm(v,1)} mL.`,i+2)
+  if(q.t==='ph0'){const p=phTit(s,0);return numReto(`¿Cuál es el pH inicial (antes de agregar base) de ${s.n}?`,p,[7,p+2,p-1,14-p],'',2,`${s.Ka?'Ácido débil: x = √(Ka·C) aprox. → pH = '+fm(p,2):'Ácido fuerte: pH = −log('+fm(s.Ca,2)+') = '+fm(p,2)}.`,i+3)}
+  if(q.t==='pheq'){const p=phTit(s,v);return numReto(`¿Cuál es el pH en el punto de equivalencia de ${s.n}?`,p,[7,p-2,p+2,s.pKa||3],'',2,`${s.Ka?'En el equivalente solo queda la base conjugada del ácido débil (A⁻), que es básica: pH = '+fm(p,2):'Sal neutra de ácido y base fuertes: pH = 7,00'}.`,i+4)}
+  if(q.t==='half'){const p=phTit(s,v/2);return numReto(`En ${s.n}, ¿cuánto vale el pH cuando se ha agregado la mitad del volumen de equivalencia? (pKa = ${fm(s.pKa,2)})`,p,[7,p+2,p-2,s.pKa+1],'',2,`A la mitad de la valoración [HA] = [A⁻] → pH = pKa = ${fm(s.pKa,2)}.`,i+5)}return q});
+ el.innerHTML=grid(panel('🎛️ Valoración',lab('Sistema')+sel('va_s',SS.map((s,i)=>[i,s.n]),0)+'<div id="va_i" style="font-size:12.5px;color:#475569;margin:6px 0"></div><div id="va_sl"></div>'+lab('Indicador')+sel('va_n',INDS.map((x,i)=>[i,x[0]+' (viraje '+fm(x[1],1)+'–'+fm(x[2],1)+')']),0)+'<div id="va_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('va2'):'<div id="va2_rt"></div><div id="va2_fb"></div>')),
+  panel('📈 Curva de valoración','<canvas id="va_cv" style="width:100%;display:block"></canvas>')+'<div id="va_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'va2');
+ const sl=()=>{const s=SS[S.i],v=veq(s);$(el,'#va_sl').innerHTML=rng('va_v','Volumen de NaOH agregado (mL)',0,2*v,S.Vb,0.1);$(el,'#va_v').oninput=e=>{S.Vb=+e.target.value;$(el,'#va_vv').textContent=fm(S.Vb,1);ctx.act('agrega',{});draw()}};
+ const good=(s)=>{const v=veq(s),a=phTit(s,v-0.05),b=phTit(s,v+0.05);return x=>x[1]>=a-0.05&&x[2]<=b+0.1};
+ const draw=()=>{const s=SS[S.i],v=veq(s),p=phTit(s,S.Vb),pe=phTit(s,v),g=good(s)(INDS[S.ind]),near=Math.abs(S.Vb-v)<=0.05;
+  $(el,'#va_i').innerHTML=dsub(esc(s.n))+': '+s.Va+' mL de ácido '+fm(s.Ca,2)+' M, base '+fm(s.Cb,2)+' M. '+(s.Ka?'Ka = '+sciU(s.Ka)+' (pKa '+fm(s.pKa,2)+').':'Ácido fuerte.');
+  SIM.plot($(el,'#va_cv'),{h:290,xmin:0,xmax:2*v,ymin:0,ymax:14,xl:'Volumen de base (mL)',yl:'pH',series:[{f:x=>phTit(s,x),color:'#2563eb'}],vlines:[{x:v,color:'#16a34a',label:'equivalencia'}],hlines:[{y:INDS[S.ind][1],color:'#f59e0b'},{y:INDS[S.ind][2],color:'#f59e0b'}],pts:[{x:S.Vb,y:p,color:'#dc2626',fill:'#dc2626',label:'pH '+fm(p,2)}]});
+  $(el,'#va_o').innerHTML=`Volumen: <b>${fm(S.Vb,1)} mL</b> · pH = <b>${fm(p,2)}</b><br>Estado: <b>${near?'punto de equivalencia ✅':S.Vb<v?'antes de la equivalencia':'después de la equivalencia'}</b><br>V(equivalencia) = ${fm(v,1)} mL · pH de equivalencia = ${fm(pe,2)}<br>Indicador elegido: <b style="color:${g?'#16a34a':'#dc2626'}">${g?'adecuado (cambia de color justo en el salto de pH)':'poco adecuado (su viraje cae fuera del salto vertical)'}</b>`;
+  if(near&&!S.eq[S.i]){S.eq[S.i]=1;ctx.act('equivalencia',{});ctx.obs(s.n+': equivalencia en '+fm(S.Vb,1)+' mL, pH '+fm(p,2))}
+  if(g&&!S.ok[S.i+'-'+S.ind]){S.ok[S.i+'-'+S.ind]=1;ctx.act('indicador_ok',{});ctx.obs(s.n+': indicador '+INDS[S.ind][0]+' adecuado')}
+  $(el,'#va_tl').innerHTML=tiles([['pH',fm(p,2),'#2563eb'],['Equivalencias halladas',Object.keys(S.eq).length+' / '+SS.length,'#16a34a']])};
+ $(el,'#va_s').onchange=e=>{S.i=+e.target.value;S.Vb=0;sl();draw()};
+ $(el,'#va_n').onchange=e=>{S.ind=+e.target.value;ctx.act('cambia',{});draw()};
+ sl();draw();U.draw();return{reset(){S.eq={};S.ok={};S.Vb=0;sl();draw();U.reset()}}};
+
+/* GALV: celdas galvánicas con potenciales estándar y ecuación de Nernst */
+const EO={Li:{ion:'Li⁺',ic:1,ne:1,pr:'Li',pc:1,E:-3.04,n:'Litio'},Mg:{ion:'Mg²⁺',ic:1,ne:2,pr:'Mg',pc:1,E:-2.37,n:'Magnesio'},Al:{ion:'Al³⁺',ic:1,ne:3,pr:'Al',pc:1,E:-1.66,n:'Aluminio'},Zn:{ion:'Zn²⁺',ic:1,ne:2,pr:'Zn',pc:1,E:-0.76,n:'Zinc'},Fe:{ion:'Fe²⁺',ic:1,ne:2,pr:'Fe',pc:1,E:-0.44,n:'Hierro'},Ni:{ion:'Ni²⁺',ic:1,ne:2,pr:'Ni',pc:1,E:-0.26,n:'Níquel'},Pb:{ion:'Pb²⁺',ic:1,ne:2,pr:'Pb',pc:1,E:-0.13,n:'Plomo'},H:{ion:'H⁺',ic:2,ne:2,pr:'H₂',pc:1,E:0.00,n:'Hidrógeno'},Cu:{ion:'Cu²⁺',ic:1,ne:2,pr:'Cu',pc:1,E:0.34,n:'Cobre'},Ag:{ion:'Ag⁺',ic:1,ne:1,pr:'Ag',pc:1,E:0.80,n:'Plata'}};
+const lcm=(a,b)=>a*b/gcd(a,b);
+const celda=(x,y,cx,cy)=>{const A=EO[x],B=EO[y],an=A.E<B.E?x:y,ca=an===x?y:x,a=EO[an],c=EO[ca],n=lcm(a.ne,c.ne),ka=n/a.ne,kc=n/c.ne,E0=c.E-a.E,ca_=an===x?cx:cy,cc=an===x?cy:cx,Q=Math.pow(ca_,ka*a.ic)/Math.pow(cc,kc*c.ic),En=E0-0.0592/n*lg(Q),co=k=>k===1?'':k;
+ return{an,ca,a,c,n,ka,kc,E0,Q,E:En,rx:`${co(kc*c.ic)}${c.ion} + ${co(ka*a.pc)}${a.pr} → ${co(kc*c.pc)}${c.pr} + ${co(ka*a.ic)}${a.ion}`,not:`${a.pr}|${a.ion} ‖ ${c.ion}|${c.pr}`}};
+E.galv=(el,cfg,ctx)=>{const L=cfg.metales;const S={a:L[0],b:L[1],ca:1,cb:1,seen:{}};const CS=[[0.01,'0,01 M'],[0.1,'0,1 M'],[1,'1 M']];
+ const RT=genR(cfg.retos||[],(q,i)=>{const r=celda(q.a,q.b,q.ca||1,q.cb||1),A=EO[q.a].n,B=EO[q.b].n;
+  if(q.t==='E0')return numReto(`Una pila une ${A} (${EO[q.a].E.toFixed(2).replace('.',',')} V) y ${B} (${EO[q.b].E.toFixed(2).replace('.',',')} V), ambos con potencial de reducción estándar. ¿Cuál es el potencial estándar de la celda?`,r.E0,[EO[q.a].E+EO[q.b].E,r.E0/2,r.E0*2,-r.E0],'V',2,`E°celda = E°cátodo − E°ánodo = ${fm(EO[r.ca].E,2)} − (${fm(EO[r.an].E,2)}) = ${fm(r.E0,2)} V.`,i+2)
+  if(q.t==='cat'){const o=[EO[q.a].n,EO[q.b].n,'Ninguno: no se produce reacción'];return{q:`En una pila de ${A} y ${B}, ¿cuál metal funciona como cátodo (donde ocurre la reducción)?`,o,ok:o.indexOf(EO[r.ca].n),why:`El cátodo es el de mayor potencial de reducción: ${EO[r.ca].n} (${fm(EO[r.ca].E,2)} V). El ánodo, ${EO[r.an].n}, se oxida y pierde masa.`}}
+  if(q.t==='nern')return numReto(`Pila ${A}–${B} con [${EO[q.a].ion}] = ${fm(q.ca,2)} M y [${EO[q.b].ion}] = ${fm(q.cb,2)} M a 25 °C. ¿Cuánto vale el potencial de la celda? (E = E° − (0,0592/n)·log Q)`,r.E,[r.E0,r.E0+(r.E0-r.E),r.E0-0.0592*lg(r.Q),r.E0*1.1],'V',3,`n = ${r.n}; Q = ${sciU(r.Q)}; E = ${fm(r.E0,2)} − (0,0592/${r.n}) × log(${sciU(r.Q)}) = ${fm(r.E,3)} V.`,i+3)
+  if(q.t==='n')return numReto(`En la pila ${A}–${B}, ¿cuántos electrones se transfieren en la reacción global balanceada?`,r.n,[r.n+1,r.n*2,1,r.a.ne+r.c.ne],'',0,`Se busca el mínimo común múltiplo de los electrones de cada semirreacción: ${r.a.ne} y ${r.c.ne} → ${r.n}.`,i+4)
+  return q});
+ el.innerHTML=grid(panel('🎛️ Semiceldas',lab('Electrodo 1')+sel('gv_a',L.map(k=>[k,EO[k].n+' ('+EO[k].ion+'/'+EO[k].pr+')']),S.a)+lab('Concentración del ion 1')+sel('gv_ca',CS,1)+lab('Electrodo 2')+sel('gv_b',L.map(k=>[k,EO[k].n+' ('+EO[k].ion+'/'+EO[k].pr+')']),S.b)+lab('Concentración del ion 2')+sel('gv_cb',CS,1)+'<div id="gv_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('gv2'):'<div id="gv2_rt"></div><div id="gv2_fb"></div>')),
+  panel('🔋 Pila','<canvas id="gv_cv" width="440" height="250" style="width:100%;background:#f8fafc;border-radius:10px"></canvas>')+'<div id="gv_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'gv2');
+ const draw=()=>{const x=$(el,'#gv_cv').getContext('2d');x.clearRect(0,0,440,250);
+  if(S.a===S.b){x.fillStyle='#b45309';x.font='bold 14px sans-serif';x.textAlign='center';x.fillText('Elige dos metales distintos',220,125);$(el,'#gv_o').innerHTML='<b style="color:#b45309">Elige dos electrodos distintos.</b>';$(el,'#gv_tl').innerHTML='';return}
+  const r=celda(S.a,S.b,S.ca,S.cb),left=r.an===S.a;S.seen[[S.a,S.b].sort().join('')]=1;
+  const bk=(X,col,lbl,met,ion,role,cnc)=>{x.fillStyle='#e0f2fe';x.fillRect(X,110,150,110);x.strokeStyle='#475569';x.lineWidth=3;x.strokeRect(X,100,150,120);x.fillStyle=col;x.fillRect(X+62,60,26,120);x.fillStyle='#0f172a';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText(met,X+75,52);x.font='11px sans-serif';x.fillText(ion+' ('+cnc+')',X+75,205);x.fillStyle=role==='ánodo'?'#dc2626':'#2563eb';x.font='bold 12px sans-serif';x.fillText(role==='ánodo'?'ÁNODO (−) oxidación':'CÁTODO (+) reducción',X+75,236)};
+  const A=EO[r.an],C=EO[r.ca],xa=left?30:260,xc=left?260:30;bk(xa,'#94a3b8',A.pr,A.pr,A.ion,'ánodo',fm(r.an===S.a?S.ca:S.cb,2)+' M');bk(xc,'#c2410c',C.pr,C.pr,C.ion,'cátodo',fm(r.ca===S.a?S.ca:S.cb,2)+' M');
+  x.strokeStyle='#0f172a';x.lineWidth=2;x.beginPath();x.moveTo(xa+75,60);x.lineTo(xa+75,22);x.lineTo(xc+75,22);x.lineTo(xc+75,60);x.stroke();
+  x.fillStyle='#16a34a';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText('e⁻ '+(left?'→':'←')+' (del ánodo al cátodo)',220,16);
+  x.strokeStyle='#a16207';x.lineWidth=6;x.beginPath();x.moveTo(xa+120,120);x.lineTo(xa+120,92);x.lineTo(xc+30,92);x.lineTo(xc+30,120);x.stroke();x.fillStyle='#a16207';x.font='11px sans-serif';x.fillText('puente salino',220,86);
+  $(el,'#gv_o').innerHTML=`<b>Ánodo:</b> ${EO[r.an].n} (se oxida, pierde masa)<br><b>Cátodo:</b> ${EO[r.ca].n} (se reduce, gana masa)<br><b>Reacción:</b> ${esc(r.rx)}<br><b>Notación:</b> ${esc(r.not)}<br>n = ${r.n} e⁻ · E° = <b>${fm(r.E0,2)} V</b> · Q = ${sciU(r.Q)}<br>E (Nernst) = <b style="color:${r.E>0?'#16a34a':'#dc2626'}">${fm(r.E,3)} V</b> ${r.E>0?'→ espontánea':'→ no espontánea con estas concentraciones'}`;
+  $(el,'#gv_tl').innerHTML=tiles([['E° celda',fm(r.E0,2)+' V','#2563eb'],['E (Nernst)',fm(r.E,3)+' V','#16a34a'],['Pilas armadas',Object.keys(S.seen).length,'#f59e0b']]);
+  if(Object.keys(S.seen).length>=3)ctx.act('celda_nueva',{})};
+ [['gv_a','a'],['gv_b','b']].forEach(([id,k])=>$(el,'#'+id).onchange=e=>{S[k]=e.target.value;ctx.act('cambia',{});draw()});
+ [['gv_ca','ca'],['gv_cb','cb']].forEach(([id,k])=>$(el,'#'+id).onchange=e=>{S[k]=+e.target.value;ctx.act('cambia',{});if(S.ca!==S.cb||S.ca!==1)ctx.act('nernst',{});draw()});
+ $(el,'#gv_b').value=S.b;draw();U.draw();return{reset(){S.seen={};draw();U.reset()}}};
+
+/* ELECTRO: electrólisis y leyes de Faraday */
+E.electro=(el,cfg,ctx)=>{const SS=cfg.sust;const S={i:0,I:2,t:30,seen:{}};const VM=24.47;
+ const calc=(s,I,t)=>{const ne=I*t*60/FAR,nc=ne/s.cat.ne,na=ne/s.an.ne;return{ne,nc,na,mc:nc*s.cat.M,vc:nc*VM*1000,va:na*VM*1000,ma:na*s.an.M}};
+ const RT=genR(cfg.retos||[],(q,i)=>{const s=SS[q.i],r=calc(s,q.I,q.t);
+  if(q.t2==='masa'||q.t==='masa'){}
+  if(q.t==='masa')return numReto(`Se electroliza ${s.n} con ${fm(q.I,1)} A durante ${q.min} min. ¿Qué masa de ${s.cat.prod} se deposita en el cátodo? (F = 96 485 C/mol)`,calc(s,q.I,q.min).mc,[calc(s,q.I,q.min).mc*2,calc(s,q.I,q.min).mc/2,calc(s,q.I,q.min).nc,calc(s,q.I,q.min).ne*s.cat.M],'g',3,`n(e⁻) = I·t/F = ${fm(q.I,1)} × ${q.min*60} / 96 485 = ${fm(calc(s,q.I,q.min).ne,4)} mol → n(${s.cat.prod}) = n(e⁻)/${s.cat.ne} → masa = ${fm(calc(s,q.I,q.min).mc,3)} g.`,i+2)
+  if(q.t==='tiempo'){const t=q.m*s.cat.ne*FAR/(q.I*s.cat.M)/60;return numReto(`¿Cuánto tiempo (minutos) hay que electrolizar ${s.n} con ${fm(q.I,1)} A para depositar ${fm(q.m,2)} g de ${s.cat.prod}?`,t,[t*2,t/2,t*60,t/s.cat.ne],'min',1,`n(${s.cat.prod}) = ${fm(q.m/s.cat.M,4)} mol → n(e⁻) = ${fm(q.m/s.cat.M*s.cat.ne,4)} mol → t = n·F/I = ${fm(t*60,0)} s = ${fm(t,1)} min.`,i+3)}
+  if(q.t==='mol'){const ne=q.I*q.min*60/FAR;return numReto(`Una corriente de ${fm(q.I,1)} A circula durante ${q.min} min. ¿Cuántos moles de electrones pasan? (F = 96 485 C/mol)`,ne,[ne*60,ne/60,q.I*q.min/FAR*2,ne*2],'mol',4,`Q = I·t = ${fm(q.I,1)} × ${q.min*60} s = ${fm(q.I*q.min*60,0)} C → n = Q/F = ${fm(ne,4)} mol.`,i+4)}
+  if(q.t==='vol'){const r2=calc(s,q.I,q.min);return numReto(`En ${s.n}, con ${fm(q.I,1)} A durante ${q.min} min, ¿qué volumen (mL, a 25 °C y 1 atm) de ${s.an.prod} se desprende en el ánodo?`,r2.va,[r2.va*2,r2.va/2,r2.vc,r2.va*4],'mL',0,`n(e⁻) = ${fm(r2.ne,4)} mol → n(${s.an.prod}) = n(e⁻)/${s.an.ne} = ${fm(r2.na,5)} mol → V = n × 24,47 L/mol = ${fm(r2.va,0)} mL.`,i+5)}return q});
+ el.innerHTML=grid(panel('🎛️ Celda electrolítica',lab('Sustancia')+sel('el_s',SS.map((s,i)=>[i,s.n]),0)+rng('el_I','Corriente (A)',0.5,5,S.I,0.5)+rng('el_t','Tiempo (min)',1,120,S.t,1)+'<div id="el_o" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'+(RT.length?rhold('el2'):'<div id="el2_rt"></div><div id="el2_fb"></div>')),
+  panel('📈 Producto en el cátodo','<canvas id="el_cv" style="width:100%;display:block"></canvas>')+'<div id="el_tl"></div>');
+ const U=mkRetoUI(el,RT,ctx,'el2');
+ const draw=()=>{const s=SS[S.i],r=calc(s,S.I,S.t),gas=s.cat.gas,fy=t=>{const q=calc(s,S.I,t);return gas?q.vc:q.mc},ymax=Math.max(fy(120),1e-6);S.seen[S.i]=1;
+  SIM.plot($(el,'#el_cv'),{h:260,xmin:0,xmax:120,ymin:0,ymax:ymax*1.05,xl:'Tiempo (min)',yl:gas?'Volumen de '+s.cat.prod+' (mL)':'Masa de '+s.cat.prod+' (g)',series:[{f:fy,color:'#2563eb'}],pts:[{x:S.t,y:fy(S.t),color:'#dc2626',fill:'#dc2626',label:fm(fy(S.t),gas?0:3)+(gas?' mL':' g')}]});
+  $(el,'#el_o').innerHTML=`${esc(s.n)}<br>Carga: Q = I·t = <b>${fm(S.I*S.t*60,0)} C</b><br>Electrones: <b>${fm(r.ne,4)} mol</b><br><b>Cátodo (−):</b> ${esc(s.cat.rx)}<br>→ ${gas?fm(r.vc,0)+' mL de '+s.cat.prod:fm(r.mc,3)+' g de '+s.cat.prod}<br><b>Ánodo (+):</b> ${esc(s.an.rx)}<br>→ ${fm(r.va,0)} mL de ${s.an.prod}`;
+  $(el,'#el_tl').innerHTML=tiles([['Carga',fm(S.I*S.t*60,0)+' C','#2563eb'],['n(e⁻)',fm(r.ne,4)+' mol','#16a34a'],['Sustancias vistas',Object.keys(S.seen).length,'#f59e0b']])};
+ $(el,'#el_s').onchange=e=>{S.i=+e.target.value;ctx.act('cambia',{});if(Object.keys(S.seen).length>=2)ctx.act('sustancia_nueva',{});draw()};
+ [['el_I','I'],['el_t','t']].forEach(([id,k])=>$(el,'#'+id).oninput=e=>{S[k]=+e.target.value;$(el,'#'+id+'v').textContent=S[k];ctx.act('cambia',{});draw()});
+ draw();U.draw();return{reset(){S.seen={};draw();U.reset()}}};
+
+/* INTEGRA: casos aplicados que combinan varios temas */
+E.integra=(el,cfg,ctx)=>{const CS=cfg.casos;const S={i:0,done:{}};
+ el.innerHTML=grid(panel('🎛️ Caso aplicado',lab('Elige un caso')+sel('in_s',CS.map((c,i)=>[i,c.n]),0)+'<div id="in_t" style="margin-top:8px;font-size:13.5px;line-height:1.6"></div>'),panel('🧩 Retos del caso',rhold('in2'))+'<div id="in_tl"></div>');
+ let U=null;const ctx2={act:(n,d)=>{if(n==='todo_ok'){if(!S.done[S.i]){S.done[S.i]=1;ctx.act('caso_ok',{});if(Object.keys(S.done).length>=CS.length)ctx.act('todo_ok',{})}}else ctx.act(n,d)},obs:ctx.obs};
+ const mk=()=>{const c=CS[S.i];$(el,'#in_t').innerHTML='<b>'+esc(c.n)+'</b><br>'+c.texto;U=mkRetoUI(el,c.retos,ctx2,'in2');el.__rt=c.retos;U.draw();$(el,'#in_tl').innerHTML=tiles([['Casos resueltos',Object.keys(S.done).length+' / '+CS.length,'#16a34a']])};
+ $(el,'#in_s').onchange=e=>{S.i=+e.target.value;$(el,'#in2_fb').textContent='';mk();ctx.act('caso_visto',{})};
+ mk();return{reset(){S.done={};$(el,'#in2_fb').textContent='';mk()}}};
+
 E._ELEM=ELEM;E._shells=shells;
 return E;})();
