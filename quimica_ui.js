@@ -12,7 +12,7 @@ const lab=c=>LB.find(x=>x.c===c);
 function init(env){ENV=env}
 async function load(){
   if(!window.QMOT)await loadScript('quimica_motor.js?v=7');
-  if(!LB.length){if(!window.QUI_G6)await loadScript('quimica_g6.js?v=3');if(!window.QUI_G7)await loadScript('quimica_g7.js?v=1');if(!window.QUI_G8)await loadScript('quimica_g8.js?v=1');if(!window.QUI_G9)await loadScript('quimica_g9.js?v=2');if(!window.QUI_G10)await loadScript('quimica_g10.js?v=1');if(!window.QUI_G11)await loadScript('quimica_g11.js?v=1');LB=[].concat(window.QUI_G6||[],window.QUI_G7||[],window.QUI_G8||[],window.QUI_G9||[],window.QUI_G10||[],window.QUI_G11||[])}
+  if(!LB.length){if(!window.QUI_G6)await loadScript('quimica_g6.js?v=4');if(!window.QUI_G7)await loadScript('quimica_g7.js?v=1');if(!window.QUI_G8)await loadScript('quimica_g8.js?v=1');if(!window.QUI_G9)await loadScript('quimica_g9.js?v=3');if(!window.QUI_G10)await loadScript('quimica_g10.js?v=1');if(!window.QUI_G11)await loadScript('quimica_g11.js?v=1');LB=[].concat(window.QUI_G6||[],window.QUI_G7||[],window.QUI_G8||[],window.QUI_G9||[],window.QUI_G10||[],window.QUI_G11||[])}
   await progreso()}
 async function progreso(){PR={};try{const r=await ENV.sb.from('lab_practica').select('skill,puntaje,total').eq('user_id',ENV.M.id).eq('lab','quimica');
   (r.data||[]).forEach(x=>{const p=PR[x.skill]||(PR[x.skill]={best:0,total:x.total,n:0});p.n++;if(x.total&&x.puntaje/x.total>=p.best/(p.total||1)){p.best=x.puntaje;p.total=x.total}})}catch(_){}}
