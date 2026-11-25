@@ -1,0 +1,100 @@
+/* AULA360 — Motores del catálogo de Física (modelos propios con las leyes físicas reales; sin dependencias externas).
+   Motor principal: «banco» = banco de experimentos parametrizado (controles → modelo físico → instrumentos con resolución y ruido
+   → tabla → gráfica y ajuste → tareas verificables → retos). Cada laboratorio declara sus límites. */
+window.FMOT=(function(){
+const E={};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fm=(v,d)=>isFinite(v)?(+v).toFixed(d==null?2:d).replace('.',','):'—';
+const $=(el,s)=>el.querySelector(s);
+const btn=(id,t,c)=>`<button id="${id}" class="sim-btn" style="background:${c||'#4f46e5'}">${t}</button>`;
+const lab=t=>`<label style="display:block;font-size:12px;font-weight:800;margin-top:8px">${t}</label>`;
+const rnd=s=>{let a=s>>>0||1;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}};
+const gauss=r=>{let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+const quant=(x,res)=>res?Math.round(x/res)*res:x;
+const dec=res=>res>=1?0:Math.min(4,Math.max(0,Math.ceil(-Math.log10(res)-1e-9)));
+const panel=(t,h)=>`<div class="sim-panel"><div class="sim-h">${t}</div>${h}</div>`;
+/* ---------- retos de opción múltiple ---------- */
+const mkRetos=(el,RT,ctx,P)=>{const S={k:0,ok:0};
+ const draw=()=>{const d=$(el,'#'+P+'_rt'),r=RT[S.k];if(!d)return;if(!RT.length){d.style.display='none';return}
+  if(!r){d.innerHTML='🏁 <b>¡Retos completados!</b> '+S.ok+' de '+RT.length;return}
+  d.innerHTML=`<b>Reto ${S.k+1}/${RT.length}:</b> ${esc(r.q)}<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${r.o.map((o,i)=>`<button data-o="${i}" class="sim-btn" style="background:#7c3aed">${esc(o)}</button>`).join('')}</div>`;
+  d.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{const ok=+b.dataset.o===r.ok,f=$(el,'#'+P+'_fb');if(ok){S.ok++;ctx.act('reto_ok',{});f.style.color='#16a34a'}else f.style.color='#dc2626';f.textContent=(ok?'✅ ':'❌ ')+(r.why||'');
+   ctx.obs('Reto '+(S.k+1)+': '+(ok?'acierto':'error'));S.k++;if(S.k>=RT.length&&S.ok>=Math.ceil(RT.length*0.7))ctx.act('todo_ok',{});draw()})};
+ return{draw,reset(){S.k=0;S.ok=0;const f=$(el,'#'+P+'_fb');if(f)f.textContent='';draw()}}};
+/* ---------- ajuste lineal ---------- */
+const fit=(xs,ys,origen)=>{const n=xs.length;if(n<2)return null;
+ if(origen){let sxy=0,sxx=0;xs.forEach((x,i)=>{sxy+=x*ys[i];sxx+=x*x});return sxx?{m:sxy/sxx,b:0}:null}
+ const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;let sxy=0,sxx=0;xs.forEach((x,i)=>{sxy+=(x-mx)*(ys[i]-my);sxx+=(x-mx)*(x-mx)});if(!sxx)return null;const m=sxy/sxx;return{m,b:my-m*mx}};
+/* ---------- dibujos (canvas 2D) ---------- */
+const D={};
+const line=(g,x1,y1,x2,y2,c,w)=>{g.strokeStyle=c||'#334155';g.lineWidth=w||1;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()};
+const txt=(g,t,x,y,c,s,al)=>{g.fillStyle=c||'#0f172a';g.font=(s||12)+'px sans-serif';g.textAlign=al||'left';g.fillText(t,x,y)};
+const rect=(g,x,y,w,h,f,s)=>{if(f){g.fillStyle=f;g.fillRect(x,y,w,h)}if(s){g.strokeStyle=s;g.strokeRect(x,y,w,h)}};
+const circ=(g,x,y,r,f,s)=>{g.beginPath();g.arc(x,y,r,0,7);if(f){g.fillStyle=f;g.fill()}if(s){g.strokeStyle=s;g.stroke()}};
+D.barras=(g,W,H,v,o,S)=>{const ks=(S.cfg.outs||[]).filter(k=>isFinite(o[k.id]));const w=Math.min(60,(W-40)/Math.max(1,ks.length)-10);ks.forEach((k,i)=>{const mx=k.max||Math.max(1,Math.abs(o[k.id])*1.5),h=Math.max(2,Math.min(1,Math.abs(o[k.id])/mx)*(H-60)),x=30+i*(w+10);rect(g,x,H-30-h,w,h,'#818cf8');txt(g,fm(o[k.id],2),x+w/2,H-34-h,'#1e1b4b',11,'center');txt(g,k.n.slice(0,12),x+w/2,H-12,'#475569',10,'center')})};
+D.regla=(g,W,H,v,o)=>{const L=o.L,vm=o._vmax||25,x0=30,sc=(W-60)/vm;rect(g,x0,70,vm*sc,34,'#fde68a','#92400e');for(let i=0;i<=vm*10;i++){const x=x0+i*sc/10,h=i%10===0?16:i%5===0?11:6;line(g,x,70,x,70+h,'#78350f',1);if(i%10===0&&(vm<=30||i%50===0))txt(g,String(i/10),x,126,'#78350f',10,'center')}
+ rect(g,x0+(o._x0||0)*sc,28,L*sc,32,o._c||'#60a5fa','#1e3a8a');txt(g,o._n||'Objeto',x0+(o._x0||0)*sc+L*sc/2,48,'#fff',11,'center');
+ if(o._cal){rect(g,x0+(o._x0||0)*sc,140,L*sc,10,'#94a3b8');rect(g,x0+(o._x0||0)*sc+L*sc,140,10,26,'#64748b');txt(g,'calibrador',x0,175,'#64748b',11)}};
+D.probeta=(g,W,H,v,o)=>{const cx=W/2-70,top=20,hh=H-50,w=50,V0=o._V0,V2=o._V2,cap=o._cap||100;[[cx,V0,'Antes'],[cx+150,V2,'Después']].forEach(([x,V,t])=>{rect(g,x,top,w,hh,null,'#334155');const h=V/cap*hh;rect(g,x+1,top+hh-h,w-2,h,'#7dd3fc');for(let i=0;i<=10;i++){const y=top+hh-i*hh/10;line(g,x,y,x+(i%5===0?14:8),y,'#334155');if(i%2===0)txt(g,String(i*cap/10),x-6,y+4,'#334155',10,'right')}txt(g,t,x+w/2,H-8,'#475569',11,'center')});
+ circ(g,cx+175,top+hh-14,10,o._c||'#78716c','#1f2937');txt(g,o._n||'Cuerpo',cx+175,top-4,'#475569',11,'center')};
+D.balanza=(g,W,H,v,o)=>{rect(g,W/2-90,H-60,180,40,'#cbd5e1','#64748b');rect(g,W/2-60,H-80,120,16,'#94a3b8');rect(g,W/2-55,H-130,110,32,'#0f172a');txt(g,fm(o.m,1)+' g',W/2,H-107,'#4ade80',20,'center');const s=o._side||40;rect(g,W/2-s/2,H-80-s,s,s,o._c||'#a16207','#451a03');txt(g,o._n||'',W/2,H-85-s,'#475569',11,'center')};
+D.torre=(g,W,H,v,o)=>{const ls=o._layers||[],x=W/2-45,top=20,hh=H-50;rect(g,x,top,90,hh,null,'#334155');let y=top+hh;const tot=ls.reduce((a,l)=>a+l.V,0),sc=Math.min(hh/Math.max(tot,1),hh/60);ls.forEach(l=>{const h=l.V*sc;y-=h;rect(g,x+1,y,88,h,l.c);txt(g,l.n+' ('+fm(l.rho,2)+' g/mL)',x+100,y+h/2+4,'#334155',11)});if(!ls.length)txt(g,'Agrega líquidos',W/2,H/2,'#64748b',13,'center')};
+D.curva=(g,W,H,v,o,S)=>{const x0=46,y0=H-34,w=W-70,h=H-60,tm=S.cfg.tmax||30,Tm=S.cfg.Tmax||130,Tn=S.cfg.Tmin||-20;line(g,x0,y0,x0+w,y0);line(g,x0,y0,x0,y0-h);const X=t=>x0+t/tm*w,Y=T=>y0-(T-Tn)/(Tm-Tn)*h;
+ g.strokeStyle='#cbd5e1';g.beginPath();for(let t=0;t<=tm;t+=.25){const T=S.cfg.curvaT(t,v);t?g.lineTo(X(t),Y(T)):g.moveTo(X(t),Y(T))}g.stroke();
+ g.strokeStyle='#4f46e5';g.lineWidth=2;g.beginPath();for(let t=0;t<=v.t+1e-9;t+=.25){const T=S.cfg.curvaT(t,v);t?g.lineTo(X(t),Y(T)):g.moveTo(X(t),Y(T))}g.stroke();g.lineWidth=1;circ(g,X(v.t),Y(o.T),5,'#ef4444');txt(g,'t (min)',x0+w,y0+14,'#475569',10,'right');txt(g,'T (°C)',x0+4,12,'#475569',10);txt(g,o._fase||'',x0+w/2,16,'#0f172a',12,'center')};
+D.anillo=(g,W,H,v,o)=>{const cx=W/2,cy=H/2,r=o.D/20*55,rr=o._ring/20*55;circ(g,cx,cy,rr+8,null,'#475569');circ(g,cx,cy,rr,'#f8fafc','#475569');g.lineWidth=1;circ(g,cx,cy,r,o.pasa?'#34d399':'#f87171','#1f2937');txt(g,o.pasa?'La esfera PASA por el anillo':'La esfera NO pasa',cx,H-14,o.pasa?'#047857':'#b91c1c',13,'center');txt(g,'T = '+fm(v.T,0)+' °C',cx,18,'#334155',12,'center')};
+D.varillas=(g,W,H,v,o,S)=>{(S.cfg.varillas||[]).forEach((r,i)=>{const y=24+i*42,L=o[r.id],sc=(W-120)/6;rect(g,60,y,6*sc,16,'#cbd5e1','#64748b');rect(g,60,y,Math.min(6,L)*sc,16,r.c);txt(g,r.n,6,y+13,'#334155',11);txt(g,fm(L,1)+' cm',W-52,y+13,'#334155',11)})};
+D.termo=(g,W,H,v,o)=>{const x=W/2-10,top=14,hh=H-70;rect(g,x,top,20,hh,'#f1f5f9','#334155');circ(g,x+10,top+hh+16,18,'#ef4444','#334155');const h=Math.min(hh,Math.max(2,o._frac*hh));rect(g,x+6,top+hh-h,8,h+4,'#ef4444');for(let i=0;i<=10;i++)line(g,x+20,top+hh-i*hh/10,x+28,top+hh-i*hh/10,'#334155');txt(g,'columna: '+fm(o.h,1)+' mm',x+40,top+hh/2,'#334155',13)};
+D.carga=(g,W,H,v,o)=>{const cx=W/2;circ(g,cx-80,H/2,46,o.q<0?'#93c5fd':'#fca5a5','#1e3a8a');txt(g,o.q<0?'−':'+',cx-80,H/2+8,'#111',26,'center');txt(g,'globo',cx-80,H/2+66,'#475569',11,'center');const n=Math.min(12,Math.round(Math.abs(o.F)*4));for(let i=0;i<12;i++){const y=H-24-(i<n?Math.min(70,Math.abs(o.F)*8):0);rect(g,cx+20+i*14,y,8,4,'#fde047','#a16207')}txt(g,'papelitos atraídos: '+n,cx+90,24,'#334155',12,'center')};
+D.electroscopio=(g,W,H,v,o)=>{const cx=W/2,cy=H/2+10;rect(g,cx-50,cy-30,100,100,'#e0f2fe','#334155');line(g,cx,cy-60,cx,cy-10,'#334155',3);circ(g,cx,cy-66,8,'#94a3b8','#334155');const a=(o.th||0)*Math.PI/180;line(g,cx,cy-10,cx-Math.sin(a)*50,cy-10+Math.cos(a)*50,'#facc15',4);line(g,cx,cy-10,cx+Math.sin(a)*50,cy-10+Math.cos(a)*50,'#facc15',4);txt(g,'θ = '+fm(o.th,0)+'°',cx,H-8,'#334155',13,'center')};
+D.iman=(g,W,H,v,o)=>{const cy=H/2;rect(g,30,cy-18,70,36,'#ef4444');rect(g,100,cy-18,70,36,'#2563eb');txt(g,'N',65,cy+6,'#fff',16,'center');txt(g,'S',135,cy+6,'#fff',16,'center');const x=170+v.d*((W-260)/15);rect(g,x,cy-14,28,28,o._c||'#94a3b8','#334155');txt(g,o._n||'',x+14,cy+34,'#334155',10,'center');txt(g,'d = '+fm(v.d,1)+' cm',W/2,16,'#334155',12,'center');if(Math.abs(o.F)>0.01)txt(g,(o.F>0?'atracción ':'repulsión ')+fm(Math.abs(o.F),1)+' mN',W/2,H-10,'#0f172a',13,'center')};
+D.campo=(g,W,H,v,o)=>{const cx=W/2,cy=H/2;rect(g,cx-50,cy-14,50,28,'#ef4444');rect(g,cx,cy-14,50,28,'#2563eb');for(let k=1;k<=4;k++){g.strokeStyle='rgba(99,102,241,'+(0.9-k*0.15)+')';g.beginPath();g.ellipse(cx,cy,60+k*30,18+k*16,0,0,7);g.stroke()}const x=cx+50+v.r*((W/2-70)/16);circ(g,x,cy,9,'#f8fafc','#334155');line(g,x-8,cy,x+8,cy,'#ef4444',3);txt(g,'r = '+fm(v.r,1)+' cm · B = '+fm(o.B,2)+' mT',W/2,H-10,'#0f172a',12,'center')};
+D.brujula=(g,W,H,v,o)=>{const cx=W/2,cy=H/2+6;circ(g,cx,cy,72,'#f8fafc','#334155');txt(g,'N',cx,cy-56,'#dc2626',14,'center');txt(g,'S',cx,cy+66,'#334155',14,'center');const a=(o.err||0)*Math.PI/180;line(g,cx-Math.sin(a)*-50,cy-Math.cos(a)*50,cx+Math.sin(a)*-50,cy+Math.cos(a)*50,'#334155',1);line(g,cx,cy,cx+Math.sin(a)*54,cy-Math.cos(a)*54,'#ef4444',5);line(g,cx,cy,cx-Math.sin(a)*54,cy+Math.cos(a)*54,'#2563eb',5);txt(g,'desviación del norte: '+fm(Math.abs(o.err),0)+'°',cx,H-8,'#0f172a',12,'center')};
+D.convec=(g,W,H,v,o)=>{const x=W/2-90;rect(g,x,40,180,H-80,'#e0f2fe','#334155');rect(g,x,40,90,H-80,'rgba(239,68,68,.35)');rect(g,x+90,40,90,H-80,'rgba(59,130,246,.35)');const n=Math.max(1,Math.min(7,Math.round(o.u*3)));for(let i=0;i<n;i++){const y=60+i*((H-140)/n);line(g,x+45,H-60-i*8,x+45,60+i*8,'#b91c1c',2);line(g,x+135,60+i*8,x+135,H-60-i*8,'#1d4ed8',2)}txt(g,'caliente',x+45,H-46,'#b91c1c',12,'center');txt(g,'fría',x+135,H-46,'#1d4ed8',12,'center');txt(g,'ΔT = '+fm(v.dT,0)+' °C',W/2,24,'#334155',12,'center')};
+E._D=D;E._util={esc,fm,$,btn,lab,rnd,gauss,quant,dec,panel,mkRetos,fit,line,txt,rect,circ};
+/* ================= MOTOR BANCO ================= */
+E.banco=(el,cfg,ctx)=>{
+ const VR=cfg.vars||[],OUT=cfg.outs||[],T=cfg.tareas||[],G=cfg.graf,seed0=cfg.seed||(Math.random()*1e9|0);
+ const S={v:{},rows:[],ti:0,ok:{},msg:'',n:0,last:null,play:0,cfg,rd:{},nc:0};
+ VR.forEach(x=>S.v[x.id]=x.v!=null?x.v:(x.tipo==='sel'?x.opts[0][0]:x.min));
+ const num=x=>VR.find(y=>y.id===x.id).tipo==='sel'?x:+x;
+ const model=()=>cfg.fx(S.v,S);
+ const outInfo=id=>OUT.find(o=>o.id===id)||{id,n:id,u:''};
+ const read=o=>{const R={},rr=rnd(seed0+S.n*131+7);OUT.forEach(k=>{if(o[k.id]==null)return;const res=(o._res&&o._res[k.id])||k.res||0,sd=(o._sd&&o._sd[k.id]!=null)?o._sd[k.id]:(k.sd!=null?k.sd:(res?res*0.4:0));R[k.id]=quant(o[k.id]+(sd?gauss(rr)*sd:0),res);R['_d'+k.id]=dec(res)});return R};
+ const fmtR=(k,R)=>fm(R[k.id],R['_d'+k.id]!=null?R['_d'+k.id]:(k.d!=null?k.d:2));
+ el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+  <div>${panel('🎛️ Controles',`<div id="fb_ctl"></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${cfg.sinMedir?'':btn('fb_m','📏 Medir y registrar','#16a34a')}${cfg.anim?btn('fb_p','▶ Simular','#4f46e5'):''}${cfg.sinMedir?'':btn('fb_c','🗑 Borrar tabla','#64748b')}</div><div id="fb_rd" style="margin-top:10px;font-size:13px"></div>`)}</div>
+  <div>${panel('🔬 Banco de experimentos',`<canvas id="fb_cv" width="520" height="${cfg.alto||260}" style="width:100%;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"></canvas><div id="fb_lv" style="font-size:12px;color:#475569;margin-top:4px"></div>`)}</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px"><div>${cfg.sinMedir?'':panel('📋 Tabla de datos','<div id="fb_tb" style="max-height:200px;overflow:auto;font-size:12px"></div>')}${G?panel('📈 Gráfica','<div id="fb_gr"></div>'):''}</div>
+  <div>${panel('✅ Tareas','<div id="fb_tk"></div>')}<div id="fb_rt" style="margin-top:10px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:8px;font-size:13px"></div><div id="fb_fb" style="margin-top:8px;font-size:13px;font-weight:700"></div></div></div>`;
+ const U=mkRetos(el,cfg.retos||[],ctx,'fb');
+ const cv=$(el,'#fb_cv'),g=cv.getContext('2d');
+ const draw=()=>{const o=model();g.clearRect(0,0,cv.width,cv.height);const d=D[cfg.vis]||D.barras;try{d(g,cv.width,cv.height,S.v,o,S)}catch(x){D.barras(g,cv.width,cv.height,o,o,S)}
+  $(el,'#fb_lv').textContent=cfg.leyenda?cfg.leyenda(S.v,o):'';return o};
+ const ctl=()=>{$(el,'#fb_ctl').innerHTML=VR.map(x=>x.tipo==='sel'?lab(esc(x.n))+`<select data-v="${x.id}" style="width:100%;padding:7px;border:1.5px solid #cbd5e1;border-radius:9px;font-weight:700;margin-top:3px">${x.opts.map(o=>`<option value="${esc(o[0])}" ${String(o[0])===String(S.v[x.id])?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`:`<label style="display:block;font-size:12px;font-weight:800;margin-top:8px">${esc(x.n)}: <b id="fbv_${x.id}">${fm(S.v[x.id],dec(x.step||1))}</b> ${esc(x.u||'')}</label><input data-v="${x.id}" type="range" min="${x.min}" max="${x.max}" step="${x.step||1}" value="${S.v[x.id]}" style="width:100%">`).join('');
+  el.querySelectorAll('#fb_ctl [data-v]').forEach(i=>{const f=()=>{const x=VR.find(y=>y.id===i.dataset.v);S.v[x.id]=x.tipo==='sel'?(isNaN(+i.value)||x.txt?i.value:+i.value):+i.value;const b=$(el,'#fbv_'+x.id);if(b)b.textContent=fm(S.v[x.id],dec(x.step||1));ctx.act('cambia',{});draw()};i.oninput=f;i.onchange=f})};
+ const tabla=()=>{const cols=cfg.tabla||[];const h='<tr>'+cols.map(c=>`<th style="padding:3px 6px;text-align:left;border-bottom:2px solid #e2e8f0">${esc((VR.find(x=>x.id===c)||outInfo(c)).n)}${(VR.find(x=>x.id===c)||outInfo(c)).u?' ('+esc((VR.find(x=>x.id===c)||outInfo(c)).u)+')':''}</th>`).join('')+'</tr>';
+  if(!$(el,'#fb_tb'))return;$(el,'#fb_tb').innerHTML=S.rows.length?`<table style="border-collapse:collapse;width:100%">${h}${S.rows.map(r=>'<tr>'+cols.map(c=>`<td style="padding:3px 6px;border-top:1px solid #e2e8f0">${esc(r[c])}</td>`).join('')+'</tr>').join('')}</table>`:'<span style="color:#64748b">Aún no hay medidas. Pulsa «Medir y registrar».</span>'};
+ const grafica=()=>{if(!G)return;const pts=S.rows.map(r=>[r._gx,r._gy]).filter(p=>isFinite(p[0])&&isFinite(p[1]));const box=$(el,'#fb_gr');if(pts.length<1){box.innerHTML='<span style="color:#64748b;font-size:12px">Registra medidas para ver la gráfica.</span>';return}
+  const W=360,H=210,m=38,xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),mx=Math.max(...xs,1e-9)*1.1,my=Math.max(...ys.map(Math.abs),1e-9)*1.1,mi=Math.min(0,...ys)*1.1;const X=x=>m+x/mx*(W-m-10),Y=y=>H-m-(y-mi)/(my-mi)*(H-m-10);
+  const f=pts.length>1?fit(xs,ys,G.origen):null;let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;background:#fff;border:1px solid #e2e8f0;border-radius:8px"><line x1="${m}" y1="${H-m}" x2="${W-6}" y2="${H-m}" stroke="#334155"/><line x1="${m}" y1="6" x2="${m}" y2="${H-m}" stroke="#334155"/><text x="${W-6}" y="${H-10}" font-size="10" text-anchor="end" fill="#475569">${esc(G.nx)}</text><text x="${m+4}" y="12" font-size="10" fill="#475569">${esc(G.ny)}</text>`;
+  [0,.5,1].forEach(k=>{s+=`<text x="${m-4}" y="${Y(mi+(my-mi)*k)+3}" font-size="9" text-anchor="end" fill="#64748b">${fm(mi+(my-mi)*k,2)}</text><text x="${X(mx*k)}" y="${H-m+12}" font-size="9" text-anchor="middle" fill="#64748b">${fm(mx*k,2)}</text>`});
+  if(f)s+=`<line x1="${X(0)}" y1="${Y(f.b)}" x2="${X(mx)}" y2="${Y(f.m*mx+f.b)}" stroke="#a5b4fc" stroke-width="2"/>`;pts.forEach(p=>{s+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="#4f46e5"/>`});s+='</svg>';
+  box.innerHTML=s+(f?`<div style="font-size:12px;margin-top:4px">Ajuste lineal: <b>pendiente = ${fm(f.m,3)}</b>${G.origen?'':' · intercepto = '+fm(f.b,3)} ${esc(G.u||'')}</div>`:'')};
+ const tareas=()=>{const t=T[S.ti];const box=$(el,'#fb_tk');if(!t){box.innerHTML='<span style="color:#64748b">Este laboratorio no tiene tareas; haz los retos.</span>';return}
+  const done=Object.keys(S.ok).length;box.innerHTML=`<div style="font-size:12px;color:#64748b">Tarea ${S.ti+1} de ${T.length} · completadas: ${done}</div><div style="margin:6px 0;font-size:13px"><b>${esc(t.txt)}</b></div>${(t.t==='valor')?`<input id="fb_in" type="number" step="any" placeholder="Tu respuesta${t.u?' ('+esc(t.u)+')':''}" value="${S.rd[S.ti]!=null?S.rd[S.ti]:''}" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:9px">`:''}<div style="display:flex;gap:6px;margin-top:8px">${btn('fb_ck','Comprobar','#4f46e5')}${btn('fb_nx','Siguiente tarea ▶','#64748b')}</div><div id="fb_msg" style="margin-top:6px;font-size:13px;font-weight:700">${esc(S.msg)}</div>`;
+  $(el,'#fb_ck').onclick=()=>{const tt=T[S.ti];let ok=false,msg='';
+   if(tt.t==='valor'){const x=+$(el,'#fb_in').value;S.rd[S.ti]=$(el,'#fb_in').value===''?null:x;if($(el,'#fb_in').value===''){msg='Escribe tu respuesta.'}else{const a=typeof tt.ans==='function'?tt.ans(S.v,S):tt.ans;const tol=tt.tolA!=null?tt.tolA:Math.abs(a)*(tt.tol||0.05);ok=Math.abs(x-a)<=tol;msg=ok?'Correcto: '+fm(a,3)+(tt.u?' '+tt.u:'')+'.':'No coincide. Revisa tus medidas y el cálculo'+(tt.pista?': '+tt.pista:'.')}}
+   else if(tt.t==='tabla'){ok=S.rows.length>=tt.n;msg=ok?'Tabla completa: '+S.rows.length+' medidas.':'Registra al menos '+tt.n+' medidas (llevas '+S.rows.length+').'}
+   else if(tt.t==='meta'){const r=tt.check(S.v,model(),S);ok=!!r.ok;msg=r.msg||(ok?'Logrado.':'Aún no.')}
+   S.msg=(ok?'✅ ':'❌ ')+msg;if(ok&&!S.ok[S.ti]){S.ok[S.ti]=1;ctx.act('tarea_ok',{});ctx.obs('Tarea '+(S.ti+1)+' lograda')}tareas()};
+  $(el,'#fb_nx').onclick=()=>{S.ti=(S.ti+1)%T.length;S.msg='';tareas()}};
+ const lectura=R=>{$(el,'#fb_rd').innerHTML=R?'<b>Lectura de los instrumentos:</b><br>'+OUT.filter(k=>R[k.id]!=null&&!k.oculto).map(k=>esc(k.n)+': <b>'+fmtR(k,R)+'</b> '+esc(k.u||'')).join('<br>'):''};
+ if(!cfg.sinMedir)$(el,'#fb_m').onclick=()=>{const o=model();S.n++;const R=read(o);const row={};(cfg.tabla||[]).forEach(c=>{if(S.v[c]!==undefined){const x=VR.find(y=>y.id===c);row[c]=x&&x.tipo==='sel'?((x.opts.find(q=>String(q[0])===String(S.v[c]))||[])[1]||S.v[c]):fm(S.v[c],dec((x&&x.step)||1))}else if(R[c]!=null)row[c]=fmtR(outInfo(c),R)});
+  const gv=c=>R[c]!=null?R[c]:S.v[c];if(G){row._gx=G.fx?G.fx(gv(G.x),S.v,R):gv(G.x);row._gy=G.fy?G.fy(gv(G.y),S.v,R):gv(G.y)}S.rows.push(row);S.last=R;lectura(R);tabla();grafica();ctx.act('mide',{});ctx.obs('Medida '+S.rows.length+': '+OUT.filter(k=>R[k.id]!=null&&!k.oculto).map(k=>k.n+' = '+fmtR(k,R)+(k.u?' '+k.u:'')).join(', '))};
+ if(!cfg.sinMedir)$(el,'#fb_c').onclick=()=>{S.rows=[];S.last=null;lectura(null);tabla();grafica()};
+ let raf=0;const stop=()=>{if(raf)cancelAnimationFrame(raf);raf=0;S.play=0;const b=$(el,'#fb_p');if(b)b.textContent='▶ Simular'};
+ if(cfg.anim){$(el,'#fb_p').onclick=()=>{if(raf){stop();return}const a=cfg.anim,x=VR.find(y=>y.id===a.v);S.v[a.v]=x.min;const t0=performance.now();ctx.act('simula',{});$(el,'#fb_p').textContent='⏸ Pausar';const st=n=>{const f=Math.min(1,(n-t0)/(a.dur||4000));S.v[a.v]=x.min+(x.max-x.min)*f;const b=$(el,'#fbv_'+a.v),i=$(el,'#fb_ctl [data-v="'+a.v+'"]');if(b)b.textContent=fm(S.v[a.v],dec(x.step||1));if(i)i.value=S.v[a.v];draw();if(f<1)raf=requestAnimationFrame(st);else stop()};raf=requestAnimationFrame(st)}}
+ ctl();tabla();grafica();tareas();draw();U.draw();
+ return{pause:stop,reset(){stop();S.rows=[];S.ok={};S.ti=0;S.msg='';S.last=null;S.rd={};VR.forEach(x=>S.v[x.id]=x.v!=null?x.v:(x.tipo==='sel'?x.opts[0][0]:x.min));ctl();lectura(null);tabla();grafica();tareas();draw();U.reset()}}};
+return E;})();
