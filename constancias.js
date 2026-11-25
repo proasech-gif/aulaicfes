@@ -170,7 +170,7 @@ function carnes(l,c){
       <div class="cd bk"><h4>${e(c.l1)}</h4>Este carné es personal e intransferible y acredita al portador como estudiante de la institución durante el año ${anio}.<br><br>Si lo encuentra, por favor devuélvalo a:<br><b>${e(c.l1)}</b><br>${e([c.l2,c.l3].filter(Boolean).join(' · '))}<div class="fx">${e(Z.rector||'')}<br>Rector(a)</div></div>`).join('')+`</div>`}
   return out}
 function certificado(p,c){
-  const cab=c.hoja?'':`<div class="lh">${c.logo?`<img src="${e(c.logo)}" alt="">`:''}<div><b>${e(c.l1)}</b><br>${e(c.l2)}${c.l3?'<br>'+e(c.l3):''}</div></div>`;
+  const cab=c.hoja?'':`<div class="lh">${c.logo?`<img src="${e(c.logo)}" alt="">`:'<span class="nologo">Subir membrete</span>'}<div><b>${e(c.l1)}</b><br>${e(c.l2)}${c.l3?'<br>'+e(c.l3):''}</div></div>`;
   const g=p.g!=null?gg(p.g,p.gr):'__________',a=Z.cert.anio;
   const cuerpo=Z.cert.tipo==='aprobo'?`cursó y <b>aprobó</b> el grado <b>${e(g)}</b> en el año lectivo <b>${a}</b>`:`se encuentra <b>matriculado(a)</b> y cursa el grado <b>${e(g)}</b> en el año lectivo <b>${a}</b>`;
   return`<div class="ce pg">${cab}<h2>EL RECTOR(A) DE ${e((c.l1||'LA INSTITUCIÓN').toUpperCase())}</h2><div class="rc">${Z.res?e(Z.res):''}</div>

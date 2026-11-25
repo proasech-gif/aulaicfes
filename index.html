@@ -13,6 +13,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>body{background:#f1f5f9;color:#0f172a;font-family:system-ui,sans-serif}.on{background:#4f46e5;color:#fff}.pop{animation:pop .4s ease}@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 #printarea{display:none}
+.nologo{display:inline-block;border:1px dashed #94a3b8;color:#64748b;font:italic 9pt Arial,sans-serif;padding:6px 10px;margin-right:8px;border-radius:6px}
+@media print{.nologo{display:none!important}}
+#printarea.doc12,#printarea.doc12 :where(p,li,td,th,span,div,b,i,u,small,a,label,dd,dt,blockquote){font-family:Arial,Helvetica,sans-serif!important;font-size:12pt!important;line-height:1.35}
+#printarea.doc12 :where(h1,h2,h3,h4){font-family:Arial,Helvetica,sans-serif!important;break-after:avoid;page-break-after:avoid}
+#printarea.doc12 :where(p,li,.cuerpo,td:not([style*='center']),dd){text-align:justify!important}
+#printarea.doc12 :where(p,li,td,th,span,div,b,i,a){overflow-wrap:break-word;word-break:normal;hyphens:auto;max-width:100%}
+#printarea.doc12 :where(tr,li,img,svg,figure,blockquote){break-inside:avoid;page-break-inside:avoid}
+#printarea.doc12 table{width:100%;table-layout:auto;border-collapse:collapse}
+#printarea.doc12 :where(.lh .l1){font-size:12pt!important}
 @media print{body>*:not(#printarea){display:none!important}#printarea{display:block!important;background:#fff}@page{size:A4;margin:12mm}}
 #printarea{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:10.5pt}
 #printarea .pg{page-break-after:always}
@@ -50,7 +59,7 @@ const HASH0=location.hash,REDIR=()=>location.origin+location.pathname;
 let sb=supabase.createClient('https://pmigzkhhqxzhspqmkbvf.supabase.co','sb_publishable_GZT40D67S2ICeD1LWOxbEQ_mimJCWlu');
 const IMG='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/question-images/';
 const LOGO='https://pmigzkhhqxzhspqmkbvf.supabase.co/storage/v1/object/public/school-logos/';
-const LGU=p=>p?LOGO+encodeURI(p):''; /* logo del colegio; si nadie lo ha subido NO se muestra ninguno */
+const LGU=p=>p?(String(p).startsWith('local:')?location.origin+'/'+String(p).slice(6):LOGO+encodeURI(p)):''; /* logo del colegio; si nadie lo ha subido NO se muestra ninguno */
 const MEDALS={first:['🥇','Primer Paso','Completar tu primer simulacro'],perfect:['🧠','Mente Brillante','100% de respuestas correctas'],clock:['⏱️','Contra el Reloj','Terminar con más de la mitad del tiempo restante'],streak:['🔥','Constante','Completar 3 simulacros'],high:['⭐','Alto Puntaje','Obtener 80 o más']};
 const isDir=()=>!!M&&(M.role==='rector'||M.role==='coordinador');
 const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -786,7 +795,7 @@ const fch=d=>new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',m
 const vl=n=>'ABCDEF'[n-1]||String(n);
 function lhHtml(h){
   const L=LH();if(L.hoja)return'';
-  return`<div class="lh">${L.logo?`<img src="${LGU(L.logo)}" style="height:${h}mm;width:auto">`:''}<div class="t"><div class="l1">${E(L.l1)}</div>${L.l2?`<div>${E(L.l2)}</div>`:''}${L.l3?`<div>${E(L.l3)}</div>`:''}</div></div>`;
+  return`<div class="lh">${L.logo?`<img src="${LGU(L.logo)}" style="height:${h}mm;width:auto">`:'<span class="nologo">Subir membrete</span>'}<div class="t"><div class="l1">${E(L.l1)}</div>${L.l2?`<div>${E(L.l2)}</div>`:''}${L.l3?`<div>${E(L.l3)}</div>`:''}</div></div>`;
 }
 function qHtml(q,i){
   if(q.image_path)return`<div class="q"><b>${i+1}.</b><img src="${IMG}${encodeURI(q.image_path)}"></div>`;
@@ -843,7 +852,7 @@ async function doPrint(html,opts){
     st.textContent=`@media print{@page{size:${P[0]}cm ${P[1]}cm;margin:0}#printarea{background:transparent!important;padding:0}}`;
     document.head.appendChild(st);
   }
-  a=document.createElement('div');a.id='printarea';a.innerHTML=html;document.body.appendChild(a);
+  a=document.createElement('div');a.id='printarea';a.innerHTML=html;if(!/class="[^"]*\b(hoja|cq|dp|cd|cdp|pt|obs)\b|hoja-bg|class="pg hoja/.test(html))a.classList.add('doc12');document.body.appendChild(a);
   await Promise.all([...a.querySelectorAll('img')].map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r;setTimeout(r,8000)})));
   window.onafterprint=()=>{const x=document.getElementById('printarea');if(x)x.remove();const y=document.getElementById('hoja-style');if(y)y.remove()};
   window.print();

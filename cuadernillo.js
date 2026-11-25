@@ -81,7 +81,7 @@ function html(spec){
   const run=`<div class="cq-run"><span>${e(spec.colegio||'')}</span><span>${e(spec.asignatura||'')}${spec.version?' · Cuadernillo '+e(spec.version):''}</span></div>`;
   const filas=[['Prueba',spec.titulo],['Asignatura / área',spec.asignatura],['Curso',spec.curso],['Fecha',spec.fecha],['Estudiante',spec.estudiante],['Documento',spec.documento],['Código',spec.codigo]].filter(r=>r[1]!=null&&r[1]!=='');
   const cover=`<div class="cq-page"><div class="cq-cover">
-    <div class="cq-brand">${spec.logo?`<img src="${e(spec.logo)}" alt="">`:''}<div class="t">${e(spec.colegio||'')}</div></div>
+    <div class="cq-brand">${spec.logo?`<img src="${e(spec.logo)}" alt="">`:'<span class="nologo">Subir membrete</span>'}<div class="t">${e(spec.colegio||'')}</div></div>
     <div class="cq-big">${e((spec.tipo||'Prueba').toUpperCase())}</div>
     <div class="cq-sub">${e(spec.asignatura||'')}</div>
     <table class="cq-id">${filas.map(r=>`<tr><td class="k">${e(r[0])}</td><td>${e(r[1])}</td></tr>`).join('')}</table>

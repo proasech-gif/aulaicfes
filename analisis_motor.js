@@ -154,7 +154,7 @@ function lecturaArea(a,A){
 }
 
 /* ============ 3. GRÁFICOS SVG ============ */
-const FONT="font-family:'Segoe UI',Arial,sans-serif";
+const FONT="font-family:Arial,Helvetica,sans-serif";
 function lc(o){
   const W=o.W||640,H=o.H||250,L=o.L||44,R=o.R||22,T=o.T||(o.leg===false?(o.titulo?22:14):40),B=o.B||34;
   const xs=o.xs,ys=o.series.flatMap(s=>s.pts.map(p=>p[1])).concat(o.extraY||[]).filter(v=>v!=null);
@@ -255,8 +255,8 @@ body{margin:0;background:#cbd5e1;font:10.6pt/1.5 'Segoe UI',Arial,Helvetica,sans
 h1{font-size:21pt;color:${C.navy};margin:0 0 2mm;line-height:1.15}
 h2{font-size:15pt;color:${C.navy};margin:0 0 1mm;border-left:3mm solid ${C.teal};padding-left:3mm;line-height:1.2}
 h3{font-size:11.8pt;color:${C.navy};margin:4mm 0 1.5mm}
-p{margin:0 0 2.2mm;text-align:justify}.sub{color:${C.mut};font-size:9.6pt;margin:0 0 4mm 6mm}
-table{border-collapse:collapse;width:100%;font-size:9.4pt;margin:1.5mm 0 3mm}
+p,li{margin:0 0 2.2mm;text-align:justify;font-family:Arial,Helvetica,sans-serif;font-size:12pt;line-height:1.35;overflow-wrap:break-word}.sub{color:${C.mut};font-size:9.6pt;margin:0 0 4mm 6mm}
+table{border-collapse:collapse;width:100%;font-size:10pt;font-family:Arial,Helvetica,sans-serif;margin:1.5mm 0 3mm}
 th{background:${C.navy};color:#fff;text-align:left;padding:1.6mm 2mm;font-weight:600}
 td{padding:1.5mm 2mm;border-bottom:.6pt solid ${C.line};vertical-align:top}
 tr:nth-child(even) td{background:#f8fafc}
@@ -264,7 +264,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin:3mm 0 4mm}
 .kpi{border:.8pt solid ${C.line};border-top:2.2mm solid ${C.navy};border-radius:2mm;padding:2.5mm 3mm;background:#fff}
 .kpi b{display:block;font-size:16pt;color:${C.navy};line-height:1.15}.kpi span{font-size:8.6pt;color:${C.mut}}
-.box{border-left:2.4mm solid ${C.teal};background:#f0fdfa;padding:2.5mm 3.5mm;margin:2mm 0 3mm;border-radius:0 2mm 2mm 0;font-size:10pt}
+.box{border-left:2.4mm solid ${C.teal};background:#f0fdfa;padding:2.5mm 3.5mm;margin:2mm 0 3mm;border-radius:0 2mm 2mm 0;font-size:12pt;text-align:justify}
 .box.w{border-color:${C.amber};background:#fffbeb}.box.r{border-color:${C.red};background:#fef2f2}.box.b{border-color:${C.blue};background:#eff6ff}
 ul{margin:0 0 2.5mm;padding-left:5mm}li{margin-bottom:1.3mm;text-align:justify}
 .tag{display:inline-block;color:#fff;border-radius:2mm;padding:.4mm 2mm;font-size:7.8pt;font-weight:700;white-space:nowrap}
@@ -616,7 +616,7 @@ function build(r,ctx){
 
   /* --- ensamblaje: portada, índice, numeración de capítulos y de páginas --- */
   const out=[];
-  const logo=Lh.logo?`<img src="${e(Lh.logo)}" alt="">`:'';
+  const logo=Lh.logo?`<img src="${e(Lh.logo)}" alt="">`:'<span class="nologo">Subir membrete</span>';
   out.push({s:'portada',html:`<div class="sheet cover"><div class="top">${logo}<div><div style="font-weight:700;font-size:12pt">${e(Lh.l1||'')}</div><div style="font-size:8.6pt;opacity:.85">${e([Lh.l2,Lh.l3].filter(Boolean).join(' · '))}</div></div></div><div class="art">${geometria()}</div><div class="tit"><div class="k">RESULTADOS SABER 11 · ANÁLISIS ESTADÍSTICO · DIAGNÓSTICO · PMI</div><h1>Informe integral de desempeño académico y mejoramiento institucional</h1><div class="n">${e(nm)}</div><div style="margin-top:3mm;font-size:10.5pt;opacity:.9">Calendario ${cal} · Periodo ${per}</div></div><div class="meta"><div><b>${A.colego?'INSTITUCIÓN':'TERRITORIO'}</b>${e(A.colego?((f.mcpio)||'')+' · '+((f.depto)||''):'')}${A.colego&&r.dane?'<br>DANE '+e(r.dane):''}</div><div><b>EMISIÓN</b>${e(emit)}<br>Documento ${ctx.conf===false?'':'confidencial'}</div><div><b>ELABORADO POR</b>AULA360<br>Análisis estadístico institucional</div></div></div>`});
   const first={};pages.forEach((p,i)=>{if(first[p.s]==null)first[p.s]=i+3});
   const num={};let n=1;const nPl=A.areas.length;

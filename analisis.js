@@ -153,7 +153,7 @@ function secUi(){return`<details style="margin-top:12px" open><summary style="fo
   <label style="display:block;font-size:13px;font-weight:700;margin-top:10px">Observaciones de la institución (opcional, salen en las conclusiones)<textarea oninput="ANA.setObs(this.value)" rows="3" style="width:100%;margin-top:4px;border:1.5px solid #cbd5e1;border-radius:10px;padding:8px;font-weight:400">${e(Z.obs)}</textarea></label></details>`}
 /* ---------- acciones ---------- */
 function membreteHtml(){const L=(typeof LH==='function')?LH():{l1:'',l2:'',l3:'',logo:''};
-  const logo=L.logo?`<img src="${LGU(L.logo)}" style="height:60px;float:left;margin-right:12px">`:'';
+  const logo=L.logo?`<img src="${LGU(L.logo)}" style="height:60px;float:left;margin-right:12px">`:'<span class="nologo" style="float:left">Subir membrete</span>';
   return`<div style="text-align:center;border-bottom:2px solid #1e63e9;padding-bottom:6px;margin-bottom:10px;overflow:hidden">${logo}<div style="font-weight:bold;font-size:13pt">${e(L.l1||M.school_name||'')}</div>${L.l2?`<div>${e(L.l2)}</div>`:''}${L.l3?`<div>${e(L.l3)}</div>`:''}</div>`}
 function cerrar(){document.getElementById('ana-prev')?.remove()}
 async function vista(){if(!Z.rep)return;await prep();Z.html=informe(Z.rep);
