@@ -11,7 +11,7 @@ const B=(c,t,x='')=>`<button ${x} style="background:${c};color:#fff;padding:8px 
 const lab=c=>LB.find(x=>x.c===c);
 function init(env){ENV=env}
 async function load(){
-  if(!window.FMOT)await loadScript('fisica_motor.js?v=4');
+  if(!window.FMOT)await loadScript('fisica_motor.js?v=5');
   if(!LB.length){const G={6:'fisica_g6.js?v=1',7:'fisica_g7.js?v=1',8:'fisica_g8.js?v=1',9:'fisica_g9.js?v=1',10:'fisica_g10.js?v=1',11:'fisica_g11.js?v=1'};
     for(const g of [6,7,8,9,10,11]){if(!window['FIS_G'+g]){try{await loadScript(G[g])}catch(_){}}LB=LB.concat(window['FIS_G'+g]||[])}}
   if(!LB._sh){LB._sh=1;const R=s=>{let a=s>>>0||1;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}};

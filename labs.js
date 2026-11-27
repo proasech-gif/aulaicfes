@@ -400,7 +400,7 @@ async function sdGen(){const v=i=>(document.getElementById(i)||{}).value||'';Z.g
 async function qInit(){if(!window.QUI)await loadScript('quimica_ui.js?v=7');QUI.init({M,sb,toast,err,render:()=>render(),isProf,volver(x){if(x&&Z.cur)LAB.abrir(Z.cur.id);else{Z.v='lab';render()}},assign:qAsignar});await QUI.load()}
 async function qcat(code,back){try{Z.lab='quimica';await qInit();Z.v='qcat';if(code){QUI.abrir(code,back)}else render()}catch(x){toast('No se pudo abrir el catálogo de Química');console.warn(x)}}
 async function qAsignar(code){await qInit();const i=QUI.info(code);if(!i)return;Z.ed={...nuevaEd(),lab:'quimica',titulo:i.t,descripcion:i.d,objetivos:i.d,competencias:i.comp,sim:'q:'+code};Z.v='build';render()}
-async function fInit(){if(!window.FIS)await loadScript('fisica_ui.js?v=4');FIS.init({M,sb,toast,err,render:()=>render(),isProf,volver(x){if(x&&Z.cur)LAB.abrir(Z.cur.id);else{Z.v='lab';render()}},assign:fAsignar});await FIS.load()}
+async function fInit(){if(!window.FIS)await loadScript('fisica_ui.js?v=5');FIS.init({M,sb,toast,err,render:()=>render(),isProf,volver(x){if(x&&Z.cur)LAB.abrir(Z.cur.id);else{Z.v='lab';render()}},assign:fAsignar});await FIS.load()}
 async function fcat(code,back){try{Z.lab='fisica';await fInit();Z.v='fcat';if(code){FIS.abrir(code,back)}else render()}catch(x){toast('No se pudo abrir el catálogo de Física');console.warn(x)}}
 async function fAsignar(code){await fInit();const i=FIS.info(code);if(!i)return;Z.ed={...nuevaEd(),lab:'fisica',titulo:i.t,descripcion:i.d,objetivos:i.d,competencias:i.comp,sim:'f:'+code};Z.v='build';render()}
 function fNom(id){return window.FIS&&FIS.info(id.slice(2))?FIS.info(id.slice(2)).t:'Laboratorio del catálogo de Física'}
